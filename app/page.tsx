@@ -8,6 +8,8 @@ import { FeaturedRoom } from "@/components/discover/featured-room"
 import { GenrePills } from "@/components/discover/genre-pills"
 import { RoomGrid } from "@/components/discover/room-grid"
 import { BubbleBackground } from "@/components/effects/bubble-background"
+import { ScrollReveal } from "@/components/effects/scroll-reveal"
+import { FeaturedRoomSkeleton, RoomCardSkeleton, GenrePillsSkeleton } from "@/components/ui/skeleton"
 import { type Room } from "@/lib/mock-data"
 import { listRooms, toFrontendRoom } from "@/lib/api"
 
@@ -117,14 +119,19 @@ export default function HomePage() {
           )}
 
           {/* Hero featured room (hidden when filtering) */}
-          {!selectedGenre && featuredRoom && (
+          {!loaded && !selectedGenre && (
             <div className="mb-8 sm:mb-10">
-              <FeaturedRoom room={featuredRoom} />
+              <FeaturedRoomSkeleton />
             </div>
+          )}
+          {loaded && !selectedGenre && featuredRoom && (
+            <ScrollReveal className="mb-8 sm:mb-10">
+              <FeaturedRoom room={featuredRoom} />
+            </ScrollReveal>
           )}
 
           {/* Genre filters */}
-          <section className="mb-6 sm:mb-8">
+          <ScrollReveal delay={100} className="mb-6 sm:mb-8">
             {selectedGenre ? (
               <div className="mb-3 flex items-center gap-3">
                 <button
@@ -148,42 +155,53 @@ export default function HomePage() {
                 Browse by Genre
               </h2>
             )}
-            <GenrePills selected={selectedGenre} onSelect={setSelectedGenre} />
-          </section>
+            {!loaded ? <GenrePillsSkeleton /> : <GenrePills selected={selectedGenre} onSelect={setSelectedGenre} />}
+          </ScrollReveal>
 
           {/* Live Now */}
-          <div className="mb-8 sm:mb-10">
-            <RoomGrid
-              rooms={filteredLiveRooms}
-              title={selectedGenre ? `Live ${selectedGenre} Rooms` : "Live Now"}
-              subtitle={
-                selectedGenre
-                  ? `${filteredLiveRooms.length} room${filteredLiveRooms.length !== 1 ? "s" : ""} streaming`
-                  : "Streaming right now"
-              }
-            />
-          </div>
+          {!loaded ? (
+            <div className="mb-8 sm:mb-10">
+              <h2 className="mb-4 font-sans text-lg font-bold text-foreground">Live Now</h2>
+              <div className="flex gap-4 overflow-hidden">
+                {[...Array(4)].map((_, i) => (
+                  <RoomCardSkeleton key={i} />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <ScrollReveal delay={200} className="mb-8 sm:mb-10">
+              <RoomGrid
+                rooms={filteredLiveRooms}
+                title={selectedGenre ? `Live ${selectedGenre} Rooms` : "Live Now"}
+                subtitle={
+                  selectedGenre
+                    ? `${filteredLiveRooms.length} room${filteredLiveRooms.length !== 1 ? "s" : ""} streaming`
+                    : "Streaming right now"
+                }
+              />
+            </ScrollReveal>
+          )}
 
           {/* Upcoming */}
           {!selectedGenre && upcomingRooms.length > 0 && (
-            <div className="mb-8 sm:mb-10">
+            <ScrollReveal delay={300} className="mb-8 sm:mb-10">
               <RoomGrid
                 rooms={upcomingRooms}
                 title="Upcoming"
                 subtitle="Scheduled shows starting soon"
               />
-            </div>
+            </ScrollReveal>
           )}
 
           {/* Recently Played */}
           {!selectedGenre && recentlyPlayedRooms.length > 0 && (
-            <div className="mb-8 sm:mb-10">
+            <ScrollReveal delay={400} className="mb-8 sm:mb-10">
               <RoomGrid
                 rooms={recentlyPlayedRooms}
                 title="Recently Played"
                 subtitle="Sessions from the last 24 hours"
               />
-            </div>
+            </ScrollReveal>
           )}
 
           {/* No rooms at all */}

@@ -457,6 +457,160 @@
   );
 }
 
+/* Card hover effects */
+@keyframes card-hover-glow {
+  0%, 100% {
+    box-shadow: 0 4px 20px oklch(0.82 0.18 80 / 0.1);
+  }
+  50% {
+    box-shadow: 0 8px 40px oklch(0.82 0.18 80 / 0.25), 0 0 60px oklch(0.82 0.18 80 / 0.1);
+  }
+}
+
+.card-hover-effect {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+
+.card-hover-effect:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 40px oklch(0.82 0.18 80 / 0.2), 0 0 60px oklch(0.82 0.18 80 / 0.08);
+}
+
+/* Scroll-triggered fade-in animations */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+
+.animate-fade-in-scale {
+  animation: fade-in-scale 0.5s ease-out forwards;
+}
+
+.scroll-animate {
+  opacity: 0;
+}
+
+.scroll-animate.is-visible {
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+
+/* Button micro-interactions */
+.btn-interactive {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.btn-interactive:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px oklch(0.82 0.18 80 / 0.3);
+}
+
+.btn-interactive:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-interactive::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--ripple-x, 50%) var(--ripple-y, 50%), oklch(1 0 0 / 0.3) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.btn-interactive:active::after {
+  opacity: 1;
+}
+
+/* Skeleton loading animation */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    oklch(0.20 0.01 280) 0%,
+    oklch(0.28 0.01 280) 50%,
+    oklch(0.20 0.01 280) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius);
+}
+
+/* Sound wave equalizer animation */
+@keyframes equalizer-bar-1 {
+  0%, 100% { height: 20%; }
+  50% { height: 80%; }
+}
+
+@keyframes equalizer-bar-2 {
+  0%, 100% { height: 40%; }
+  50% { height: 100%; }
+}
+
+@keyframes equalizer-bar-3 {
+  0%, 100% { height: 60%; }
+  50% { height: 30%; }
+}
+
+@keyframes equalizer-bar-4 {
+  0%, 100% { height: 30%; }
+  50% { height: 90%; }
+}
+
+@keyframes equalizer-bar-5 {
+  0%, 100% { height: 50%; }
+  50% { height: 70%; }
+}
+
+.equalizer-bar {
+  width: 3px;
+  background: var(--neon-amber);
+  border-radius: 1px;
+  transform-origin: bottom;
+}
+
+.equalizer-bar:nth-child(1) { animation: equalizer-bar-1 0.8s ease-in-out infinite; }
+.equalizer-bar:nth-child(2) { animation: equalizer-bar-2 0.6s ease-in-out infinite 0.1s; }
+.equalizer-bar:nth-child(3) { animation: equalizer-bar-3 0.7s ease-in-out infinite 0.2s; }
+.equalizer-bar:nth-child(4) { animation: equalizer-bar-4 0.5s ease-in-out infinite 0.15s; }
+.equalizer-bar:nth-child(5) { animation: equalizer-bar-5 0.9s ease-in-out infinite 0.25s; }
+
+/* Genre pill active glow */
+.genre-pill-active {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .animate-neon-flicker,
@@ -466,8 +620,20 @@
   .animate-live-pulse,
   .animate-shake,
   .animate-rainbow,
-  .animate-count-bounce {
+  .animate-count-bounce,
+  .animate-fade-in-up,
+  .animate-fade-in-scale,
+  .scroll-animate,
+  .skeleton,
+  .equalizer-bar,
+  .card-hover-effect,
+  .btn-interactive,
+  .genre-pill-active {
     animation: none !important;
+    transform: none !important;
+  }
+  .scroll-animate {
+    opacity: 1 !important;
   }
 }
 

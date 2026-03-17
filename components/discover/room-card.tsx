@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useRef, useState, useCallback, useEffect } from "react"
 import { Headphones, Music, Bell, BellRing, Clock, Inbox, PauseCircle, XCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { SoundWaveVisualizer } from "@/components/effects/sound-wave-visualizer"
 import { type Room, formatListenerCount } from "@/lib/mock-data"
 import { useRoomStatus } from "@/lib/room-status-context"
 
@@ -67,7 +68,7 @@ export function RoomCard({ room }: { room: Room }) {
     <Link href={`/room/${room.slug}`}>
       <div
         ref={cardRef}
-        className="group relative cursor-pointer"
+        className="group relative cursor-pointer card-hover-effect"
         onMouseMove={handleMouseMove}
         onMouseEnter={() => setHovering(true)}
         onMouseLeave={handleMouseLeave}
@@ -344,22 +345,11 @@ export function RoomCard({ room }: { room: Room }) {
                 </button>
               </div>
             ) : (
-              <div className="mx-4 mb-2 flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5" style={{ background: "linear-gradient(90deg, oklch(0.18 0.01 280), oklch(0.22 0.01 280), oklch(0.18 0.01 280))", border: "1px solid oklch(0.30 0.03 60 / 0.3)" }}>
-                {/* Mini visualizer dots */}
-                {room.isLive && [0.6, 1, 0.4, 0.8, 0.5].map((h, i) => (
-                  <div
-                    key={i}
-                    className="shrink-0 rounded-full"
-                    style={{
-                      width: 3,
-                      height: 3 + h * 8,
-                      background: i % 2 === 0 ? "var(--neon-amber)" : "var(--neon-magenta)",
-                      animation: `visualizer-bar ${0.3 + i * 0.1}s ease-in-out infinite alternate`,
-                      animationDelay: `${i * 0.07}s`,
-                      opacity: 0.7,
-                    }}
-                  />
-                ))}
+              <div className="mx-4 mb-2 flex items-center justify-center gap-2 rounded-lg px-2 py-1.5" style={{ background: "linear-gradient(90deg, oklch(0.18 0.01 280), oklch(0.22 0.01 280), oklch(0.18 0.01 280))", border: "1px solid oklch(0.30 0.03 60 / 0.3)" }}>
+                {/* Sound wave visualizer */}
+                {room.isLive && (
+                  <SoundWaveVisualizer isPlaying={true} size="sm" color="mixed" barCount={5} />
+                )}
                 <div className="min-w-0">
                   {room.isLive ? (
                     <p className="font-sans text-[10px] truncate max-w-[180px] text-center">
