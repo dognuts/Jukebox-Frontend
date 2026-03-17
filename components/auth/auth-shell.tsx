@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { Radio } from "lucide-react"
 import { BubbleBackground } from "@/components/effects/bubble-background"
+import { NeonJukeboxLogo } from "@/components/effects/neon-jukebox-logo"
 
 export function AuthShell({ children, title, subtitle }: { children: React.ReactNode; title: string; subtitle?: string }) {
   return (
@@ -13,9 +14,7 @@ export function AuthShell({ children, title, subtitle }: { children: React.React
         <div className="mb-8 text-center">
           <Link href="/" className="inline-flex items-center gap-2">
             <Radio className="h-7 w-7 text-primary" />
-            <span className="font-sans text-2xl font-bold tracking-tight text-foreground neon-text-amber">
-              Jukebox
-            </span>
+            <NeonJukeboxLogo size="lg" />
           </Link>
         </div>
 

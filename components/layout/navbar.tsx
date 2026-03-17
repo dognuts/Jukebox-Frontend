@@ -11,6 +11,7 @@ import { useMessages } from "@/lib/messages-context"
 import { useUpgrade } from "@/lib/upgrade-context"
 import { useAuth } from "@/lib/auth-context"
 import { UserMenu } from "@/components/layout/user-menu"
+import { NeonJukeboxLogo } from "@/components/effects/neon-jukebox-logo"
 
 export function Navbar() {
   const { triggerRainbow, classicModeBadge } = useEasterEggs()
@@ -63,9 +64,7 @@ export function Navbar() {
               className="flex items-center gap-2 bg-transparent border-0 cursor-pointer"
             >
               <Radio className="h-6 w-6 text-primary" />
-              <span className="font-sans text-xl font-bold tracking-tight text-foreground neon-text-amber">
-                Jukebox
-              </span>
+              <NeonJukeboxLogo size="sm" />
             </button>
           </Link>
           {classicModeBadge && (
