@@ -3,7 +3,7 @@ import { NeonJukeboxLogo } from "@/components/effects/neon-jukebox-logo"
 export function Footer() {
   return (
     <footer className="border-t border-border/50 bg-background/80">
-      <div className="mx-auto flex max-w-7xl flex-col items-center gap-4 px-4 py-8 sm:flex-row sm:justify-between lg:px-6">
+      <div className="mx-auto flex max-w-7xl flex-col items-center gap-4 px-4 py-8 lg:px-6">
         <div className="flex items-center gap-2">
           <NeonJukeboxLogo size="sm" />
         </div>

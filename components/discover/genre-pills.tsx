@@ -53,7 +53,7 @@ export function GenrePills({ selected, onSelect }: GenrePillsProps) {
   return (
     <div
       ref={containerRef}
-      className="flex flex-wrap gap-2"
+      className="flex flex-wrap gap-2 justify-center"
       role="group"
       aria-label="Filter by genre"
     >
