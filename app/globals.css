@@ -895,6 +895,98 @@
   animation-delay: -25s;
 }
 
+/* Upgrade button - vibrant premium animation */
+@keyframes upgrade-glow-pulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 8px oklch(0.82 0.18 80),
+      0 0 16px oklch(0.82 0.18 80 / 0.4),
+      inset 0 0 8px oklch(0.82 0.18 80 / 0.1);
+  }
+  50% {
+    box-shadow: 
+      0 0 20px oklch(0.82 0.18 80),
+      0 0 40px oklch(0.82 0.18 80 / 0.6),
+      0 0 60px oklch(0.72 0.18 250 / 0.4),
+      inset 0 0 12px oklch(0.82 0.18 80 / 0.15);
+  }
+}
+
+@keyframes upgrade-gradient-shift {
+  0% {
+    background-position: 0% center;
+  }
+  50% {
+    background-position: 100% center;
+  }
+  100% {
+    background-position: 0% center;
+  }
+}
+
+@keyframes upgrade-scale-bounce {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.upgrade-button-premium {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  background: linear-gradient(
+    135deg,
+    var(--neon-amber) 0%,
+    oklch(0.85 0.20 60) 25%,
+    var(--neon-blue) 50%,
+    oklch(0.85 0.20 60) 75%,
+    var(--neon-amber) 100%
+  );
+  background-size: 200% auto;
+}
+
+.upgrade-button-premium:hover {
+  animation: 
+    upgrade-glow-pulse 1.5s ease-in-out infinite,
+    upgrade-gradient-shift 2s linear infinite,
+    upgrade-scale-bounce 2s ease-in-out infinite;
+  box-shadow: 
+    0 0 20px var(--neon-amber),
+    0 0 40px oklch(0.82 0.18 80 / 0.5),
+    0 0 60px oklch(0.72 0.18 250 / 0.3),
+    inset 0 0 12px oklch(0.82 0.18 80 / 0.15);
+}
+
+.upgrade-button-premium:active {
+  transform: scale(0.95);
+  box-shadow: 
+    0 0 30px var(--neon-amber),
+    0 0 60px oklch(0.82 0.18 80 / 0.6),
+    0 0 90px oklch(0.72 0.18 250 / 0.4),
+    inset 0 0 16px oklch(0.82 0.18 80 / 0.2);
+}
+
+.upgrade-button-premium::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at center,
+    oklch(1 0 0 / 0.1),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.upgrade-button-premium:hover::before {
+  animation: upgrade-scale-bounce 0.6s ease-out;
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .animate-neon-flicker,
@@ -919,7 +1011,9 @@
   .gradient-text-neon-animated,
   .animate-ambient-drift-1,
   .animate-ambient-drift-2,
-  .animate-ambient-drift-3 {
+  .animate-ambient-drift-3,
+  .upgrade-button-premium:hover,
+  .upgrade-button-premium:active {
     animation: none !important;
     transform: none !important;
   }
