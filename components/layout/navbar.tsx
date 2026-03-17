@@ -57,7 +57,7 @@ export function Navbar() {
     >
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 lg:px-6">
         {/* Logo */}
-        <div className="flex flex-col items-start gap-0.5">
+        <div className="flex flex-col items-center gap-0.5">
           <Link href="/">
             <button
               onClick={handleLogoClick}
@@ -66,7 +66,7 @@ export function Navbar() {
               <NeonJukeboxLogo size="sm" />
             </button>
           </Link>
-          <span className="font-sans text-xs font-light text-foreground/70 leading-none">
+          <span className="font-sans text-xs font-light text-foreground/70 leading-none tracking-widest uppercase">
             Listen Together
           </span>
           {classicModeBadge && (
