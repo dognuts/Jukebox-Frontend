@@ -14,10 +14,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
           color: 'oklch(0.95 0 0)',
         },
         classNames: {
-          success: '[&>svg]:text-green-500',
-          error: '[&>svg]:text-red-500',
-          warning: '[&>svg]:text-amber-500',
-          info: '[&>svg]:text-blue-500',
+          success: '[&>svg]:text-[oklch(0.65_0.15_155)]',
+          error: '[&>svg]:text-[oklch(0.62_0.28_30)]',
+          warning: '[&>svg]:text-[oklch(0.75_0.20_60)]',
+          info: '[&>svg]:text-[oklch(0.72_0.18_250)]',
         },
       }}
       {...props}
