@@ -42,14 +42,14 @@ export default function LoginPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <Label htmlFor="email" className="font-sans text-sm font-medium text-muted-foreground">Email</Label>
+          <Label htmlFor="email" className="font-sans text-sm font-medium text-foreground">Email</Label>
           <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required
             className="mt-1 rounded-xl border-border/40 bg-muted/30 font-sans" />
         </div>
 
         <div>
           <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="font-sans text-sm font-medium text-muted-foreground">Password</Label>
+            <Label htmlFor="password" className="font-sans text-sm font-medium text-foreground">Password</Label>
             <Link href="/forgot-password" className="font-sans text-xs text-primary hover:underline">Forgot password?</Link>
           </div>
           <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required

@@ -100,7 +100,7 @@ export default function SignupPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <Label htmlFor="stageName" className="font-sans text-sm font-medium text-muted-foreground">
+          <Label htmlFor="stageName" className="font-sans text-sm font-medium text-foreground">
             Stage Name <span className="text-muted-foreground/50 font-normal">(display name)</span>
           </Label>
           <div className="relative mt-1">
@@ -133,13 +133,13 @@ export default function SignupPage() {
         </div>
 
         <div>
-          <Label htmlFor="email" className="font-sans text-sm font-medium text-muted-foreground">Email</Label>
+          <Label htmlFor="email" className="font-sans text-sm font-medium text-foreground">Email</Label>
           <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required
             className="mt-1 rounded-xl border-border/40 bg-muted/30 font-sans" />
         </div>
 
         <div>
-          <Label htmlFor="password" className="font-sans text-sm font-medium text-muted-foreground">Password</Label>
+          <Label htmlFor="password" className="font-sans text-sm font-medium text-foreground">Password</Label>
           <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 8 chars, upper + lower + digit" required minLength={8}
             className="mt-1 rounded-xl border-border/40 bg-muted/30 font-sans" />
         </div>
