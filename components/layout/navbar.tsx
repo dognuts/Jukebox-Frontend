@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link"
-import Image from "next/image"
 import { useRef, useCallback, useState, useEffect } from "react"
 import { Search, Plus, MessageCircle, Crown, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -62,16 +61,9 @@ export function Navbar() {
           <Link href="/">
             <button
               onClick={handleLogoClick}
-              className="flex items-center gap-3 bg-transparent border-0 cursor-pointer"
+              className="flex items-center bg-transparent border-0 cursor-pointer"
             >
-              <Image
-                src="/images/jukebox-logo.png"
-                alt="Jukebox"
-                width={56}
-                height={56}
-                className="h-14 w-14 object-contain flex-shrink-0"
-              />
-              <NeonJukeboxLogo size="sm" />
+              <NeonJukeboxLogo size="md" />
             </button>
           </Link>
           {classicModeBadge && (
