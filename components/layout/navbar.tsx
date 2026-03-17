@@ -56,20 +56,20 @@ export function Navbar() {
     <header
       className={`sticky top-0 z-40 w-full border-b border-border/50 glass-panel transition-transform duration-300 ${hidden ? "-translate-y-full" : "translate-y-0"}`}
     >
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 lg:px-6">
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 lg:px-6">
         {/* Logo */}
         <div className="flex items-center gap-3">
           <Link href="/">
             <button
               onClick={handleLogoClick}
-              className="flex items-center gap-2 bg-transparent border-0 cursor-pointer"
+              className="flex items-center gap-3 bg-transparent border-0 cursor-pointer"
             >
               <Image
                 src="/images/jukebox-logo.png"
                 alt="Jukebox"
-                width={80}
-                height={80}
-                className="h-20 w-20"
+                width={56}
+                height={56}
+                className="h-14 w-14 object-contain flex-shrink-0"
               />
               <NeonJukeboxLogo size="sm" />
             </button>
