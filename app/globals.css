@@ -420,56 +420,6 @@
   -webkit-backdrop-filter: blur(20px);
 }
 
-/* Neon tube letter animation */
-@keyframes neon-tube-letter-breathe {
-  0%, 100% {
-    text-shadow:
-      0 0 4px var(--tube-shadow),
-      0 0 10px var(--tube-shadow),
-      0 0 20px var(--tube-glow),
-      0 0 40px var(--tube-glow);
-    opacity: 0.92;
-    filter: brightness(1);
-  }
-  45%, 55% {
-    text-shadow:
-      0 0 6px var(--tube-shadow),
-      0 0 16px var(--tube-shadow),
-      0 0 32px var(--tube-glow),
-      0 0 60px var(--tube-glow),
-      0 0 80px var(--tube-glow);
-    opacity: 1;
-    filter: brightness(1.2);
-  }
-}
-
-@keyframes neon-tube-flicker {
-  0%   { opacity: 1; }
-  3%   { opacity: 0.7; }
-  5%   { opacity: 1; }
-  8%   { opacity: 0.85; }
-  10%  { opacity: 1; }
-  55%  { opacity: 1; }
-  57%  { opacity: 0.75; }
-  59%  { opacity: 1; }
-  100% { opacity: 1; }
-}
-
-.neon-tube-letter {
-  animation:
-    neon-tube-letter-breathe 2.8s ease-in-out infinite,
-    neon-tube-flicker 6s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .neon-tube-letter {
-    animation: none !important;
-    text-shadow:
-      0 0 6px var(--tube-shadow),
-      0 0 16px var(--tube-glow);
-  }
-}
-
 /* Neon text glow */
 .neon-text-amber {
   text-shadow: 0 0 7px var(--neon-amber), 0 0 20px oklch(0.82 0.18 80 / 0.4);
