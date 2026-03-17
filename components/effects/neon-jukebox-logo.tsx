@@ -95,8 +95,8 @@ export function NeonJukeboxLogo({ size = 'lg' }: NeonJukeboxLogoProps) {
     globalDip()
 
     // --- Color cycle via rAF ---
-    // Cycle period: ~6 seconds. t oscillates 0→1→0 using a sine wave.
-    const CYCLE_MS = 6000
+    // Cycle period: ~12 seconds. t oscillates 0→1→0 using a sine wave.
+    const CYCLE_MS = 12000
     let rafId: number
     const startTime = performance.now()
 
