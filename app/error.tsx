@@ -3,7 +3,7 @@
 import { useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { BubbleBackground } from "@/components/effects/bubble-background"
+
 import { NeonJukeboxLogo } from "@/components/effects/neon-jukebox-logo"
 import { AlertTriangle, RefreshCw } from "lucide-react"
 
@@ -20,7 +20,6 @@ export default function Error({
 
   return (
     <div className="relative min-h-screen flex flex-col items-center justify-center px-4 overflow-hidden">
-      <BubbleBackground />
       
       <div className="relative z-10 flex flex-col items-center text-center max-w-md">
         {/* Error Icon */}

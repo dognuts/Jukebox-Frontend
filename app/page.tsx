@@ -9,7 +9,7 @@ import { Footer } from "@/components/layout/footer"
 import { FeaturedRoom } from "@/components/discover/featured-room"
 import { GenrePills } from "@/components/discover/genre-pills"
 import { RoomGrid } from "@/components/discover/room-grid"
-import { BubbleBackground } from "@/components/effects/bubble-background"
+
 import { ScrollReveal } from "@/components/effects/scroll-reveal"
 import { FeaturedRoomSkeleton, RoomCardSkeleton, GenrePillsSkeleton } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -140,7 +140,6 @@ export default function HomePage() {
 
   return (
     <div className="relative min-h-screen">
-      <BubbleBackground />
       <div className="relative z-10">
         <Navbar />
 

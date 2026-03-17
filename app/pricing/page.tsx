@@ -6,7 +6,7 @@ import { ArrowLeft, Check, Zap, Crown, Loader2, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Navbar } from "@/components/layout/navbar"
 import { Footer } from "@/components/layout/footer"
-import { BubbleBackground } from "@/components/effects/bubble-background"
+
 import { useAuth } from "@/lib/auth-context"
 import { authRequest } from "@/lib/api"
 
@@ -64,7 +64,6 @@ export default function PricingPage() {
 
   return (
     <div className="relative min-h-screen">
-      <BubbleBackground />
       <div className="relative z-10">
         <Navbar />
 

@@ -14,6 +14,7 @@ import { MessagesDrawer } from "@/components/messages/messages-drawer"
 import { UpgradeDialog } from "@/components/upgrade/upgrade-dialog"
 import { Toaster } from "@/components/ui/sonner"
 import { AmbientBackground } from "@/components/effects/ambient-background"
+import { BubbleBackground } from "@/components/effects/bubble-background"
 import { ProgressBar } from "@/components/effects/progress-bar"
 import "./globals.css"
 
@@ -60,6 +61,7 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <ProgressBar />
         <AmbientBackground />
+        <BubbleBackground />
         <RoomStatusProvider>
         <AuthProvider>
         <FavoritesProvider>

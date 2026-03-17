@@ -1,12 +1,11 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { BubbleBackground } from "@/components/effects/bubble-background"
+
 import { NeonJukeboxLogo } from "@/components/effects/neon-jukebox-logo"
 
 export default function NotFound() {
   return (
     <div className="relative min-h-screen flex flex-col items-center justify-center px-4 overflow-hidden">
-      <BubbleBackground />
       
       <div className="relative z-10 flex flex-col items-center text-center max-w-md">
         {/* Neon 404 */}

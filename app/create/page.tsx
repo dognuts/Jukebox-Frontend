@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Navbar } from "@/components/layout/navbar"
 import { Footer } from "@/components/layout/footer"
-import { BubbleBackground } from "@/components/effects/bubble-background"
+
 import { genres, vibeOptions, rooms, coverGradients, avatarColors, createTrack, currentUser } from "@/lib/mock-data"
 import type { Room } from "@/lib/mock-data"
 import { containsProhibitedContent } from "@/lib/moderation"
@@ -186,7 +186,6 @@ export default function CreateRoomPage() {
   if (authLoading || !isLoggedIn) {
     return (
       <div className="relative min-h-screen">
-        <BubbleBackground />
         <div className="relative z-10">
           <Navbar />
           <main className="mx-auto max-w-3xl px-4 py-24 text-center">
@@ -201,7 +200,6 @@ export default function CreateRoomPage() {
 
   return (
     <div className="relative min-h-screen">
-      <BubbleBackground />
       <div className="relative z-10">
         <Navbar />
 

@@ -265,7 +265,7 @@ export default function RoomPage() {
   if (notFound) {
     return (
       <div className="relative min-h-screen">
-        <BubbleBackground />
+
         <div className="relative z-10">
           <Navbar />
           <div className="flex flex-col items-center justify-center gap-4 py-40">
@@ -289,7 +289,7 @@ export default function RoomPage() {
   if (ws.roomEnded) {
     return (
       <div className="relative min-h-screen">
-        <BubbleBackground />
+
         <div className="relative z-10">
           <Navbar />
           <div className="flex flex-col items-center justify-center gap-4 py-40">
@@ -322,7 +322,7 @@ export default function RoomPage() {
   if (!room) {
     return (
       <div className="relative min-h-screen">
-        <BubbleBackground />
+
         <div className="relative z-10">
           <Navbar />
           <div className="flex items-center justify-center py-40">
@@ -337,7 +337,7 @@ export default function RoomPage() {
 
   return (
     <div className="relative min-h-screen">
-      <BubbleBackground />
+
       <div className="relative z-10 flex min-h-screen flex-col">
         <Navbar />
 

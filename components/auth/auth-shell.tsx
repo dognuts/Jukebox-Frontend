@@ -1,13 +1,12 @@
 "use client"
 
 import Link from "next/link"
-import { BubbleBackground } from "@/components/effects/bubble-background"
+
 import { NeonJukeboxLogo } from "@/components/effects/neon-jukebox-logo"
 
 export function AuthShell({ children, title, subtitle }: { children: React.ReactNode; title: string; subtitle?: string }) {
   return (
     <div className="relative min-h-screen flex items-center justify-center px-4 py-12">
-      <BubbleBackground />
       <div className="relative z-10 w-full max-w-md">
         {/* Logo */}
         <div className="mb-8 flex justify-center">
