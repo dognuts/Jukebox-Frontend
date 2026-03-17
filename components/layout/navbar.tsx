@@ -55,7 +55,7 @@ export function Navbar() {
     <header
       className={`sticky top-0 z-40 w-full border-b border-border/50 glass-panel transition-transform duration-300 ${hidden ? "-translate-y-full" : "translate-y-0"}`}
     >
-      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 lg:px-6">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 lg:px-6">
         {/* Logo */}
         <div className="flex items-center gap-3">
           <Link href="/">
@@ -63,7 +63,7 @@ export function Navbar() {
               onClick={handleLogoClick}
               className="flex items-center bg-transparent border-0 cursor-pointer"
             >
-              <NeonJukeboxLogo size="md" />
+              <NeonJukeboxLogo size="sm" />
             </button>
           </Link>
           {classicModeBadge && (

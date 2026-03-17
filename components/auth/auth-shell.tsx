@@ -10,7 +10,7 @@ export function AuthShell({ children, title, subtitle }: { children: React.React
       <BubbleBackground />
       <div className="relative z-10 w-full max-w-md">
         {/* Logo */}
-        <div className="mb-12 flex justify-center">
+        <div className="mb-8 flex justify-center">
           <Link href="/">
             <NeonJukeboxLogo size="lg" />
           </Link>

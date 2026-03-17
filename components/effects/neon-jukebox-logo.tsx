@@ -155,7 +155,7 @@ export function NeonJukeboxLogo({ size = 'lg' }: NeonJukeboxLogoProps) {
     }
   }, [])
 
-  const sizeClass = size === 'sm' ? 'h-10 w-auto' : size === 'md' ? 'h-16 w-auto' : 'h-20 w-auto'
+  const sizeClass = size === 'sm' ? 'h-8 w-auto' : size === 'md' ? 'h-12 w-auto' : 'h-16 w-auto'
 
   return (
     <div
