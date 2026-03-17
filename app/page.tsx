@@ -1,7 +1,9 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
-import { ArrowLeft } from "lucide-react"
+import { useState, useMemo, useEffect, useRef } from "react"
+import { ArrowLeft, HelpCircle } from "lucide-react"
+import { toast } from "sonner"
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import { Navbar } from "@/components/layout/navbar"
 import { Footer } from "@/components/layout/footer"
 import { FeaturedRoom } from "@/components/discover/featured-room"
@@ -23,6 +25,8 @@ export default function HomePage() {
   const [allRooms, setAllRooms] = useState<Room[]>([])
   const [loaded, setLoaded] = useState(false)
   const [usingMock, setUsingMock] = useState(false)
+  const { registerShortcut } = useKeyboardShortcuts()
+  const scrollToTopRef = useRef<() => void>(() => {})
 
   // Fetch rooms from backend
   useEffect(() => {
@@ -63,6 +67,41 @@ export default function HomePage() {
       clearInterval(interval)
     }
   }, [])
+
+  // Register keyboard shortcuts
+  useEffect(() => {
+    registerShortcut({
+      key: '/',
+      description: 'Focus search',
+      action: () => {
+        const searchInput = document.querySelector('input[type="text"][placeholder*="search" i]') as HTMLInputElement
+        if (searchInput) {
+          searchInput.focus()
+          toast.info('Type to search rooms')
+        }
+      },
+    })
+
+    registerShortcut({
+      key: '?',
+      shift: true,
+      description: 'Show keyboard shortcuts',
+      action: () => {
+        toast.info('Keyboard Shortcuts:\n/ - Focus search\nShift+? - This help message')
+      },
+    })
+
+    registerShortcut({
+      key: 'c',
+      description: 'Clear filters',
+      action: () => {
+        if (selectedGenre) {
+          setSelectedGenre(null)
+          toast.success('Filters cleared')
+        }
+      },
+    })
+  }, [registerShortcut, selectedGenre])
 
   const liveRooms = useMemo(() => allRooms.filter((r) => r.isLive), [allRooms])
   const upcomingRooms = useMemo(

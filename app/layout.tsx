@@ -14,6 +14,7 @@ import { MessagesDrawer } from "@/components/messages/messages-drawer"
 import { UpgradeDialog } from "@/components/upgrade/upgrade-dialog"
 import { Toaster } from "@/components/ui/sonner"
 import { AmbientBackground } from "@/components/effects/ambient-background"
+import { ProgressBar } from "@/components/effects/progress-bar"
 import "./globals.css"
 
 const _geist = Geist({ subsets: ["latin"] })
@@ -57,6 +58,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="font-sans antialiased">
+        <ProgressBar />
         <AmbientBackground />
         <RoomStatusProvider>
         <AuthProvider>
