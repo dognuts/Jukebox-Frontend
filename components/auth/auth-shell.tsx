@@ -1,0 +1,39 @@
+"use client"
+
+import Link from "next/link"
+import { Radio } from "lucide-react"
+import { BubbleBackground } from "@/components/effects/bubble-background"
+
+export function AuthShell({ children, title, subtitle }: { children: React.ReactNode; title: string; subtitle?: string }) {
+  return (
+    <div className="relative min-h-screen flex items-center justify-center px-4 py-12">
+      <BubbleBackground />
+      <div className="relative z-10 w-full max-w-md">
+        {/* Logo */}
+        <div className="mb-8 text-center">
+          <Link href="/" className="inline-flex items-center gap-2">
+            <Radio className="h-7 w-7 text-primary" />
+            <span className="font-sans text-2xl font-bold tracking-tight text-foreground neon-text-amber">
+              Jukebox
+            </span>
+          </Link>
+        </div>
+
+        {/* Card */}
+        <div
+          className="rounded-2xl border border-border/30 p-8"
+          style={{
+            background: "oklch(0.12 0.01 280 / 0.8)",
+            backdropFilter: "blur(16px)",
+            boxShadow: "0 0 40px oklch(0.08 0.01 280 / 0.5)",
+          }}
+        >
+          <h1 className="font-sans text-xl font-bold text-foreground mb-1">{title}</h1>
+          {subtitle && <p className="font-sans text-sm text-muted-foreground mb-6">{subtitle}</p>}
+          {!subtitle && <div className="mb-6" />}
+          {children}
+        </div>
+      </div>
+    </div>
+  )
+}

@@ -1,0 +1,117 @@
+"use client"
+
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { User, LogOut, LogIn, Crown, Shield } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { useAuth } from "@/lib/auth-context"
+import { useUpgrade } from "@/lib/upgrade-context"
+
+export function UserMenu() {
+  const { user, isLoggedIn, logout } = useAuth()
+  const { plan, openUpgradeDialog } = useUpgrade()
+  const router = useRouter()
+
+  // Not logged in — show login button
+  if (!isLoggedIn || !user) {
+    return (
+      <div className="flex items-center gap-2">
+        <Link href="/login">
+          <button
+            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 font-sans text-sm font-medium transition-all hover:opacity-90"
+            style={{
+              background: "oklch(0.82 0.18 80 / 0.15)",
+              border: "1px solid oklch(0.82 0.18 80 / 0.3)",
+              color: "oklch(0.82 0.18 80)",
+            }}
+          >
+            <LogIn className="h-4 w-4" />
+            <span className="hidden sm:inline">Log in</span>
+          </button>
+        </Link>
+      </div>
+    )
+  }
+
+  const initials = user.displayName.slice(0, 2).toUpperCase()
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-border/30 font-sans text-sm font-bold text-foreground transition-all hover:scale-105 hover:border-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+          style={{ background: user.avatarColor || "oklch(0.70 0.18 30)" }}
+          aria-label="User menu"
+        >
+          <span className="text-background">{initials}</span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        className="w-56 rounded-xl border border-border/30 bg-background/95 p-1 backdrop-blur-xl"
+      >
+        <DropdownMenuLabel className="px-3 py-2 font-sans text-sm">
+          <div className="font-semibold text-foreground">{user.displayName}</div>
+          <div className="text-xs text-muted-foreground">{user.email}</div>
+          {!user.emailVerified && (
+            <div className="mt-1 text-[10px] font-medium" style={{ color: "oklch(0.75 0.15 60)" }}>
+              Email not verified
+            </div>
+          )}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator className="bg-border/30" />
+        <DropdownMenuItem asChild>
+          <Link
+            href="/account"
+            className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 font-sans text-sm text-foreground transition-colors hover:bg-accent/10 hover:text-accent focus:bg-accent/10 focus:text-accent"
+          >
+            <User className="h-4 w-4" />
+            Account
+          </Link>
+        </DropdownMenuItem>
+        {user.isAdmin && (
+          <DropdownMenuItem asChild>
+            <Link
+              href="/admin"
+              className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 font-sans text-sm transition-colors hover:bg-accent/10 hover:text-accent focus:bg-accent/10 focus:text-accent"
+              style={{ color: "oklch(0.65 0.18 270)" }}
+            >
+              <Shield className="h-4 w-4" />
+              Admin
+            </Link>
+          </DropdownMenuItem>
+        )}
+        {plan === "free" && (
+          <>
+            <DropdownMenuSeparator className="bg-border/30" />
+            <DropdownMenuItem
+              className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 font-sans text-sm transition-colors hover:bg-primary/10 focus:bg-primary/10"
+              onClick={openUpgradeDialog}
+            >
+              <Crown className="h-4 w-4" style={{ color: "oklch(0.82 0.18 80)" }} />
+              <span style={{ color: "oklch(0.82 0.18 80)" }}>Upgrade to Premium</span>
+            </DropdownMenuItem>
+          </>
+        )}
+        <DropdownMenuSeparator className="bg-border/30" />
+        <DropdownMenuItem
+          className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 font-sans text-sm text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus:bg-destructive/10 focus:text-destructive"
+          onClick={async () => {
+            await logout()
+            router.push("/")
+          }}
+        >
+          <LogOut className="h-4 w-4" />
+          Sign Out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
