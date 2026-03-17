@@ -1,8 +1,9 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { useRef, useCallback, useState, useEffect } from "react"
-import { Search, Plus, Radio, MessageCircle, Crown, Zap } from "lucide-react"
+import { Search, Plus, MessageCircle, Crown, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -63,7 +64,13 @@ export function Navbar() {
               onClick={handleLogoClick}
               className="flex items-center gap-2 bg-transparent border-0 cursor-pointer"
             >
-              <Radio className="h-6 w-6 text-primary" />
+              <Image
+                src="/images/jukebox-logo.png"
+                alt="Jukebox"
+                width={40}
+                height={40}
+                className="h-10 w-10"
+              />
               <NeonJukeboxLogo size="sm" />
             </button>
           </Link>
