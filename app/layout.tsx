@@ -8,9 +8,11 @@ import { MessagesProvider } from "@/lib/messages-context"
 import { UpgradeProvider } from "@/lib/upgrade-context"
 import { RoomStatusProvider } from "@/lib/room-status-context"
 import { AuthProvider } from "@/lib/auth-context"
+import { FavoritesProvider } from "@/lib/favorites-context"
 import { MiniPlayer } from "@/components/layout/mini-player"
 import { MessagesDrawer } from "@/components/messages/messages-drawer"
 import { UpgradeDialog } from "@/components/upgrade/upgrade-dialog"
+import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 
 const _geist = Geist({ subsets: ["latin"] })
@@ -56,6 +58,7 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <RoomStatusProvider>
         <AuthProvider>
+        <FavoritesProvider>
         <UpgradeProvider>
           <PlaylistProvider>
             <MessagesProvider>
@@ -66,10 +69,12 @@ export default function RootLayout({
                 <MiniPlayer />
                 <MessagesDrawer />
                 <UpgradeDialog />
+                <Toaster position="bottom-right" />
               </PlayerProvider>
             </MessagesProvider>
           </PlaylistProvider>
         </UpgradeProvider>
+        </FavoritesProvider>
         </AuthProvider>
         </RoomStatusProvider>
         <Analytics />

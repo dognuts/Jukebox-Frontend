@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AuthShell } from "@/components/auth/auth-shell"
 import { useAuth } from "@/lib/auth-context"
+import { Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -24,9 +26,11 @@ export default function LoginPage() {
 
     try {
       await login(email, password)
+      toast.success("Welcome back!")
       router.push("/")
     } catch (err: any) {
       setError(err.message || "Login failed")
+      toast.error("Login failed")
     } finally {
       setLoading(false)
     }
@@ -57,7 +61,12 @@ export default function LoginPage() {
         </div>
 
         <Button type="submit" disabled={loading} className="w-full rounded-xl bg-primary font-sans font-semibold text-primary-foreground hover:bg-primary/90">
-          {loading ? "Logging in..." : "Log In"}
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Logging in...
+            </>
+          ) : "Log In"}
         </Button>
       </form>
 

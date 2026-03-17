@@ -4,14 +4,27 @@ import { useRef, useState, useCallback, useEffect } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { type Room } from "@/lib/mock-data"
 import { RoomCard } from "./room-card"
+import { EmptyState } from "@/components/ui/empty-state"
 
 interface RoomGridProps {
   rooms: Room[]
   title: string
   subtitle?: string
+  showEmptyState?: boolean
+  emptyStateTitle?: string
+  emptyStateDescription?: string
+  onClearFilters?: () => void
 }
 
-export function RoomGrid({ rooms, title, subtitle }: RoomGridProps) {
+export function RoomGrid({ 
+  rooms, 
+  title, 
+  subtitle, 
+  showEmptyState = false,
+  emptyStateTitle,
+  emptyStateDescription,
+  onClearFilters,
+}: RoomGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
@@ -47,7 +60,28 @@ export function RoomGrid({ rooms, title, subtitle }: RoomGridProps) {
     })
   }, [])
 
-  if (rooms.length === 0) return null
+  if (rooms.length === 0) {
+    if (showEmptyState) {
+      return (
+        <section>
+          <div className="mb-4">
+            <h2 className="font-sans text-lg font-bold text-foreground">{title}</h2>
+            {subtitle && (
+              <p className="mt-0.5 font-sans text-sm text-muted-foreground">{subtitle}</p>
+            )}
+          </div>
+          <EmptyState
+            variant="no-results"
+            title={emptyStateTitle}
+            description={emptyStateDescription}
+            actionLabel={onClearFilters ? "Clear filters" : undefined}
+            onAction={onClearFilters}
+          />
+        </section>
+      )
+    }
+    return null
+  }
 
   return (
     <section>

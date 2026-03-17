@@ -11,6 +11,7 @@ import { AuthShell } from "@/components/auth/auth-shell"
 import { useAuth } from "@/lib/auth-context"
 import { API_BASE } from "@/lib/api"
 import { containsProfanity } from "@/lib/moderation"
+import { toast } from "sonner"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -78,6 +79,7 @@ export default function SignupPage() {
     setLoading(true)
     try {
       await signup(email, password, stageName, stageName)
+      toast.success("Welcome to Jukebox!")
       router.push("/")
     } catch (err: any) {
       const msg = err.message || "Signup failed"
@@ -85,6 +87,7 @@ export default function SignupPage() {
         setNameStatus("taken")
       }
       setError(msg)
+      toast.error("Signup failed")
     } finally {
       setLoading(false)
     }
@@ -145,7 +148,12 @@ export default function SignupPage() {
         </div>
 
         <Button type="submit" disabled={loading || nameStatus === "taken"} className="w-full rounded-xl bg-primary font-sans font-semibold text-primary-foreground hover:bg-primary/90">
-          {loading ? "Creating account..." : "Sign Up"}
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Creating account...
+            </>
+          ) : "Sign Up"}
         </Button>
       </form>
 

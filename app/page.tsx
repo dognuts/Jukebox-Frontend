@@ -10,6 +10,7 @@ import { RoomGrid } from "@/components/discover/room-grid"
 import { BubbleBackground } from "@/components/effects/bubble-background"
 import { ScrollReveal } from "@/components/effects/scroll-reveal"
 import { FeaturedRoomSkeleton, RoomCardSkeleton, GenrePillsSkeleton } from "@/components/ui/skeleton"
+import { EmptyState } from "@/components/ui/empty-state"
 import { type Room } from "@/lib/mock-data"
 import { listRooms, toFrontendRoom } from "@/lib/api"
 
@@ -178,6 +179,10 @@ export default function HomePage() {
                     ? `${filteredLiveRooms.length} room${filteredLiveRooms.length !== 1 ? "s" : ""} streaming`
                     : "Streaming right now"
                 }
+                showEmptyState={!!selectedGenre}
+                emptyStateTitle={`No ${selectedGenre} rooms live`}
+                emptyStateDescription={`There are no ${selectedGenre} rooms streaming right now. Check back later or explore other genres.`}
+                onClearFilters={() => setSelectedGenre(null)}
               />
             </ScrollReveal>
           )}
@@ -206,12 +211,11 @@ export default function HomePage() {
 
           {/* No rooms at all */}
           {loaded && !usingMock && allRooms.length === 0 && (
-            <div className="text-center py-20">
-              <p className="font-sans text-lg text-muted-foreground mb-2">No rooms yet</p>
-              <p className="font-sans text-sm text-muted-foreground">
-                Create the first room to get started!
-              </p>
-            </div>
+            <EmptyState
+              variant="no-rooms"
+              title="No rooms live"
+              description="All DJs are taking a break. Check back soon or start your own session!"
+            />
           )}
         </main>
 
