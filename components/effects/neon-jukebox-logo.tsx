@@ -6,8 +6,18 @@ interface NeonJukeboxLogoProps {
   size?: 'sm' | 'lg'
 }
 
+// Color A: warm orange (existing)
+const COLOR_A = { r: 255, g: 106, b: 26 }
+// Color B: blue at 0.35 "intensity" — we'll treat 0.35 as a brightness scale
+const COLOR_B = { r: 0, g: 149, b: 229 }
+
+function lerp(a: number, b: number, t: number) {
+  return Math.round(a + (b - a) * t)
+}
+
 export function NeonJukeboxLogo({ size = 'lg' }: NeonJukeboxLogoProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const svgRef = useRef<SVGSVGElement>(null)
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -83,6 +93,62 @@ export function NeonJukeboxLogo({ size = 'lg' }: NeonJukeboxLogoProps) {
       }, nextIn)
     }
     globalDip()
+
+    // --- Color cycle via rAF ---
+    // Cycle period: ~6 seconds. t oscillates 0→1→0 using a sine wave.
+    const CYCLE_MS = 6000
+    let rafId: number
+    const startTime = performance.now()
+
+    function applyColor(t: number) {
+      const svg = svgRef.current
+      if (!svg) return
+
+      // t = 0 → full orange, t = 1 → blue at 0.35 brightness
+      const r = lerp(COLOR_A.r, COLOR_B.r, t)
+      const g = lerp(COLOR_A.g, COLOR_B.g, t)
+      const b = lerp(COLOR_A.b, COLOR_B.b, t)
+
+      // outer: full color, low alpha
+      const outerAlpha = lerp(Math.round(0.18 * 255), Math.round(0.35 * 255), t) / 255
+
+      const outerEls = svg.querySelectorAll<SVGTextElement>('.outer')
+      outerEls.forEach((el) => {
+        el.style.stroke = `rgb(${r},${g},${b})`
+        el.style.opacity = outerAlpha.toFixed(3)
+        el.style.filter = `drop-shadow(0 0 10px rgba(${r},${g},${b},0.22)) drop-shadow(0 0 30px rgba(${r},${g},${b},0.22))`
+      })
+
+      const mainEls = svg.querySelectorAll<SVGTextElement>('.main')
+      mainEls.forEach((el) => {
+        el.style.stroke = `rgb(${r},${g},${b})`
+        el.style.filter = `drop-shadow(0 0 10px rgba(${r},${g},${b},0.55)) drop-shadow(0 0 22px rgba(${r},${g},${b},0.35))`
+      })
+
+      // core: bright highlight — stays light but tints toward blue-white
+      const coreR = lerp(255, 210, t)
+      const coreG = lerp(235, 235, t)
+      const coreB = lerp(210, 255, t)
+      const coreEls = svg.querySelectorAll<SVGTextElement>('.core')
+      coreEls.forEach((el) => {
+        el.style.stroke = `rgba(${coreR},${coreG},${coreB},0.85)`
+        el.style.filter = `drop-shadow(0 0 12px rgba(${coreR},${coreG},${coreB},0.55))`
+      })
+    }
+
+    function tick(now: number) {
+      const elapsed = (now - startTime) % CYCLE_MS
+      // sine wave: 0 → 1 → 0 over CYCLE_MS
+      const t = (1 - Math.cos((elapsed / CYCLE_MS) * 2 * Math.PI)) / 2
+      applyColor(t)
+      rafId = requestAnimationFrame(tick)
+    }
+
+    rafId = requestAnimationFrame(tick)
+
+    return () => {
+      cancelAnimationFrame(rafId)
+    }
   }, [])
 
   const sizeClass = size === 'sm' ? 'h-8 w-auto' : 'h-12 w-auto'
@@ -93,6 +159,7 @@ export function NeonJukeboxLogo({ size = 'lg' }: NeonJukeboxLogoProps) {
       className={`${sizeClass} inline-flex items-center justify-center`}
     >
       <svg
+        ref={svgRef}
         viewBox="0 0 1200 260"
         xmlns="http://www.w3.org/2000/svg"
         role="img"
