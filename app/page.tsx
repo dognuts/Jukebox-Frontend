@@ -101,7 +101,7 @@ export default function HomePage() {
       <div className="relative z-10">
         <Navbar />
 
-        <main className="mx-auto max-w-7xl px-4 py-8 lg:px-6">
+        <main className="mx-auto max-w-7xl px-3 py-6 sm:px-4 sm:py-8 lg:px-6">
           {/* Connection status banner */}
           {loaded && usingMock && (
             <div
@@ -118,13 +118,13 @@ export default function HomePage() {
 
           {/* Hero featured room (hidden when filtering) */}
           {!selectedGenre && featuredRoom && (
-            <div className="mb-10">
+            <div className="mb-8 sm:mb-10">
               <FeaturedRoom room={featuredRoom} />
             </div>
           )}
 
           {/* Genre filters */}
-          <section className="mb-8">
+          <section className="mb-6 sm:mb-8">
             {selectedGenre ? (
               <div className="mb-3 flex items-center gap-3">
                 <button
@@ -152,7 +152,7 @@ export default function HomePage() {
           </section>
 
           {/* Live Now */}
-          <div className="mb-10">
+          <div className="mb-8 sm:mb-10">
             <RoomGrid
               rooms={filteredLiveRooms}
               title={selectedGenre ? `Live ${selectedGenre} Rooms` : "Live Now"}
@@ -166,7 +166,7 @@ export default function HomePage() {
 
           {/* Upcoming */}
           {!selectedGenre && upcomingRooms.length > 0 && (
-            <div className="mb-10">
+            <div className="mb-8 sm:mb-10">
               <RoomGrid
                 rooms={upcomingRooms}
                 title="Upcoming"
@@ -177,7 +177,7 @@ export default function HomePage() {
 
           {/* Recently Played */}
           {!selectedGenre && recentlyPlayedRooms.length > 0 && (
-            <div className="mb-10">
+            <div className="mb-8 sm:mb-10">
               <RoomGrid
                 rooms={recentlyPlayedRooms}
                 title="Recently Played"

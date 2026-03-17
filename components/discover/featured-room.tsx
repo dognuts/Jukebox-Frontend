@@ -70,7 +70,7 @@ export function FeaturedRoom({ room }: { room: Room }) {
           </div>
 
           {/* Main content area */}
-          <div className="relative z-10 flex flex-col gap-6 px-8 py-8 sm:px-12 md:flex-row md:items-center md:gap-10 md:py-10">
+          <div className="relative z-10 flex flex-col gap-4 px-4 py-6 sm:gap-6 sm:px-8 sm:py-8 md:flex-row md:items-center md:gap-10 md:py-10 lg:px-12">
 
             {/* Display window with album art */}
             <div className="flex shrink-0 items-center justify-center">
@@ -85,7 +85,7 @@ export function FeaturedRoom({ room }: { room: Room }) {
                 />
                 {/* Album art */}
                 <div
-                  className="relative h-40 w-40 rounded-xl sm:h-48 sm:w-48"
+                  className="relative h-32 w-32 rounded-xl sm:h-40 sm:w-40 md:h-48 md:w-48"
                   style={{
                     background: room.coverArt
                       ? `url(${room.coverArt}) center/cover no-repeat`
@@ -140,7 +140,7 @@ export function FeaturedRoom({ room }: { room: Room }) {
               </div>
 
               <div>
-                <h2 className="font-sans text-2xl font-bold text-foreground sm:text-3xl text-balance neon-text-amber">
+                <h2 className="font-sans text-xl font-bold text-foreground sm:text-2xl md:text-3xl text-balance neon-text-amber">
                   {room.name}
                 </h2>
                 <p className="mt-1 font-sans text-sm text-muted-foreground">

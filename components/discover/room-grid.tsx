@@ -130,7 +130,7 @@ export function RoomGrid({ rooms, title, subtitle }: RoomGridProps) {
           {rooms.map((room) => (
             <div
               key={room.id}
-              className="w-[300px] shrink-0 sm:w-[340px]"
+              className="w-[280px] shrink-0 sm:w-[300px] md:w-[340px]"
               style={{ scrollSnapAlign: "start" }}
             >
               <RoomCard room={room} />
