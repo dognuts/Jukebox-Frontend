@@ -66,7 +66,7 @@ export function Navbar() {
               <NeonJukeboxLogo size="sm" />
             </button>
           </Link>
-          <span className="font-sans text-xs font-light text-foreground/70 leading-none tracking-widest uppercase">
+          <span className="font-sans text-[9px] font-normal text-foreground/50 leading-none tracking-[0.2em] uppercase">
             Listen Together
           </span>
           {classicModeBadge && (
