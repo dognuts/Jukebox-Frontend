@@ -71,7 +71,7 @@ export function RoomCard({ room }: { room: Room }) {
     <Link href={`/room/${room.slug}`}>
       <div
         ref={cardRef}
-        className="group relative cursor-pointer card-hover-effect"
+        className="group relative cursor-pointer card-hover-effect card-shine"
         onMouseMove={handleMouseMove}
         onMouseEnter={() => setHovering(true)}
         onMouseLeave={handleMouseLeave}

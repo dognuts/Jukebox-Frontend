@@ -161,11 +161,14 @@ export function RoomGrid({
           className="flex gap-4 overflow-x-auto pb-2 scrollbar-none"
           style={{ scrollSnapType: "x mandatory" }}
         >
-          {rooms.map((room) => (
+          {rooms.map((room, index) => (
             <div
               key={room.id}
-              className="w-[280px] shrink-0 sm:w-[300px] md:w-[340px]"
-              style={{ scrollSnapAlign: "start" }}
+              className="w-[280px] shrink-0 sm:w-[300px] md:w-[340px] stagger-animate"
+              style={{ 
+                scrollSnapAlign: "start",
+                animationDelay: `${index * 75}ms`,
+              }}
             >
               <RoomCard room={room} />
             </div>

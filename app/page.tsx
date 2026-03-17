@@ -11,6 +11,7 @@ import { BubbleBackground } from "@/components/effects/bubble-background"
 import { ScrollReveal } from "@/components/effects/scroll-reveal"
 import { FeaturedRoomSkeleton, RoomCardSkeleton, GenrePillsSkeleton } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/ui/empty-state"
+import { SectionDivider } from "@/components/ui/section-divider"
 import { type Room } from "@/lib/mock-data"
 import { listRooms, toFrontendRoom } from "@/lib/api"
 
@@ -189,24 +190,30 @@ export default function HomePage() {
 
           {/* Upcoming */}
           {!selectedGenre && upcomingRooms.length > 0 && (
-            <ScrollReveal delay={300} className="mb-8 sm:mb-10">
-              <RoomGrid
-                rooms={upcomingRooms}
-                title="Upcoming"
-                subtitle="Scheduled shows starting soon"
-              />
-            </ScrollReveal>
+            <>
+              <SectionDivider />
+              <ScrollReveal delay={300} className="mb-8 sm:mb-10">
+                <RoomGrid
+                  rooms={upcomingRooms}
+                  title="Upcoming"
+                  subtitle="Scheduled shows starting soon"
+                />
+              </ScrollReveal>
+            </>
           )}
 
           {/* Recently Played */}
           {!selectedGenre && recentlyPlayedRooms.length > 0 && (
-            <ScrollReveal delay={400} className="mb-8 sm:mb-10">
-              <RoomGrid
-                rooms={recentlyPlayedRooms}
-                title="Recently Played"
-                subtitle="Sessions from the last 24 hours"
-              />
-            </ScrollReveal>
+            <>
+              <SectionDivider />
+              <ScrollReveal delay={400} className="mb-8 sm:mb-10">
+                <RoomGrid
+                  rooms={recentlyPlayedRooms}
+                  title="Recently Played"
+                  subtitle="Sessions from the last 24 hours"
+                />
+              </ScrollReveal>
+            </>
           )}
 
           {/* No rooms at all */}
