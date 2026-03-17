@@ -936,7 +936,6 @@
 .upgrade-button-premium {
   position: relative;
   overflow: hidden;
-  transition: all 0.3s ease;
   background: linear-gradient(
     135deg,
     var(--neon-amber) 0%,
@@ -946,18 +945,17 @@
     var(--neon-amber) 100%
   );
   background-size: 200% auto;
+  transition: all 0.3s ease;
 }
 
 .upgrade-button-premium:hover {
   animation: 
     upgrade-glow-pulse 1.5s ease-in-out infinite,
-    upgrade-gradient-shift 2s linear infinite,
-    upgrade-scale-bounce 2s ease-in-out infinite;
+    upgrade-gradient-shift 2s linear infinite;
   box-shadow: 
     0 0 20px var(--neon-amber),
     0 0 40px oklch(0.82 0.18 80 / 0.5),
-    0 0 60px oklch(0.72 0.18 250 / 0.3),
-    inset 0 0 12px oklch(0.82 0.18 80 / 0.15);
+    0 0 60px oklch(0.72 0.18 250 / 0.3);
 }
 
 .upgrade-button-premium:active {
@@ -965,26 +963,7 @@
   box-shadow: 
     0 0 30px var(--neon-amber),
     0 0 60px oklch(0.82 0.18 80 / 0.6),
-    0 0 90px oklch(0.72 0.18 250 / 0.4),
-    inset 0 0 16px oklch(0.82 0.18 80 / 0.2);
-}
-
-.upgrade-button-premium::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    circle at center,
-    oklch(1 0 0 / 0.1),
-    transparent 70%
-  );
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-}
-
-.upgrade-button-premium:hover::before {
-  animation: upgrade-scale-bounce 0.6s ease-out;
+    0 0 90px oklch(0.72 0.18 250 / 0.4);
 }
 
 /* Reduced motion */

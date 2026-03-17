@@ -143,18 +143,19 @@ export function Navbar() {
           <UserMenu />
 
           {plan === "free" && (
-            <Link
-              href="/pricing"
-              className="hidden items-center gap-1.5 rounded-full px-3 py-1.5 font-sans text-xs font-semibold upgrade-button-premium sm:flex"
-              style={{
-                background: "linear-gradient(135deg, oklch(0.82 0.18 80) 0%, oklch(0.85 0.20 60) 50%, oklch(0.72 0.18 250) 100%)",
-                backgroundSize: "200% auto",
-                border: "1px solid oklch(0.82 0.18 80 / 0.5)",
-                color: "oklch(0.15 0.02 80)",
-              }}
-            >
-              <Crown className="h-3.5 w-3.5" />
-              Upgrade
+            <Link href="/pricing" className="hidden sm:block">
+              <button
+                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 font-sans text-xs font-semibold transition-all upgrade-button-premium"
+                style={{
+                  background: "linear-gradient(135deg, oklch(0.82 0.18 80) 0%, oklch(0.85 0.20 60) 50%, oklch(0.72 0.18 250) 100%)",
+                  backgroundSize: "200% auto",
+                  border: "1px solid oklch(0.82 0.18 80 / 0.5)",
+                  color: "oklch(0.15 0.02 80)",
+                }}
+              >
+                <Crown className="h-3.5 w-3.5" />
+                Upgrade
+              </button>
             </Link>
           )}
         </div>
