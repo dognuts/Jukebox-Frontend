@@ -689,23 +689,29 @@
 
 /* Genre pill enhanced glow */
 @keyframes genre-pulse {
-  0%, 100% {
+  0% {
     box-shadow: 
-      0 0 4px var(--neon-amber),
-      0 0 8px oklch(0.82 0.18 80 / 0.3),
-      inset 0 0 4px oklch(0.82 0.18 80 / 0.1);
+      0 0 3px var(--neon-amber),
+      0 0 6px oklch(0.82 0.18 80 / 0.2),
+      inset 0 0 3px oklch(0.82 0.18 80 / 0.06);
   }
   50% {
     box-shadow: 
       0 0 8px var(--neon-amber),
-      0 0 20px oklch(0.82 0.18 80 / 0.4),
-      0 0 40px oklch(0.82 0.18 80 / 0.2),
+      0 0 22px oklch(0.82 0.18 80 / 0.45),
+      0 0 44px oklch(0.82 0.18 80 / 0.22),
       inset 0 0 8px oklch(0.82 0.18 80 / 0.15);
+  }
+  100% {
+    box-shadow: 
+      0 0 3px var(--neon-amber),
+      0 0 6px oklch(0.82 0.18 80 / 0.2),
+      inset 0 0 3px oklch(0.82 0.18 80 / 0.06);
   }
 }
 
 .genre-pill-glow {
-  animation: genre-pulse 2.5s ease-in-out infinite;
+  animation: genre-pulse 3.5s ease-in-out infinite;
   border-color: var(--neon-amber) !important;
 }
 
