@@ -16,9 +16,9 @@ export function AuthShell({ children, title, subtitle }: { children: React.React
             <Image
               src="/images/jukebox-logo.png"
               alt="Jukebox"
-              width={56}
-              height={56}
-              className="h-14 w-14"
+              width={112}
+              height={112}
+              className="h-28 w-28"
             />
             <NeonJukeboxLogo size="lg" />
           </Link>
