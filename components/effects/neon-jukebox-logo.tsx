@@ -18,6 +18,7 @@ function lerp(a: number, b: number, t: number) {
 export function NeonJukeboxLogo({ size = 'lg' }: NeonJukeboxLogoProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
+  const startTimeRef = useRef<number>(0)
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -98,7 +99,10 @@ export function NeonJukeboxLogo({ size = 'lg' }: NeonJukeboxLogoProps) {
     // Cycle period: ~30 seconds. t oscillates 0→1→0 using a sine wave.
     const CYCLE_MS = 30000
     let rafId: number
-    const startTime = performance.now()
+    if (startTimeRef.current === 0) {
+      startTimeRef.current = performance.now()
+    }
+    const startTime = startTimeRef.current
 
     function applyColor(t: number) {
       const svg = svgRef.current
