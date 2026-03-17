@@ -61,7 +61,6 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <ProgressBar />
         <AmbientBackground />
-        <BubbleBackground />
         <RoomStatusProvider>
         <AuthProvider>
         <FavoritesProvider>
@@ -70,6 +69,7 @@ export default function RootLayout({
             <MessagesProvider>
               <PlayerProvider>
                 <EasterEggProvider>
+                  <BubbleBackground />
                   {children}
                 </EasterEggProvider>
                 <MiniPlayer />
