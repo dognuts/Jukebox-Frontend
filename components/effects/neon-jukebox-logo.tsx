@@ -45,10 +45,10 @@ export function NeonJukeboxLogo({ size = 'lg' }: NeonJukeboxLogoProps) {
 
     // Flicker patterns: sequences of [brightness, ms]
     const patterns = [
-      [[0.55, 35], [1.0, 120]],
-      [[0.35, 25], [1.0, 60], [0.65, 40], [1.0, 220]],
-      [[0.2, 55], [0.55, 90], [1.0, 400]],
-      [[0.75, 30], [1.0, 90]],
+      [[0.55, 70], [1.0, 240]],
+      [[0.35, 50], [1.0, 120], [0.65, 80], [1.0, 440]],
+      [[0.2, 110], [0.55, 180], [1.0, 800]],
+      [[0.75, 60], [1.0, 180]],
     ] as const
 
     function runPattern(i: number, pattern: readonly (readonly [number, number])[]) {
@@ -62,7 +62,7 @@ export function NeonJukeboxLogo({ size = 'lg' }: NeonJukeboxLogoProps) {
 
     // Schedule per-letter flickers at random intervals
     function scheduleLetter(i: number): void {
-      const nextIn = 220 + Math.random() * 1400
+      const nextIn = 440 + Math.random() * 2800
       setTimeout(() => {
         const r = Math.random()
         if (r < 0.62) {
