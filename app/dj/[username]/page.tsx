@@ -6,7 +6,7 @@ import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Navbar } from "@/components/layout/navbar"
 import { Footer } from "@/components/layout/footer"
-import { BubbleBackground } from "@/components/effects/bubble-background"
+
 import { DJHeader } from "@/components/profile/dj-header"
 import { ShowHistory } from "@/components/profile/show-history"
 import { getDJByUsername, djs, getRoomBySlug } from "@/lib/mock-data"
@@ -24,7 +24,6 @@ export default function DJProfilePage() {
 
   return (
     <div className="relative min-h-screen">
-      <BubbleBackground />
       <div className="relative z-10">
         <Navbar />
 

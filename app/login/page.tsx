@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AuthShell } from "@/components/auth/auth-shell"
 import { useAuth } from "@/lib/auth-context"
+import { Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -24,9 +26,11 @@ export default function LoginPage() {
 
     try {
       await login(email, password)
+      toast.success("Welcome back!")
       router.push("/")
     } catch (err: any) {
       setError(err.message || "Login failed")
+      toast.error("Login failed")
     } finally {
       setLoading(false)
     }
@@ -42,14 +46,14 @@ export default function LoginPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <Label htmlFor="email" className="font-sans text-sm text-muted-foreground">Email</Label>
+          <Label htmlFor="email" className="font-sans text-sm font-medium text-foreground">Email</Label>
           <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required
             className="mt-1 rounded-xl border-border/40 bg-muted/30 font-sans" />
         </div>
 
         <div>
           <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="font-sans text-sm text-muted-foreground">Password</Label>
+            <Label htmlFor="password" className="font-sans text-sm font-medium text-foreground">Password</Label>
             <Link href="/forgot-password" className="font-sans text-xs text-primary hover:underline">Forgot password?</Link>
           </div>
           <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
@@ -57,7 +61,12 @@ export default function LoginPage() {
         </div>
 
         <Button type="submit" disabled={loading} className="w-full rounded-xl bg-primary font-sans font-semibold text-primary-foreground hover:bg-primary/90">
-          {loading ? "Logging in..." : "Log In"}
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Logging in...
+            </>
+          ) : "Log In"}
         </Button>
       </form>
 

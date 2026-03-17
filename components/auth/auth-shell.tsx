@@ -1,21 +1,17 @@
 "use client"
 
 import Link from "next/link"
-import { Radio } from "lucide-react"
-import { BubbleBackground } from "@/components/effects/bubble-background"
+
+import { NeonJukeboxLogo } from "@/components/effects/neon-jukebox-logo"
 
 export function AuthShell({ children, title, subtitle }: { children: React.ReactNode; title: string; subtitle?: string }) {
   return (
     <div className="relative min-h-screen flex items-center justify-center px-4 py-12">
-      <BubbleBackground />
       <div className="relative z-10 w-full max-w-md">
         {/* Logo */}
-        <div className="mb-8 text-center">
-          <Link href="/" className="inline-flex items-center gap-2">
-            <Radio className="h-7 w-7 text-primary" />
-            <span className="font-sans text-2xl font-bold tracking-tight text-foreground neon-text-amber">
-              Jukebox
-            </span>
+        <div className="mb-8 flex justify-center">
+          <Link href="/">
+            <NeonJukeboxLogo size="lg" />
           </Link>
         </div>
 

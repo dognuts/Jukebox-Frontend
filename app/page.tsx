@@ -1,13 +1,19 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
-import { ArrowLeft } from "lucide-react"
+import { useState, useMemo, useEffect, useRef } from "react"
+import { ArrowLeft, HelpCircle } from "lucide-react"
+import { toast } from "sonner"
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import { Navbar } from "@/components/layout/navbar"
 import { Footer } from "@/components/layout/footer"
 import { FeaturedRoom } from "@/components/discover/featured-room"
 import { GenrePills } from "@/components/discover/genre-pills"
 import { RoomGrid } from "@/components/discover/room-grid"
-import { BubbleBackground } from "@/components/effects/bubble-background"
+
+import { ScrollReveal } from "@/components/effects/scroll-reveal"
+import { FeaturedRoomSkeleton, RoomCardSkeleton, GenrePillsSkeleton } from "@/components/ui/skeleton"
+import { EmptyState } from "@/components/ui/empty-state"
+import { SectionDivider } from "@/components/ui/section-divider"
 import { type Room } from "@/lib/mock-data"
 import { listRooms, toFrontendRoom } from "@/lib/api"
 
@@ -19,6 +25,8 @@ export default function HomePage() {
   const [allRooms, setAllRooms] = useState<Room[]>([])
   const [loaded, setLoaded] = useState(false)
   const [usingMock, setUsingMock] = useState(false)
+  const { registerShortcut } = useKeyboardShortcuts()
+  const scrollToTopRef = useRef<() => void>(() => {})
 
   // Fetch rooms from backend
   useEffect(() => {
@@ -60,6 +68,41 @@ export default function HomePage() {
     }
   }, [])
 
+  // Register keyboard shortcuts
+  useEffect(() => {
+    registerShortcut({
+      key: '/',
+      description: 'Focus search',
+      action: () => {
+        const searchInput = document.querySelector('input[type="text"][placeholder*="search" i]') as HTMLInputElement
+        if (searchInput) {
+          searchInput.focus()
+          toast.info('Type to search rooms')
+        }
+      },
+    })
+
+    registerShortcut({
+      key: '?',
+      shift: true,
+      description: 'Show keyboard shortcuts',
+      action: () => {
+        toast.info('Keyboard Shortcuts:\n/ - Focus search\nShift+? - This help message')
+      },
+    })
+
+    registerShortcut({
+      key: 'c',
+      description: 'Clear filters',
+      action: () => {
+        if (selectedGenre) {
+          setSelectedGenre(null)
+          toast.success('Filters cleared')
+        }
+      },
+    })
+  }, [registerShortcut, selectedGenre])
+
   const liveRooms = useMemo(() => allRooms.filter((r) => r.isLive), [allRooms])
   const upcomingRooms = useMemo(
     () =>
@@ -97,11 +140,10 @@ export default function HomePage() {
 
   return (
     <div className="relative min-h-screen">
-      <BubbleBackground />
       <div className="relative z-10">
         <Navbar />
 
-        <main className="mx-auto max-w-7xl px-4 py-8 lg:px-6">
+        <main className="mx-auto max-w-7xl px-3 py-6 sm:px-4 sm:py-8 lg:px-6">
           {/* Connection status banner */}
           {loaded && usingMock && (
             <div
@@ -117,14 +159,19 @@ export default function HomePage() {
           )}
 
           {/* Hero featured room (hidden when filtering) */}
-          {!selectedGenre && featuredRoom && (
-            <div className="mb-10">
-              <FeaturedRoom room={featuredRoom} />
+          {!loaded && !selectedGenre && (
+            <div className="mb-8 sm:mb-10">
+              <FeaturedRoomSkeleton />
             </div>
+          )}
+          {loaded && !selectedGenre && featuredRoom && (
+            <ScrollReveal className="mb-8 sm:mb-10">
+              <FeaturedRoom room={featuredRoom} />
+            </ScrollReveal>
           )}
 
           {/* Genre filters */}
-          <section className="mb-8">
+          <ScrollReveal delay={100} className="mb-6 sm:mb-8">
             {selectedGenre ? (
               <div className="mb-3 flex items-center gap-3">
                 <button
@@ -148,52 +195,72 @@ export default function HomePage() {
                 Browse by Genre
               </h2>
             )}
-            <GenrePills selected={selectedGenre} onSelect={setSelectedGenre} />
-          </section>
+            {!loaded ? <GenrePillsSkeleton /> : <GenrePills selected={selectedGenre} onSelect={setSelectedGenre} />}
+          </ScrollReveal>
 
           {/* Live Now */}
-          <div className="mb-10">
-            <RoomGrid
-              rooms={filteredLiveRooms}
-              title={selectedGenre ? `Live ${selectedGenre} Rooms` : "Live Now"}
-              subtitle={
-                selectedGenre
-                  ? `${filteredLiveRooms.length} room${filteredLiveRooms.length !== 1 ? "s" : ""} streaming`
-                  : "Streaming right now"
-              }
-            />
-          </div>
+          {!loaded ? (
+            <div className="mb-8 sm:mb-10">
+              <h2 className="mb-4 font-sans text-lg font-bold text-foreground">Live Now</h2>
+              <div className="flex gap-4 overflow-hidden">
+                {[...Array(4)].map((_, i) => (
+                  <RoomCardSkeleton key={i} />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <ScrollReveal delay={200} className="mb-8 sm:mb-10">
+              <RoomGrid
+                rooms={filteredLiveRooms}
+                title={selectedGenre ? `Live ${selectedGenre} Rooms` : "Live Now"}
+                subtitle={
+                  selectedGenre
+                    ? `${filteredLiveRooms.length} room${filteredLiveRooms.length !== 1 ? "s" : ""} streaming`
+                    : "Streaming right now"
+                }
+                showEmptyState={!!selectedGenre}
+                emptyStateTitle={`No ${selectedGenre} rooms live`}
+                emptyStateDescription={`There are no ${selectedGenre} rooms streaming right now. Check back later or explore other genres.`}
+                onClearFilters={() => setSelectedGenre(null)}
+              />
+            </ScrollReveal>
+          )}
 
           {/* Upcoming */}
           {!selectedGenre && upcomingRooms.length > 0 && (
-            <div className="mb-10">
-              <RoomGrid
-                rooms={upcomingRooms}
-                title="Upcoming"
-                subtitle="Scheduled shows starting soon"
-              />
-            </div>
+            <>
+              <SectionDivider />
+              <ScrollReveal delay={300} className="mb-8 sm:mb-10">
+                <RoomGrid
+                  rooms={upcomingRooms}
+                  title="Upcoming"
+                  subtitle="Scheduled shows starting soon"
+                />
+              </ScrollReveal>
+            </>
           )}
 
           {/* Recently Played */}
           {!selectedGenre && recentlyPlayedRooms.length > 0 && (
-            <div className="mb-10">
-              <RoomGrid
-                rooms={recentlyPlayedRooms}
-                title="Recently Played"
-                subtitle="Sessions from the last 24 hours"
-              />
-            </div>
+            <>
+              <SectionDivider />
+              <ScrollReveal delay={400} className="mb-8 sm:mb-10">
+                <RoomGrid
+                  rooms={recentlyPlayedRooms}
+                  title="Recently Played"
+                  subtitle="Sessions from the last 24 hours"
+                />
+              </ScrollReveal>
+            </>
           )}
 
           {/* No rooms at all */}
           {loaded && !usingMock && allRooms.length === 0 && (
-            <div className="text-center py-20">
-              <p className="font-sans text-lg text-muted-foreground mb-2">No rooms yet</p>
-              <p className="font-sans text-sm text-muted-foreground">
-                Create the first room to get started!
-              </p>
-            </div>
+            <EmptyState
+              variant="no-rooms"
+              title="No rooms live"
+              description="All DJs are taking a break. Check back soon or start your own session!"
+            />
           )}
         </main>
 

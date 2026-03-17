@@ -11,6 +11,7 @@ import { AuthShell } from "@/components/auth/auth-shell"
 import { useAuth } from "@/lib/auth-context"
 import { API_BASE } from "@/lib/api"
 import { containsProfanity } from "@/lib/moderation"
+import { toast } from "sonner"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -78,6 +79,7 @@ export default function SignupPage() {
     setLoading(true)
     try {
       await signup(email, password, stageName, stageName)
+      toast.success("Welcome to Jukebox!")
       router.push("/")
     } catch (err: any) {
       const msg = err.message || "Signup failed"
@@ -85,6 +87,7 @@ export default function SignupPage() {
         setNameStatus("taken")
       }
       setError(msg)
+      toast.error("Signup failed")
     } finally {
       setLoading(false)
     }
@@ -100,8 +103,8 @@ export default function SignupPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <Label htmlFor="stageName" className="font-sans text-sm text-muted-foreground">
-            Stage Name <span className="text-muted-foreground/50">(display name)</span>
+          <Label htmlFor="stageName" className="font-sans text-sm font-medium text-foreground">
+            Stage Name <span className="text-muted-foreground/50 font-normal">(display name)</span>
           </Label>
           <div className="relative mt-1">
             <Input
@@ -133,19 +136,24 @@ export default function SignupPage() {
         </div>
 
         <div>
-          <Label htmlFor="email" className="font-sans text-sm text-muted-foreground">Email</Label>
+          <Label htmlFor="email" className="font-sans text-sm font-medium text-foreground">Email</Label>
           <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required
             className="mt-1 rounded-xl border-border/40 bg-muted/30 font-sans" />
         </div>
 
         <div>
-          <Label htmlFor="password" className="font-sans text-sm text-muted-foreground">Password</Label>
+          <Label htmlFor="password" className="font-sans text-sm font-medium text-foreground">Password</Label>
           <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 8 chars, upper + lower + digit" required minLength={8}
             className="mt-1 rounded-xl border-border/40 bg-muted/30 font-sans" />
         </div>
 
         <Button type="submit" disabled={loading || nameStatus === "taken"} className="w-full rounded-xl bg-primary font-sans font-semibold text-primary-foreground hover:bg-primary/90">
-          {loading ? "Creating account..." : "Sign Up"}
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Creating account...
+            </>
+          ) : "Sign Up"}
         </Button>
       </form>
 

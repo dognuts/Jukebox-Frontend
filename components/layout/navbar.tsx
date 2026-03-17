@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRef, useCallback, useState, useEffect } from "react"
-import { Search, Plus, Radio, MessageCircle, Crown, Zap } from "lucide-react"
+import { Search, Plus, MessageCircle, Crown, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -11,6 +11,7 @@ import { useMessages } from "@/lib/messages-context"
 import { useUpgrade } from "@/lib/upgrade-context"
 import { useAuth } from "@/lib/auth-context"
 import { UserMenu } from "@/components/layout/user-menu"
+import { NeonJukeboxLogo } from "@/components/effects/neon-jukebox-logo"
 
 export function Navbar() {
   const { triggerRainbow, classicModeBadge } = useEasterEggs()
@@ -54,24 +55,24 @@ export function Navbar() {
     <header
       className={`sticky top-0 z-40 w-full border-b border-border/50 glass-panel transition-transform duration-300 ${hidden ? "-translate-y-full" : "translate-y-0"}`}
     >
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 lg:px-6">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 lg:px-6">
         {/* Logo */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col items-center gap-0.5">
           <Link href="/">
             <button
               onClick={handleLogoClick}
-              className="flex items-center gap-2 bg-transparent border-0 cursor-pointer"
+              className="flex items-center bg-transparent border-0 cursor-pointer"
             >
-              <Radio className="h-6 w-6 text-primary" />
-              <span className="font-sans text-xl font-bold tracking-tight text-foreground neon-text-amber">
-                Jukebox
-              </span>
+              <NeonJukeboxLogo size="sm" />
             </button>
           </Link>
+          <span className="font-sans text-[9px] font-normal text-foreground/50 leading-none tracking-[0.2em] uppercase">
+            Listen Together
+          </span>
           {classicModeBadge && (
             <Badge
               variant="outline"
-              className="border-primary/40 text-primary text-xs animate-neon-flicker"
+              className="border-primary/40 text-primary text-xs animate-neon-flicker mt-1"
             >
               Classic
             </Badge>
@@ -142,17 +143,19 @@ export function Navbar() {
           <UserMenu />
 
           {plan === "free" && (
-            <Link
-              href="/pricing"
-              className="hidden items-center gap-1.5 rounded-full px-3 py-1.5 font-sans text-xs font-semibold transition-all hover:opacity-90 sm:flex"
-              style={{
-                background: "linear-gradient(135deg, oklch(0.82 0.18 80 / 0.15), oklch(0.80 0.20 60 / 0.15))",
-                border: "1px solid oklch(0.82 0.18 80 / 0.3)",
-                color: "oklch(0.82 0.18 80)",
-              }}
-            >
-              <Crown className="h-3.5 w-3.5" />
-              Upgrade
+            <Link href="/pricing" className="hidden sm:block">
+              <button
+                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 font-sans text-xs font-semibold transition-all upgrade-button-premium"
+                style={{
+                  background: "linear-gradient(135deg, oklch(0.82 0.18 80) 0%, oklch(0.85 0.20 60) 50%, oklch(0.72 0.18 250) 100%)",
+                  backgroundSize: "200% auto",
+                  border: "1px solid oklch(0.82 0.18 80 / 0.5)",
+                  color: "oklch(0.15 0.02 80)",
+                }}
+              >
+                <Crown className="h-3.5 w-3.5" />
+                Upgrade
+              </button>
             </Link>
           )}
         </div>

@@ -92,11 +92,16 @@ export function UserMenu() {
           <>
             <DropdownMenuSeparator className="bg-border/30" />
             <DropdownMenuItem
-              className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 font-sans text-sm transition-colors hover:bg-primary/10 focus:bg-primary/10"
+              className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 font-sans text-sm font-semibold upgrade-button-premium transition-all"
               onClick={openUpgradeDialog}
+              style={{
+                background: "linear-gradient(135deg, oklch(0.82 0.18 80) 0%, oklch(0.85 0.20 60) 50%, oklch(0.72 0.18 250) 100%)",
+                backgroundSize: "200% auto",
+                color: "oklch(0.15 0.02 80)",
+              }}
             >
-              <Crown className="h-4 w-4" style={{ color: "oklch(0.82 0.18 80)" }} />
-              <span style={{ color: "oklch(0.82 0.18 80)" }}>Upgrade to Premium</span>
+              <Crown className="h-4 w-4" />
+              <span>Upgrade to Premium</span>
             </DropdownMenuItem>
           </>
         )}

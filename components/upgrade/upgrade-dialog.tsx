@@ -58,16 +58,17 @@ export function UpgradeDialog() {
 
         {/* CTA */}
         <div className="px-6 pb-6 space-y-3">
-          <Button
+          <button
             onClick={() => { closeUpgradeDialog(); router.push("/pricing") }}
-            className="w-full rounded-xl py-3 font-sans font-semibold text-white"
+            className="w-full rounded-xl py-3 font-sans font-semibold text-background upgrade-button-premium"
             style={{
-              background: "linear-gradient(135deg, oklch(0.55 0.22 270), oklch(0.48 0.24 300))",
-              boxShadow: "0 0 20px oklch(0.55 0.22 270 / 0.3)",
+              background: "linear-gradient(135deg, oklch(0.82 0.18 80) 0%, oklch(0.85 0.20 60) 50%, oklch(0.72 0.18 250) 100%)",
+              backgroundSize: "200% auto",
+              boxShadow: "0 0 20px oklch(0.82 0.18 80 / 0.3)",
             }}
           >
             View Pricing
-          </Button>
+          </button>
           <button
             onClick={closeUpgradeDialog}
             className="block w-full text-center font-sans text-xs text-muted-foreground hover:text-foreground"

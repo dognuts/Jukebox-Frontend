@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Navbar } from "@/components/layout/navbar"
 import { Footer } from "@/components/layout/footer"
-import { BubbleBackground } from "@/components/effects/bubble-background"
+
 import { ProfileView } from "@/components/account/profile-view"
 import { FavoritesSection } from "@/components/account/favorites-section"
 import { PlaylistsSection } from "@/components/account/playlists-section"
@@ -72,7 +72,6 @@ export default function AccountPage() {
 
   return (
     <div className="relative min-h-screen">
-      <BubbleBackground />
       <Navbar />
 
       <main className="relative z-10 mx-auto max-w-4xl px-4 py-8 lg:px-6">

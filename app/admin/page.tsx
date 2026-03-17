@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Navbar } from "@/components/layout/navbar"
-import { BubbleBackground } from "@/components/effects/bubble-background"
+
 import { useAuth } from "@/lib/auth-context"
 
 import { authRequest } from "@/lib/api"
@@ -97,7 +97,6 @@ export default function AdminPage() {
   if (!loading && !isAdmin) {
     return (
       <div className="relative min-h-screen">
-        <BubbleBackground />
         <div className="relative z-10">
           <Navbar />
           <div className="flex flex-col items-center justify-center gap-4 py-40">
@@ -121,7 +120,6 @@ export default function AdminPage() {
 
   return (
     <div className="relative min-h-screen">
-      <BubbleBackground />
       <div className="relative z-10">
         <Navbar />
 

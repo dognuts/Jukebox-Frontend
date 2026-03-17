@@ -2,10 +2,12 @@
 
 import Link from "next/link"
 import { useRef, useState, useCallback, useEffect } from "react"
-import { Headphones, Music, Bell, BellRing, Clock, Inbox, PauseCircle, XCircle } from "lucide-react"
+import { Headphones, Music, Bell, BellRing, Clock, Inbox, PauseCircle, XCircle, Heart } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { SoundWaveVisualizer } from "@/components/effects/sound-wave-visualizer"
 import { type Room, formatListenerCount } from "@/lib/mock-data"
 import { useRoomStatus } from "@/lib/room-status-context"
+import { useFavorites } from "@/lib/favorites-context"
 
 function useCountdown(targetDate?: Date) {
   const [timeLeft, setTimeLeft] = useState("")
@@ -42,8 +44,10 @@ export function RoomCard({ room }: { room: Room }) {
   const [tilt, setTilt] = useState({ x: 0, y: 0 })
   const [hovering, setHovering] = useState(false)
   const { requestStatus } = useRoomStatus(room.id)
+  const { isFavorite, toggleFavorite } = useFavorites()
   const [reminderSet, setReminderSet] = useState(false)
   const countdown = useCountdown(room.scheduledStart)
+  const favorited = isFavorite(room.id)
 
   const isUpcoming = !!room.scheduledStart && !room.isLive
 
@@ -67,7 +71,7 @@ export function RoomCard({ room }: { room: Room }) {
     <Link href={`/room/${room.slug}`}>
       <div
         ref={cardRef}
-        className="group relative cursor-pointer"
+        className="group relative cursor-pointer card-hover-effect card-shine"
         onMouseMove={handleMouseMove}
         onMouseEnter={() => setHovering(true)}
         onMouseLeave={handleMouseLeave}
@@ -196,15 +200,38 @@ export function RoomCard({ room }: { room: Room }) {
                     )}
                   </div>
 
-                  {/* Listener count */}
-                  {room.isLive && (
-                    <div className="flex items-center gap-1 rounded-full px-2 py-0.5" style={{ background: "oklch(0.10 0.01 280 / 0.85)", border: "1px solid oklch(0.30 0.02 280 / 0.5)" }}>
-                      <Headphones className="h-3 w-3 text-muted-foreground" />
-                      <span className="font-sans text-[10px] text-foreground">
-                        {formatListenerCount(room.listenerCount)}
-                      </span>
-                    </div>
-                  )}
+                  {/* Listener count + favorite */}
+                  <div className="flex items-center gap-1.5">
+                    {room.isLive && (
+                      <div className="flex items-center gap-1 rounded-full px-2 py-0.5" style={{ background: "oklch(0.10 0.01 280 / 0.85)", border: "1px solid oklch(0.30 0.02 280 / 0.5)" }}>
+                        <Headphones className="h-3 w-3 text-muted-foreground" />
+                        <span className="font-sans text-[10px] text-foreground">
+                          {formatListenerCount(room.listenerCount)}
+                        </span>
+                      </div>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        toggleFavorite(room.id, room.name)
+                      }}
+                      className="flex items-center justify-center rounded-full p-1 transition-all"
+                      style={{
+                        background: favorited ? "oklch(0.50 0.24 0 / 0.2)" : "oklch(0.10 0.01 280 / 0.85)",
+                        border: favorited ? "1px solid oklch(0.60 0.24 0 / 0.5)" : "1px solid oklch(0.30 0.02 280 / 0.5)",
+                      }}
+                      aria-label={favorited ? "Remove from favorites" : "Add to favorites"}
+                    >
+                      <Heart
+                        className="h-3 w-3 transition-all"
+                        style={{
+                          color: favorited ? "oklch(0.65 0.28 0)" : "oklch(0.60 0.02 280)",
+                          fill: favorited ? "oklch(0.65 0.28 0)" : "transparent",
+                        }}
+                      />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Bottom: room name, DJ, genres -- over a subtle dark scrim */}
@@ -344,22 +371,11 @@ export function RoomCard({ room }: { room: Room }) {
                 </button>
               </div>
             ) : (
-              <div className="mx-4 mb-2 flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5" style={{ background: "linear-gradient(90deg, oklch(0.18 0.01 280), oklch(0.22 0.01 280), oklch(0.18 0.01 280))", border: "1px solid oklch(0.30 0.03 60 / 0.3)" }}>
-                {/* Mini visualizer dots */}
-                {room.isLive && [0.6, 1, 0.4, 0.8, 0.5].map((h, i) => (
-                  <div
-                    key={i}
-                    className="shrink-0 rounded-full"
-                    style={{
-                      width: 3,
-                      height: 3 + h * 8,
-                      background: i % 2 === 0 ? "var(--neon-amber)" : "var(--neon-magenta)",
-                      animation: `visualizer-bar ${0.3 + i * 0.1}s ease-in-out infinite alternate`,
-                      animationDelay: `${i * 0.07}s`,
-                      opacity: 0.7,
-                    }}
-                  />
-                ))}
+              <div className="mx-4 mb-2 flex items-center justify-center gap-2 rounded-lg px-2 py-1.5" style={{ background: "linear-gradient(90deg, oklch(0.18 0.01 280), oklch(0.22 0.01 280), oklch(0.18 0.01 280))", border: "1px solid oklch(0.30 0.03 60 / 0.3)" }}>
+                {/* Sound wave visualizer */}
+                {room.isLive && (
+                  <SoundWaveVisualizer isPlaying={true} size="sm" color="mixed" barCount={5} />
+                )}
                 <div className="min-w-0">
                   {room.isLive ? (
                     <p className="font-sans text-[10px] truncate max-w-[180px] text-center">

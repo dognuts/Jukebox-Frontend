@@ -53,7 +53,7 @@ export function GenrePills({ selected, onSelect }: GenrePillsProps) {
   return (
     <div
       ref={containerRef}
-      className="flex flex-wrap gap-2"
+      className="flex flex-wrap gap-2 justify-center"
       role="group"
       aria-label="Filter by genre"
     >
@@ -64,7 +64,7 @@ export function GenrePills({ selected, onSelect }: GenrePillsProps) {
           <button
             key={genre}
             onClick={(e) => handleClick(genre, e)}
-            className="relative overflow-hidden rounded-full px-4 py-1.5 font-sans text-sm font-medium transition-all duration-300 border"
+            className={`relative overflow-hidden rounded-full px-4 py-1.5 font-sans text-sm font-medium transition-all duration-300 border ${isSelected ? 'genre-pill-glow' : ''}`}
             style={{
               background: isSelected
                 ? `oklch(0.30 0.08 ${hue})`

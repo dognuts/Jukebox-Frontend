@@ -7,7 +7,7 @@ import { ArrowLeft, Shield, Radio } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Navbar } from "@/components/layout/navbar"
-import { BubbleBackground } from "@/components/effects/bubble-background"
+
 import { useAuth } from "@/lib/auth-context"
 
 import { authRequest } from "@/lib/api"
@@ -33,7 +33,7 @@ export default function AdminCreatePage() {
   if (!isAdmin) {
     return (
       <div className="relative min-h-screen">
-        <BubbleBackground />
+
         <div className="relative z-10">
           <Navbar />
           <div className="flex flex-col items-center justify-center gap-4 py-40">
@@ -72,7 +72,7 @@ export default function AdminCreatePage() {
   if (djKey) {
     return (
       <div className="relative min-h-screen">
-        <BubbleBackground />
+
         <div className="relative z-10">
           <Navbar />
           <div className="mx-auto max-w-md py-20 px-4">
