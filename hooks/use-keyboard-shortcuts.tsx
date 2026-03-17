@@ -1,7 +1,7 @@
-'use client'
+"use client"
 
-import { useEffect, useState, useCallback } from 'react'
-import { toast } from 'sonner'
+import { useEffect, useState, useCallback, type ReactNode } from "react"
+import { toast } from "sonner"
 
 interface KeyboardShortcut {
   key: string
@@ -55,7 +55,7 @@ export function useKeyboardShortcuts() {
   return { registerShortcut, unregisterShortcut, shortcuts }
 }
 
-export function KeyboardShortcutsProvider({ children }: { children: React.ReactNode }) {
+export function KeyboardShortcutsProvider({ children }: { children: ReactNode }) {
   const { registerShortcut } = useKeyboardShortcuts()
 
   useEffect(() => {
