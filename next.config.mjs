@@ -1,11 +1,15 @@
 /** @type {import('next').NextConfig} */
-// Cache invalidation: 2026-03-17
+// Force full rebuild - cache disabled
 const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
   images: {
     unoptimized: true,
+  },
+  onDemandEntries: {
+    maxInactiveAge: 0,
+    maxSize: 0,
   },
   async rewrites() {
     return [
