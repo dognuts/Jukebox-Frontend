@@ -155,7 +155,7 @@ export default function RoomPage() {
   const serverPolicy = ws.connected ? ws.requestPolicy : (room?.requestPolicy ?? "open")
   const requestStatus = serverPolicy === "approval" ? "paused" : serverPolicy as "open" | "closed"
 
-  // Mock activity messages (join/tip) injected into chat
+  // Mock activity messages (join/tip) injected into chat - these are merged into chat stream
   const mockActivityMessages = useMockActivityMessages()
 
   // Track history - combine current + queue for demo

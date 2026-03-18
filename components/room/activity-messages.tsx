@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import type { ChatMessage } from "@/lib/mock-data"
 
-// Activity feed hook for merging join/tip events into chat stream
 export function useMockActivityMessages(): ChatMessage[] {
   const [messages, setMessages] = useState<ChatMessage[]>([])
 
@@ -18,7 +17,6 @@ export function useMockActivityMessages(): ChatMessage[] {
       "oklch(0.60 0.18 320)",
     ]
 
-    // Seed with a couple of join messages
     const initialMessages: ChatMessage[] = [
       {
         id: `activity-init-1`,
@@ -39,7 +37,6 @@ export function useMockActivityMessages(): ChatMessage[] {
     ]
     setMessages(initialMessages)
 
-    // Simulate join/tip events over time
     const interval = setInterval(() => {
       const isJoin = Math.random() > 0.4
       const username = mockUsernames[Math.floor(Math.random() * mockUsernames.length)]
