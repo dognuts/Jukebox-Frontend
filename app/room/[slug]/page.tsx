@@ -453,7 +453,7 @@ export default function RoomPage() {
                 </div>
 
                 {/* Room info header */}
-                <div className="relative z-30 px-8 pt-8 pb-3 text-center">
+                <div className="relative z-30 px-8 pt-6 pb-4 text-center">
                   <div className="flex flex-wrap items-center justify-center gap-3">
                     <h1 className="font-sans text-xl font-bold text-foreground neon-text-amber">
                       {room.name}
@@ -512,17 +512,23 @@ export default function RoomPage() {
                       {requestStatus === "open" ? "Requests Open" : requestStatus === "paused" ? "Requests Paused" : "Requests Closed"}
                     </span>
                   </div>
+
+                  {/* Subtle divider */}
+                  <div
+                    className="mt-4 mx-auto h-px w-24"
+                    style={{ background: "linear-gradient(90deg, transparent, oklch(0.40 0.02 280 / 0.5), transparent)" }}
+                  />
                 </div>
 
                 {/* DJ Subscription card — listeners only */}
                 {!isDJ && room.creatorUserId && (
-                  <div className="relative z-10 px-6 pb-2">
+                  <div className="relative z-10 px-6 py-2">
                     <DJSubscribeCard djUserId={room.creatorUserId} djName={room.djName} />
                   </div>
                 )}
 
                 {/* Glass display window */}
-                <div className="relative z-10 mx-6">
+                <div className="relative z-10 mx-6 mt-2">
                   <div
                     className="absolute -inset-[2px] rounded-2xl pointer-events-none"
                     style={{
