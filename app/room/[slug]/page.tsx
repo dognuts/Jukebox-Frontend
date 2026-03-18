@@ -829,16 +829,6 @@ export default function RoomPage() {
         </div>
       </div>
 
-      {/* Track Countdown - shows when track is ending */}
-      {!isDJ && queueTracks.length > 0 && (
-        <TrackCountdown
-          nextTrack={queueTracks[0]}
-          currentTime={audioCurrentTime}
-          currentDuration={audioDuration}
-          showThreshold={15}
-        />
-      )}
-
       {/* Request modal */}
       <RequestModal
         open={requestModalOpen}
