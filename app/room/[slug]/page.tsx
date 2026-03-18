@@ -26,6 +26,10 @@ import { NeonTubeViz } from "@/components/room/neon-tube"
 import { SendNeonModal } from "@/components/room/send-neon-modal"
 import { DJSubscribeCard } from "@/components/room/dj-subscribe-card"
 import { useAuth } from "@/lib/auth-context"
+import { HypeMeter, useHypeTracking } from "@/components/room/hype-meter"
+import { CollapsibleSection } from "@/components/room/collapsible-section"
+import { IntermissionScheduler } from "@/components/room/intermission-scheduler"
+import { PerformanceMode } from "@/components/room/performance-mode"
 
 export default function RoomPage() {
   const params = useParams()
@@ -115,6 +119,10 @@ export default function RoomPage() {
   const [mobilePanel, setMobilePanel] = useState<"queue" | "chat">("chat")
   const [micActive, setMicActive] = useState(false)
   const [micPausesMusic, setMicPausesMusic] = useState(true)
+  const [performanceModeOpen, setPerformanceModeOpen] = useState(false)
+
+  // Hype tracking for DJ view
+  const hypeTracking = useHypeTracking()
 
   // Mock tube state for when backend is not connected
   const [mockTube, setMockTube] = useState({ roomId: slug || "", level: 1, fillAmount: 35, fillTarget: 100, totalNeon: 35 })
@@ -750,6 +758,7 @@ export default function RoomPage() {
                       onMicChange={handleMicChange}
                       onEndRoom={ws.connected ? ws.djEndRoom : undefined}
                       listenerCount={listenerCount}
+                      onEnterPerformanceMode={() => setPerformanceModeOpen(true)}
                     />
                   </div>
                 )}
@@ -819,44 +828,61 @@ export default function RoomPage() {
               </div>
             )}
 
-            {/* Queue */}
-            <div
-              className={`relative overflow-hidden rounded-2xl ${mobilePanel !== "queue" ? "hidden lg:block" : ""}`}
-              style={{
-                background: "oklch(0.13 0.01 280)",
-                border: "1px solid oklch(0.28 0.02 60 / 0.25)",
-              }}
-            >
-              <div className="p-4">
-                <TrackQueue
-                  tracks={queueTracks}
-                  isDJ={isDJ}
-                  requestPolicy={serverPolicy as "open" | "closed" | "approval"}
-                  onSubmitTrack={handleSubmitTrack}
+            {/* DJ-only: Hype Meter & Intermission Scheduler */}
+            {isDJ && (
+              <div className={`flex flex-col gap-3 ${mobilePanel !== "queue" ? "hidden lg:flex" : ""}`}>
+                <HypeMeter
+                  recentTips={hypeTracking.recentTips}
+                  recentChats={hypeTracking.recentChats}
+                  recentReactions={hypeTracking.recentReactions}
                 />
+                <IntermissionScheduler />
               </div>
-              <div className="h-px" style={{ background: "linear-gradient(90deg, transparent, oklch(0.72 0.18 250 / 0.3), transparent)" }} />
-            </div>
+            )}
+
+            {/* Queue */}
+            <CollapsibleSection
+              title="Queue"
+              defaultOpen={true}
+              badge={
+                <span
+                  className="rounded-full px-1.5 py-0.5 font-mono text-[10px]"
+                  style={{ background: "oklch(0.72 0.18 250 / 0.15)", color: "oklch(0.72 0.18 250)" }}
+                >
+                  {queueTracks.length}
+                </span>
+              }
+            >
+              <TrackQueue
+                tracks={queueTracks}
+                isDJ={isDJ}
+                requestPolicy={serverPolicy as "open" | "closed" | "approval"}
+                onSubmitTrack={handleSubmitTrack}
+              />
+            </CollapsibleSection>
 
             {/* Pending Requests — DJ only, below queue */}
-            {isDJ && requestStatus !== "closed" && (
-              <div
-                className={`relative overflow-hidden rounded-2xl ${mobilePanel !== "queue" ? "hidden lg:block" : ""}`}
-                style={{
-                  background: "oklch(0.12 0.008 280)",
-                  border: "1px solid oklch(0.26 0.015 280 / 0.35)",
-                }}
+            {isDJ && requestStatus !== "closed" && ws.pendingRequests.length > 0 && (
+              <CollapsibleSection
+                title="Requests"
+                defaultOpen={true}
+                badge={
+                  <span
+                    className="rounded-full px-1.5 py-0.5 font-mono text-[10px] animate-pulse"
+                    style={{ background: "oklch(0.65 0.20 30 / 0.2)", color: "oklch(0.75 0.18 30)" }}
+                  >
+                    {ws.pendingRequests.length}
+                  </span>
+                }
               >
-                <div className="p-4">
-                  <PendingRequests
-                    requests={ws.pendingRequests}
-                    onApprove={ws.djApprove}
-                    onReject={ws.djReject}
-                    onApproveAll={() => ws.pendingRequests.forEach((r) => ws.djApprove(r.id))}
-                    onRejectAll={() => ws.pendingRequests.forEach((r) => ws.djReject(r.id))}
-                  />
-                </div>
-              </div>
+                <PendingRequests
+                  requests={ws.pendingRequests}
+                  onApprove={ws.djApprove}
+                  onReject={ws.djReject}
+                  onApproveAll={() => ws.pendingRequests.forEach((r) => ws.djApprove(r.id))}
+                  onRejectAll={() => ws.pendingRequests.forEach((r) => ws.djReject(r.id))}
+                />
+              </CollapsibleSection>
             )}
           </div>
 
@@ -894,6 +920,21 @@ export default function RoomPage() {
         neonBalance={(authUser as any)?.neonBalance ?? 0}
         onNeonSent={handleNeonSent}
       />
+
+      {/* Performance Mode - fullscreen DJ view */}
+      {isDJ && (
+        <PerformanceMode
+          isOpen={performanceModeOpen}
+          onClose={() => setPerformanceModeOpen(false)}
+          track={displayTrack}
+          isPlaying={!!(ws.playbackState || room.isLive)}
+          listenerCount={listenerCount}
+          hypeScore={Math.min(100, Math.round(((hypeTracking.recentTips * 2) + (hypeTracking.recentChats * 0.5) + hypeTracking.recentReactions) / 50 * 100))}
+          micActive={micActive}
+          onToggleMic={() => setMicActive(!micActive)}
+          onSkip={ws.connected ? ws.djSkip : undefined}
+        />
+      )}
     </div>
   )
 }
