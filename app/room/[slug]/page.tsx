@@ -100,6 +100,29 @@ export default function RoomPage() {
   const [micActive, setMicActive] = useState(false)
   const [micPausesMusic, setMicPausesMusic] = useState(true)
 
+  // Mock tube state for when backend is not connected
+  const [mockTube, setMockTube] = useState({ roomId: slug || "", level: 1, fillAmount: 35, fillTarget: 100, totalNeon: 35 })
+  const [mockPowerUp, setMockPowerUp] = useState<{ newLevel: number; color: string } | null>(null)
+
+  // Handle neon sent - update tube locally in mock mode
+  const handleNeonSent = useCallback((amount: number) => {
+    if (!ws.connected) {
+      setMockTube((prev) => {
+        const newFill = prev.fillAmount + amount
+        const newTotal = prev.totalNeon + amount
+        // Check if we level up (every 100 neon)
+        if (newFill >= prev.fillTarget) {
+          const newLevel = Math.min(prev.level + 1, 4)
+          const colors = ["oklch(0.72 0.18 195)", "oklch(0.65 0.24 330)", "oklch(0.82 0.18 80)", "oklch(0.90 0.05 0)"]
+          setMockPowerUp({ newLevel, color: colors[newLevel - 1] })
+          setTimeout(() => setMockPowerUp(null), 4000)
+          return { level: newLevel, fillAmount: newFill - prev.fillTarget, fillTarget: 100, totalNeon: newTotal }
+        }
+        return { ...prev, fillAmount: newFill, totalNeon: newTotal }
+      })
+    }
+  }, [ws.connected])
+
   // Use WebSocket data when connected, otherwise room data from initial fetch
   const currentTrack: Track | null = useMemo(() => {
     if (ws.connected && ws.currentTrack) {
@@ -681,7 +704,7 @@ export default function RoomPage() {
 
                 {/* Neon Tube */}
                 <div className="relative z-10 px-6 py-3">
-                  <NeonTubeViz tube={ws.tube} powerUp={ws.lastPowerUp} />
+                  <NeonTubeViz tube={ws.tube ?? mockTube} powerUp={ws.lastPowerUp ?? mockPowerUp} />
                 </div>
 
                 {/* DJ Controls */}
@@ -845,6 +868,7 @@ export default function RoomPage() {
         onClose={() => setSendNeonOpen(false)}
         roomId={room?.id ?? ""}
         neonBalance={(authUser as any)?.neonBalance ?? 0}
+        onNeonSent={handleNeonSent}
       />
     </div>
   )

@@ -1,4 +1,4 @@
-// Force rebuild v2
+// Force rebuild v3 - activity-feed removed
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
