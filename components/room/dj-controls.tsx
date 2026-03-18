@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect, useRef } from "react"
-import { Plus, Check, X, Mic, MicOff, Music, Radio, Inbox, PauseCircle, XCircle, ChevronDown, Power, Loader2, AlertCircle, Users, Maximize2 } from "lucide-react"
+import { Plus, Check, X, Mic, MicOff, Music, Radio, Inbox, PauseCircle, XCircle, ChevronDown, Power, Loader2, AlertCircle, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -17,7 +17,6 @@ interface DJControlsProps {
   onMicChange?: (active: boolean, pauseMusic: boolean) => void
   onEndRoom?: () => void
   listenerCount?: number
-  onEnterPerformanceMode?: () => void
 }
 
 export function DJControls({
@@ -28,7 +27,6 @@ export function DJControls({
   onMicChange,
   onEndRoom,
   listenerCount = 0,
-  onEnterPerformanceMode,
 }: DJControlsProps) {
   const [showStatusMenu, setShowStatusMenu] = useState(false)
   const [showEndConfirm, setShowEndConfirm] = useState(false)
@@ -494,22 +492,6 @@ export function DJControls({
           </p>
         )}
       </div>
-
-      {/* Performance Mode */}
-      {onEnterPerformanceMode && (
-        <Button
-          variant="ghost"
-          onClick={onEnterPerformanceMode}
-          className="gap-2 rounded-xl border font-sans text-xs text-muted-foreground hover:text-foreground"
-          style={{
-            borderColor: "oklch(0.55 0.20 270 / 0.3)",
-            background: "oklch(0.14 0.02 270 / 0.2)",
-          }}
-        >
-          <Maximize2 className="h-3.5 w-3.5" />
-          Performance Mode
-        </Button>
-      )}
 
       {/* End Room */}
       {onEndRoom && (

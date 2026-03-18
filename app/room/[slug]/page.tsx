@@ -29,7 +29,6 @@ import { useAuth } from "@/lib/auth-context"
 import { HypeMeter, useHypeTracking } from "@/components/room/hype-meter"
 import { CollapsibleSection } from "@/components/room/collapsible-section"
 import { IntermissionScheduler } from "@/components/room/intermission-scheduler"
-import { PerformanceMode } from "@/components/room/performance-mode"
 
 export default function RoomPage() {
   const params = useParams()
@@ -119,7 +118,6 @@ export default function RoomPage() {
   const [mobilePanel, setMobilePanel] = useState<"queue" | "chat">("chat")
   const [micActive, setMicActive] = useState(false)
   const [micPausesMusic, setMicPausesMusic] = useState(true)
-  const [performanceModeOpen, setPerformanceModeOpen] = useState(false)
 
   // Hype tracking for DJ view
   const hypeTracking = useHypeTracking()
@@ -758,7 +756,6 @@ export default function RoomPage() {
                       onMicChange={handleMicChange}
                       onEndRoom={ws.connected ? ws.djEndRoom : undefined}
                       listenerCount={listenerCount}
-                      onEnterPerformanceMode={() => setPerformanceModeOpen(true)}
                     />
                   </div>
                 )}
@@ -920,21 +917,6 @@ export default function RoomPage() {
         neonBalance={(authUser as any)?.neonBalance ?? 0}
         onNeonSent={handleNeonSent}
       />
-
-      {/* Performance Mode - fullscreen DJ view */}
-      {isDJ && (
-        <PerformanceMode
-          isOpen={performanceModeOpen}
-          onClose={() => setPerformanceModeOpen(false)}
-          track={displayTrack}
-          isPlaying={!!(ws.playbackState || room.isLive)}
-          listenerCount={listenerCount}
-          hypeScore={Math.min(100, Math.round(((hypeTracking.recentTips * 2) + (hypeTracking.recentChats * 0.5) + hypeTracking.recentReactions) / 50 * 100))}
-          micActive={micActive}
-          onToggleMic={() => setMicActive(!micActive)}
-          onSkip={ws.connected ? ws.djSkip : undefined}
-        />
-      )}
     </div>
   )
 }
