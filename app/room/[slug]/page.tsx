@@ -54,18 +54,16 @@ export default function RoomPage() {
         if (!cancelled) {
           setRoom(toFrontendRoom(detail.room, detail.nowPlaying, detail.queue, detail.recentChat))
         }
-      } catch (err: any) {
+      } catch {
         if (!cancelled) {
-          // If API returned 404, room genuinely doesn't exist
-          if (err?.message?.includes("404") || err?.message?.includes("not found")) {
-            setNotFound(true)
-            closePlayer() // clear stale mini player
-            return
-          }
-          // Backend unreachable — fall back to mock
-          console.warn("[room] Backend unreachable, falling back to mock:", err)
+          // Always fall back to mock — only show not found if mock also has nothing
           setUsingMock(true)
           const mock = getRoomBySlug(slug) || rooms[0]
+          if (!mock) {
+            setNotFound(true)
+            closePlayer()
+            return
+          }
           setRoom(mock)
         }
       }
