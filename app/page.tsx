@@ -1,6 +1,6 @@
 "use client"
-
-import { useState, useMemo, useEffect, useRef } from "react"
+// Cache clear v3
+import { useEffect, useMemo, useRef, useState } from "react"
 import { ArrowLeft, HelpCircle } from "lucide-react"
 import { toast } from "sonner"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
@@ -38,8 +38,8 @@ export default function HomePage() {
           setAllRooms(apiRooms.map((r) => toFrontendRoom(r, r.nowPlaying)))
           setLoaded(true)
         }
-      } catch (err) {
-        console.warn("[jukebox] Backend unreachable, falling back to mock data:", err)
+      } catch {
+        // Backend unavailable - silently fall back to mock data
         if (!cancelled) {
           setUsingMock(true)
           // Combine all mock rooms as fallback

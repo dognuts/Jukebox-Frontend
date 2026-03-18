@@ -1,10 +1,15 @@
 /** @type {import('next').NextConfig} */
+// Force full rebuild - cache disabled
 const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
   images: {
     unoptimized: true,
+  },
+  onDemandEntries: {
+    maxInactiveAge: 0,
+    maxSize: 0,
   },
   async rewrites() {
     return [

@@ -26,6 +26,9 @@ import { NeonTubeViz } from "@/components/room/neon-tube"
 import { SendNeonModal } from "@/components/room/send-neon-modal"
 import { DJSubscribeCard } from "@/components/room/dj-subscribe-card"
 import { useAuth } from "@/lib/auth-context"
+import { HypeMeter, useHypeTracking } from "@/components/room/hype-meter"
+import { CollapsibleSection } from "@/components/room/collapsible-section"
+import { IntermissionScheduler } from "@/components/room/intermission-scheduler"
 
 export default function RoomPage() {
   const params = useParams()
@@ -54,18 +57,16 @@ export default function RoomPage() {
         if (!cancelled) {
           setRoom(toFrontendRoom(detail.room, detail.nowPlaying, detail.queue, detail.recentChat))
         }
-      } catch (err: any) {
+      } catch {
         if (!cancelled) {
-          // If API returned 404, room genuinely doesn't exist
-          if (err?.message?.includes("404") || err?.message?.includes("not found")) {
-            setNotFound(true)
-            closePlayer() // clear stale mini player
-            return
-          }
-          // Backend unreachable — fall back to mock
-          console.warn("[room] Backend unreachable, falling back to mock:", err)
+          // Always fall back to mock — only show not found if mock also has nothing
           setUsingMock(true)
           const mock = getRoomBySlug(slug) || rooms[0]
+          if (!mock) {
+            setNotFound(true)
+            closePlayer()
+            return
+          }
           setRoom(mock)
         }
       }
@@ -94,13 +95,55 @@ export default function RoomPage() {
     onReaction: handleIncomingReaction,
   })
 
-  const isDJ = !!djKey
+  const _isDJFromKey = !!djKey
+  const [demoMode, setDemoMode] = useState(false) // Toggle DJ view for demo
+
+  // Toggle DJ view (for demo purposes when no real djKey)
+  const handleToggleDJ = useCallback(() => {
+    if (_isDJFromKey) {
+      // Real DJ - can switch back to listener view
+      sessionStorage.removeItem(`djKey:${slug}`)
+      setDjKey(null)
+    } else {
+      // Demo mode - toggle DJ view
+      setDemoMode((prev) => !prev)
+    }
+  }, [_isDJFromKey, slug])
+
+  const isDJ = _isDJFromKey || demoMode
+
   const [requestModalOpen, setRequestModalOpen] = useState(false)
   const [sendNeonOpen, setSendNeonOpen] = useState(false)
   const { user: authUser } = useAuth()
   const [mobilePanel, setMobilePanel] = useState<"queue" | "chat">("chat")
   const [micActive, setMicActive] = useState(false)
   const [micPausesMusic, setMicPausesMusic] = useState(true)
+
+  // Hype tracking for DJ view
+  const hypeTracking = useHypeTracking()
+
+  // Mock tube state for when backend is not connected
+  const [mockTube, setMockTube] = useState({ roomId: slug || "", level: 1, fillAmount: 35, fillTarget: 100, totalNeon: 35 })
+  const [mockPowerUp, setMockPowerUp] = useState<{ newLevel: number; color: string } | null>(null)
+
+  // Handle neon sent - update tube locally in mock mode
+  const handleNeonSent = useCallback((amount: number) => {
+    if (!ws.connected) {
+      setMockTube((prev) => {
+        const newFill = prev.fillAmount + amount
+        const newTotal = prev.totalNeon + amount
+        // Check if we level up (every 100 neon)
+        if (newFill >= prev.fillTarget) {
+          const newLevel = Math.min(prev.level + 1, 4)
+          const colors = ["oklch(0.72 0.18 195)", "oklch(0.65 0.24 330)", "oklch(0.82 0.18 80)", "oklch(0.90 0.05 0)"]
+          setMockPowerUp({ newLevel, color: colors[newLevel - 1] })
+          setTimeout(() => setMockPowerUp(null), 4000)
+          return { level: newLevel, fillAmount: newFill - prev.fillTarget, fillTarget: 100, totalNeon: newTotal }
+        }
+        return { ...prev, fillAmount: newFill, totalNeon: newTotal }
+      })
+    }
+  }, [ws.connected])
 
   // Use WebSocket data when connected, otherwise room data from initial fetch
   const currentTrack: Track | null = useMemo(() => {
@@ -360,7 +403,7 @@ export default function RoomPage() {
                 isLive={room.isLive}
                 djName={room.djName}
                 isDJ={isDJ}
-                onToggleDJ={() => {}}
+                onToggleDJ={handleToggleDJ}
                 minimal
               />
             </div>
@@ -432,38 +475,38 @@ export default function RoomPage() {
                 </div>
 
                 {/* Room info header */}
-                <div className="relative z-30 px-8 pt-8 pb-3 text-center">
-                  <div className="flex flex-wrap items-center justify-center gap-3">
+                <div className="relative z-30 px-8 pt-6 pb-4 text-center">
+                  <div className="flex flex-wrap items-center justify-center gap-2">
                     <h1 className="font-sans text-xl font-bold text-foreground neon-text-amber">
                       {room.name}
                     </h1>
                     {room.isLive && (
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className="flex items-center gap-1 rounded px-1.5 py-0.5"
-                          style={{
-                            background: "oklch(0.08 0.01 280 / 0.9)",
-                            border: "1.5px solid oklch(0.50 0.24 30)",
-                            boxShadow: "0 0 6px oklch(0.50 0.24 30 / 0.6), 0 0 12px oklch(0.50 0.24 30 / 0.3)",
-                          }}
+                      <div
+                        className="flex items-center gap-1 rounded px-1.5 py-0.5"
+                        style={{
+                          background: "oklch(0.08 0.01 280 / 0.9)",
+                          border: "1.5px solid oklch(0.50 0.24 30)",
+                          boxShadow: "0 0 6px oklch(0.50 0.24 30 / 0.6), 0 0 12px oklch(0.50 0.24 30 / 0.3)",
+                        }}
+                      >
+                        <span
+                          className="font-sans text-[10px] font-bold tracking-wider"
+                          style={{ color: "oklch(0.58 0.26 30)", textShadow: "0 0 4px oklch(0.58 0.26 30 / 0.8)" }}
                         >
-                          <span
-                            className="font-sans text-[9px] font-bold tracking-wide"
-                            style={{ color: "oklch(0.58 0.26 30)", textShadow: "0 0 4px oklch(0.58 0.26 30 / 0.8)" }}
-                          >
-                            ON AIR
-                          </span>
-                        </div>
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {listenerCount.toLocaleString()} listening
+                          ON AIR
                         </span>
                       </div>
                     )}
                   </div>
-                  <p className="mt-0.5 font-sans text-xs font-medium text-primary">
+                  {room.isLive && (
+                    <span className="mt-1 block font-mono text-xs font-medium text-muted-foreground">
+                      {listenerCount.toLocaleString()} listening
+                    </span>
+                  )}
+                  <p className="mt-2 font-sans text-sm font-medium text-primary">
                     {room.djName}
                   </p>
-                  <p className="mt-1.5 font-sans text-sm text-muted-foreground leading-relaxed">
+                  <p className="mt-1.5 font-sans text-xs text-muted-foreground leading-relaxed">
                     {room.description}
                   </p>
                   {/* Request status */}
@@ -479,7 +522,7 @@ export default function RoomPage() {
                     {requestStatus === "open" && <Inbox className="h-3 w-3" style={{ color: "oklch(0.82 0.18 80)" }} />}
                     {requestStatus === "paused" && <PauseCircle className="h-3 w-3" style={{ color: "oklch(0.78 0.14 60)" }} />}
                     {requestStatus === "closed" && <XCircle className="h-3 w-3 text-muted-foreground" />}
-                    <span className="font-sans text-[10px] font-medium"
+                    <span className="font-sans text-xs font-semibold"
                       style={{
                         color: requestStatus === "open"
                           ? "oklch(0.82 0.18 80)"
@@ -491,17 +534,23 @@ export default function RoomPage() {
                       {requestStatus === "open" ? "Requests Open" : requestStatus === "paused" ? "Requests Paused" : "Requests Closed"}
                     </span>
                   </div>
+
+                  {/* Subtle divider */}
+                  <div
+                    className="mt-4 mx-auto h-px w-24"
+                    style={{ background: "linear-gradient(90deg, transparent, oklch(0.40 0.02 280 / 0.5), transparent)" }}
+                  />
                 </div>
 
                 {/* DJ Subscription card — listeners only */}
                 {!isDJ && room.creatorUserId && (
-                  <div className="relative z-10 px-6 pb-2">
+                  <div className="relative z-10 px-6 py-2">
                     <DJSubscribeCard djUserId={room.creatorUserId} djName={room.djName} />
                   </div>
                 )}
 
                 {/* Glass display window */}
-                <div className="relative z-10 mx-6">
+                <div className="relative z-10 mx-6 mt-2">
                   <div
                     className="absolute -inset-[2px] rounded-2xl pointer-events-none"
                     style={{
@@ -681,25 +730,9 @@ export default function RoomPage() {
                   </div>
                 </div>
 
-                {/* Neon Tube + Send Neon */}
-                <div className="relative z-10 px-6 py-3">
-                  <NeonTubeViz tube={ws.tube} powerUp={ws.lastPowerUp} />
-                  {!isDJ && (
-                    <div className="mt-2 flex justify-center">
-                      <button
-                        onClick={() => setSendNeonOpen(true)}
-                        className="flex items-center gap-1.5 rounded-full px-4 py-1.5 font-sans text-xs font-semibold transition-all hover:scale-105 active:scale-95"
-                        style={{
-                          background: "oklch(0.72 0.18 195 / 0.15)",
-                          border: "1px solid oklch(0.72 0.18 195 / 0.4)",
-                          color: "oklch(0.72 0.18 195)",
-                        }}
-                      >
-                        <Zap className="h-3.5 w-3.5" />
-                        Send Neon
-                      </button>
-                    </div>
-                  )}
+                {/* Neon Tube */}
+                <div className="relative z-10 px-6 py-2">
+                  <NeonTubeViz tube={ws.tube ?? mockTube} powerUp={ws.lastPowerUp ?? mockPowerUp} />
                 </div>
 
                 {/* DJ Controls */}
@@ -770,60 +803,83 @@ export default function RoomPage() {
               </Button>
             </div>
 
-            {/* Request button for listeners */}
-            {!isDJ && serverPolicy !== "closed" && (
-              <div className="flex justify-center py-2">
+            {/* Action buttons for listeners */}
+            {!isDJ && (
+              <div className="flex flex-wrap items-center justify-center gap-3 py-2">
                 <button
-                  onClick={() => setRequestModalOpen(true)}
-                  className="request-glow-btn group relative flex items-center gap-2.5 rounded-full px-7 py-3 font-sans text-sm font-semibold transition-all hover:scale-105 active:scale-95"
-                  style={{
-                    background: "linear-gradient(135deg, oklch(0.55 0.22 270), oklch(0.48 0.24 300))",
-                    color: "white",
-                    boxShadow: "0 0 20px oklch(0.55 0.22 270 / 0.4), 0 0 40px oklch(0.48 0.24 300 / 0.2), 0 0 60px oklch(0.55 0.22 270 / 0.1)",
-                  }}
+                  onClick={() => setSendNeonOpen(true)}
+                  className="send-neon-btn group relative flex items-center gap-1.5 rounded-full px-4 py-2 font-sans text-xs font-semibold transition-all"
                 >
-                  <ListMusic className="h-4.5 w-4.5" />
-                  Request a Track
+                  <Zap className="icon-zap h-3.5 w-3.5" />
+                  Send Neon
                 </button>
+                {serverPolicy !== "closed" && (
+                  <button
+                    onClick={() => setRequestModalOpen(true)}
+                    className="request-track-btn group relative flex items-center gap-1.5 rounded-full px-4 py-2 font-sans text-xs font-semibold transition-all"
+                  >
+                    <ListMusic className="icon-music h-3.5 w-3.5" />
+                    Request a Track
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* DJ-only: Hype Meter & Intermission Scheduler */}
+            {isDJ && (
+              <div className={`flex flex-col gap-3 ${mobilePanel !== "queue" ? "hidden lg:flex" : ""}`}>
+                <HypeMeter
+                  recentTips={hypeTracking.recentTips}
+                  recentChats={hypeTracking.recentChats}
+                  recentReactions={hypeTracking.recentReactions}
+                />
+                <IntermissionScheduler />
               </div>
             )}
 
             {/* Queue */}
-            <div
-              className={`relative overflow-hidden rounded-2xl ${mobilePanel !== "queue" ? "hidden lg:block" : ""}`}
-              style={{
-                background: "oklch(0.13 0.01 280)",
-                border: "1px solid oklch(0.28 0.02 60 / 0.25)",
-              }}
+            <CollapsibleSection
+              title="Queue"
+              defaultOpen={true}
+              badge={
+                <span
+                  className="rounded-full px-1.5 py-0.5 font-mono text-[10px]"
+                  style={{ background: "oklch(0.72 0.18 250 / 0.15)", color: "oklch(0.72 0.18 250)" }}
+                >
+                  {queueTracks.length}
+                </span>
+              }
             >
-              <div className="p-4">
-                <TrackQueue
-                  tracks={queueTracks}
-                  isDJ={isDJ}
-                  requestPolicy={serverPolicy as "open" | "closed" | "approval"}
-                  onSubmitTrack={handleSubmitTrack}
-                />
-              </div>
-              <div className="h-px" style={{ background: "linear-gradient(90deg, transparent, oklch(0.72 0.18 250 / 0.3), transparent)" }} />
-            </div>
+              <TrackQueue
+                tracks={queueTracks}
+                isDJ={isDJ}
+                requestPolicy={serverPolicy as "open" | "closed" | "approval"}
+                onSubmitTrack={handleSubmitTrack}
+              />
+            </CollapsibleSection>
 
             {/* Pending Requests — DJ only, below queue */}
-            {isDJ && requestStatus !== "closed" && (
-              <div
-                className={`relative overflow-hidden rounded-2xl ${mobilePanel !== "queue" ? "hidden lg:block" : ""}`}
-                style={{
-                  background: "oklch(0.13 0.01 280)",
-                  border: "1px solid oklch(0.28 0.02 60 / 0.25)",
-                }}
+            {isDJ && requestStatus !== "closed" && ws.pendingRequests.length > 0 && (
+              <CollapsibleSection
+                title="Requests"
+                defaultOpen={true}
+                badge={
+                  <span
+                    className="rounded-full px-1.5 py-0.5 font-mono text-[10px] animate-pulse"
+                    style={{ background: "oklch(0.65 0.20 30 / 0.2)", color: "oklch(0.75 0.18 30)" }}
+                  >
+                    {ws.pendingRequests.length}
+                  </span>
+                }
               >
-                <div className="p-4">
-                  <PendingRequests
-                    requests={ws.pendingRequests}
-                    onApprove={ws.djApprove}
-                    onReject={ws.djReject}
-                  />
-                </div>
-              </div>
+                <PendingRequests
+                  requests={ws.pendingRequests}
+                  onApprove={ws.djApprove}
+                  onReject={ws.djReject}
+                  onApproveAll={() => ws.pendingRequests.forEach((r) => ws.djApprove(r.id))}
+                  onRejectAll={() => ws.pendingRequests.forEach((r) => ws.djReject(r.id))}
+                />
+              </CollapsibleSection>
             )}
           </div>
 
@@ -859,6 +915,7 @@ export default function RoomPage() {
         onClose={() => setSendNeonOpen(false)}
         roomId={room?.id ?? ""}
         neonBalance={(authUser as any)?.neonBalance ?? 0}
+        onNeonSent={handleNeonSent}
       />
     </div>
   )

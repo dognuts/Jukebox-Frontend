@@ -23,9 +23,10 @@ interface SendNeonModalProps {
   roomId: string
   neonBalance: number
   onBalanceChange?: (newBalance: number) => void
+  onNeonSent?: (amount: number) => void
 }
 
-export function SendNeonModal({ open, onClose, roomId, neonBalance: initialBalance, onBalanceChange }: SendNeonModalProps) {
+export function SendNeonModal({ open, onClose, roomId, neonBalance: initialBalance, onBalanceChange, onNeonSent }: SendNeonModalProps) {
   const [view, setView] = useState<View>("send")
   const [balance, setBalance] = useState(initialBalance)
   const [amount, setAmount] = useState(25)
@@ -54,6 +55,7 @@ export function SendNeonModal({ open, onClose, roomId, neonBalance: initialBalan
         body: JSON.stringify({ roomId, amount }),
       })
       updateBalance(res.balance)
+      onNeonSent?.(amount)
       setSuccess(true)
       setTimeout(() => {
         setSuccess(false)

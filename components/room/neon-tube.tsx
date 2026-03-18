@@ -78,23 +78,45 @@ export function NeonTubeViz({ tube, powerUp }: NeonTubeProps) {
       <div
         className="relative w-full overflow-hidden rounded-full"
         style={{
-          height: "10px",
-          background: "oklch(0.15 0.02 280)",
-          border: `1px solid oklch(0.30 0.04 280 / 0.5)`,
-          boxShadow: fillPct > 0 ? `inset 0 0 8px ${colors.glow}` : "none",
+          height: "12px",
+          background: "linear-gradient(180deg, oklch(0.12 0.02 280), oklch(0.16 0.02 280))",
+          border: `1px solid oklch(0.28 0.03 280 / 0.6)`,
+          boxShadow: fillPct > 0
+            ? `inset 0 0 10px ${colors.glow}, 0 0 8px oklch(0 0 0 / 0.5)`
+            : "inset 0 2px 4px oklch(0 0 0 / 0.3)",
         }}
       >
+        {/* Ambient glow layer */}
+        {fillPct > 0 && (
+          <div
+            className="absolute inset-0 rounded-full opacity-30"
+            style={{
+              background: `radial-gradient(ellipse at ${fillPct / 2}% 50%, ${colors.glow}, transparent 70%)`,
+              animation: "tube-pulse 2s ease-in-out infinite",
+            }}
+          />
+        )}
+
         {/* Fill bar */}
         <div
-          className="absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out"
+          className="absolute inset-y-0 left-0 rounded-full"
           style={{
             width: `${fillPct}%`,
             background: isRainbow
               ? "linear-gradient(90deg, oklch(0.72 0.18 195), oklch(0.65 0.24 330), oklch(0.82 0.18 80), oklch(0.72 0.18 195))"
-              : colors.primary,
-            boxShadow: `0 0 8px ${colors.glow}, 0 0 16px ${colors.glow}`,
+              : `linear-gradient(180deg, ${colors.primary}, oklch(from ${colors.primary} calc(l - 0.1) c h))`,
+            boxShadow: `0 0 10px ${colors.glow}, 0 0 20px ${colors.glow}, inset 0 1px 2px oklch(1 0 0 / 0.2)`,
             backgroundSize: isRainbow ? "200% 100%" : undefined,
             animation: isRainbow ? "rainbow-shift 3s linear infinite" : undefined,
+            transition: "width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
+          }}
+        />
+
+        {/* Highlight reflection */}
+        <div
+          className="absolute inset-x-0 top-0 h-[3px] rounded-t-full"
+          style={{
+            background: "linear-gradient(90deg, transparent, oklch(1 0 0 / 0.08), transparent)",
           }}
         />
       </div>
