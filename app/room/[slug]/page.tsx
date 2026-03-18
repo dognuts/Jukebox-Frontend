@@ -1,11 +1,12 @@
 "use client"
-// Cache clear v3
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+
+import { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, ListMusic, MessageCircle, Inbox, PauseCircle, XCircle, Play, Radio, SkipForward, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Navbar } from "@/components/layout/navbar"
+import { BubbleBackground } from "@/components/effects/bubble-background"
 import { NowPlaying } from "@/components/room/now-playing"
 import { SaveTrackMenu } from "@/components/room/save-track-menu"
 import { TrackQueue } from "@/components/room/track-queue"
@@ -24,9 +25,6 @@ import { parseTrackUrl } from "@/lib/track-utils"
 import { NeonTubeViz } from "@/components/room/neon-tube"
 import { SendNeonModal } from "@/components/room/send-neon-modal"
 import { DJSubscribeCard } from "@/components/room/dj-subscribe-card"
-import { TrackHistory } from "@/components/room/track-history"
-import { QuickTipButton } from "@/components/room/quick-tip-button"
-import { TrackCountdown } from "@/components/room/track-countdown"
 import { useAuth } from "@/lib/auth-context"
 
 export default function RoomPage() {
@@ -153,14 +151,6 @@ export default function RoomPage() {
   // Map server request policy to UI status
   const serverPolicy = ws.connected ? ws.requestPolicy : (room?.requestPolicy ?? "open")
   const requestStatus = serverPolicy === "approval" ? "paused" : serverPolicy as "open" | "closed"
-
-  // Track history - combine current + queue for demo
-  const trackHistory = useMemo(() => {
-    const history: Track[] = []
-    if (currentTrack) history.push(currentTrack)
-    if (room?.queue) history.push(...room.queue.slice(0, 5))
-    return history
-  }, [currentTrack, room?.queue])
 
   // Sync player context
   useEffect(() => {
@@ -762,42 +752,30 @@ export default function RoomPage() {
               </Button>
             </div>
 
-            {/* Listener Action Bar - prominent CTA area */}
-            {!isDJ && (
-              <div
-                className="relative overflow-hidden rounded-2xl p-4"
-                style={{
-                  background: "linear-gradient(135deg, oklch(0.14 0.02 280), oklch(0.12 0.015 300))",
-                  border: "1px solid oklch(0.35 0.04 80 / 0.3)",
-                  boxShadow: "0 4px 20px oklch(0 0 0 / 0.3), inset 0 1px 0 oklch(1 0 0 / 0.03)",
-                }}
-              >
-                <div className="flex flex-wrap items-center justify-center gap-3">
-                  <QuickTipButton djName={room.djName} />
-                  {serverPolicy !== "closed" && (
-                    <button
-                      onClick={() => setRequestModalOpen(true)}
-                      className="request-glow-btn group relative flex items-center gap-2.5 rounded-full px-7 py-3 font-sans text-sm font-semibold transition-all hover:scale-105 active:scale-95"
-                      style={{
-                        background: "linear-gradient(135deg, oklch(0.55 0.22 270), oklch(0.48 0.24 300))",
-                        color: "white",
-                        boxShadow: "0 0 20px oklch(0.55 0.22 270 / 0.4), 0 0 40px oklch(0.48 0.24 300 / 0.2), 0 0 60px oklch(0.55 0.22 270 / 0.1)",
-                      }}
-                    >
-                      <ListMusic className="h-4.5 w-4.5" />
-                      Request a Track
-                    </button>
-                  )}
-                </div>
+            {/* Request button for listeners */}
+            {!isDJ && serverPolicy !== "closed" && (
+              <div className="flex justify-center py-2">
+                <button
+                  onClick={() => setRequestModalOpen(true)}
+                  className="request-glow-btn group relative flex items-center gap-2.5 rounded-full px-7 py-3 font-sans text-sm font-semibold transition-all hover:scale-105 active:scale-95"
+                  style={{
+                    background: "linear-gradient(135deg, oklch(0.55 0.22 270), oklch(0.48 0.24 300))",
+                    color: "white",
+                    boxShadow: "0 0 20px oklch(0.55 0.22 270 / 0.4), 0 0 40px oklch(0.48 0.24 300 / 0.2), 0 0 60px oklch(0.55 0.22 270 / 0.1)",
+                  }}
+                >
+                  <ListMusic className="h-4.5 w-4.5" />
+                  Request a Track
+                </button>
               </div>
             )}
 
-            {/* Queue - Up Next (second priority after Now Playing) */}
+            {/* Queue */}
             <div
               className={`relative overflow-hidden rounded-2xl ${mobilePanel !== "queue" ? "hidden lg:block" : ""}`}
               style={{
                 background: "oklch(0.13 0.01 280)",
-                border: "1px solid oklch(0.30 0.03 60 / 0.3)",
+                border: "1px solid oklch(0.28 0.02 60 / 0.25)",
               }}
             >
               <div className="p-4">
@@ -810,19 +788,6 @@ export default function RoomPage() {
               </div>
               <div className="h-px" style={{ background: "linear-gradient(90deg, transparent, oklch(0.72 0.18 250 / 0.3), transparent)" }} />
             </div>
-
-            {/* Track History Carousel */}
-            {trackHistory.length > 0 && (
-              <div
-                className="relative overflow-hidden rounded-2xl p-4"
-                style={{
-                  background: "oklch(0.12 0.008 280)",
-                  border: "1px solid oklch(0.26 0.015 280 / 0.35)",
-                }}
-              >
-                <TrackHistory tracks={trackHistory} currentTrackId={currentTrack?.id} />
-              </div>
-            )}
 
             {/* Pending Requests — DJ only, below queue */}
             {isDJ && requestStatus !== "closed" && (

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { Send, Music, Users, MessageSquare, Zap } from "lucide-react"
+import { Send, Music, Users, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { type ChatMessage } from "@/lib/mock-data"
@@ -28,7 +28,6 @@ const reactions = [
 
 interface ChatPanelProps {
   initialMessages: ChatMessage[]
-  activityMessages?: ChatMessage[]
   roomName: string
   onSendMessage?: (message: string) => void
   onSendReaction?: (emoji: string) => void
@@ -40,7 +39,6 @@ interface ChatPanelProps {
 
 export function ChatPanel({
   initialMessages,
-  activityMessages = [],
   roomName,
   onSendMessage,
   onSendReaction,
@@ -49,24 +47,17 @@ export function ChatPanel({
   listeners = [],
   listenerCount = 0,
 }: ChatPanelProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>(() =>
-    [...initialMessages, ...activityMessages].sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    )
-  )
+  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
   const [input, setInput] = useState("")
   const [activeTab, setActiveTab] = useState<"chat" | "lobby">("chat")
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const internalOverlayRef = useRef<HTMLDivElement>(null)
   const { checkChatMagicWords } = useEasterEggs()
 
-  // Merge chat + activity messages, sorted by time
+  // Sync messages from parent
   useEffect(() => {
-    const merged = [...initialMessages, ...activityMessages].sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    )
-    setMessages(merged)
-  }, [initialMessages, activityMessages])
+    setMessages(initialMessages)
+  }, [initialMessages])
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -239,44 +230,7 @@ export function ChatPanel({
             />
 
             <div ref={scrollContainerRef} className="relative z-20 h-full overflow-y-auto px-3 py-2 scrollbar-thin">
-              {messages.map((msg) => {
-                // Activity system messages — join and tip
-                if (msg.type === "activity_join" || msg.type === "activity_tip") {
-                  const isJoin = msg.type === "activity_join"
-                  return (
-                    <div
-                      key={msg.id}
-                      className="mb-1.5 flex items-center justify-center animate-in fade-in duration-300"
-                    >
-                      <span
-                        className="flex items-center gap-1.5 rounded-full px-3 py-0.5 font-sans text-xs"
-                        style={
-                          isJoin
-                            ? {
-                                background: "oklch(0.65 0.15 155 / 0.12)",
-                                border: "1px solid oklch(0.65 0.15 155 / 0.25)",
-                                color: "oklch(0.72 0.14 155)",
-                              }
-                            : {
-                                background: "oklch(0.82 0.18 80 / 0.12)",
-                                border: "1px solid oklch(0.82 0.18 80 / 0.3)",
-                                color: "oklch(0.82 0.18 80)",
-                              }
-                        }
-                      >
-                        {isJoin
-                          ? <Users className="h-3 w-3 shrink-0" />
-                          : <Zap className="h-3 w-3 shrink-0" />
-                        }
-                        <span className="font-semibold">{msg.username}</span>
-                        <span className="opacity-80">{msg.message}</span>
-                      </span>
-                    </div>
-                  )
-                }
-
-                // Regular chat / announcement / request messages
-                return (
+              {messages.map((msg) => (
                 <div
                   key={msg.id}
                   className={`mb-2 flex gap-2.5 rounded-lg px-2.5 py-1.5 animate-in fade-in slide-in-from-right-3 duration-200 ${
@@ -314,8 +268,7 @@ export function ChatPanel({
                     </div>
                   </div>
                 </div>
-                )
-              })}
+              ))}
             </div>
           </div>
 
