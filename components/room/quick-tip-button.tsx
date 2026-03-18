@@ -89,7 +89,7 @@ export function QuickTipButton({ djName, onTip }: QuickTipButtonProps) {
           ) : (
             <Coins className="h-4 w-4" />
           )}
-          <span>Tip DJ</span>
+          <span>Send Neon</span>
         </button>
 
         {/* Expanded tip amounts */}

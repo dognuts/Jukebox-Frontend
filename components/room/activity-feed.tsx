@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import type { ChatMessage } from "@/lib/mock-data"
 
-// Hook that generates mock join/tip activity as ChatMessages to be merged into chat
+// Activity feed hook for merging join/tip events into chat stream
 export function useMockActivityMessages(): ChatMessage[] {
   const [messages, setMessages] = useState<ChatMessage[]>([])
 
