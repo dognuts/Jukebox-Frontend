@@ -1,23 +1,9 @@
 "use client"
-// Activity feed component - cache buster v3
-import { useState, useEffect, type ReactNode } from "react"
-import {
-  Users,
-  Heart,
-  Zap,
-  MessageCircle,
-  SkipForward,
-  Music,
-} from "lucide-react"
 
-export type ActivityType =
-  | "join"
-  | "leave"
-  | "reaction"
-  | "tip"
-  | "skip"
-  | "track_change"
-  | "chat"
+import { useState, useEffect } from "react"
+import { Users, Heart, Zap, MessageCircle, SkipForward, Music } from "lucide-react"
+
+export type ActivityType = "join" | "leave" | "reaction" | "tip" | "skip" | "track_change" | "chat"
 
 export interface ActivityItem {
   id: string
@@ -27,30 +13,19 @@ export interface ActivityItem {
   timestamp: Date
 }
 
-// Icon mapping - defined as a function to ensure icons are resolved at runtime
-function getActivityIcon(type: ActivityType): ReactNode {
-  switch (type) {
-    case "join":
-    case "leave":
-      return <Users className="h-3 w-3" />
-    case "reaction":
-      return <Heart className="h-3 w-3" />
-    case "tip":
-      return <Zap className="h-3 w-3" />
-    case "skip":
-      return <SkipForward className="h-3 w-3" />
-    case "track_change":
-      return <Music className="h-3 w-3" />
-    case "chat":
-      return <MessageCircle className="h-3 w-3" />
-    default:
-      return null
-  }
-}
-
 interface ActivityFeedProps {
   activities: ActivityItem[]
   maxVisible?: number
+}
+
+const activityIcons: Record<ActivityType, React.ReactNode> = {
+  join: <Users className="h-3 w-3" />,
+  leave: <Users className="h-3 w-3" />,
+  reaction: <Heart className="h-3 w-3" />,
+  tip: <Zap className="h-3 w-3" />,
+  skip: <SkipForward className="h-3 w-3" />,
+  track_change: <Music className="h-3 w-3" />,
+  chat: <MessageCircle className="h-3 w-3" />,
 }
 
 export function ActivityFeed({ activities, maxVisible = 5 }: ActivityFeedProps) {
@@ -58,14 +33,9 @@ export function ActivityFeed({ activities, maxVisible = 5 }: ActivityFeedProps) 
   return (
     <div className="flex flex-col gap-1">
       {visible.map((item) => (
-        <div
-          key={item.id}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground"
-        >
-          <span className="shrink-0">{getActivityIcon(item.type)}</span>
-          {item.username && (
-            <span className="font-medium text-foreground/70">{item.username}</span>
-          )}
+        <div key={item.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="shrink-0">{activityIcons[item.type]}</span>
+          {item.username && <span className="font-medium text-foreground/70">{item.username}</span>}
           <span>{item.message}</span>
         </div>
       ))}
@@ -75,49 +45,28 @@ export function ActivityFeed({ activities, maxVisible = 5 }: ActivityFeedProps) 
 
 export function useMockActivities(): ActivityItem[] {
   const [activities, setActivities] = useState<ActivityItem[]>([])
-
   useEffect(() => {
-    const initial: ActivityItem[] = [
-      {
-        id: "1",
-        type: "join",
-        username: "NightOwl",
-        message: "joined the room",
-        timestamp: new Date(Date.now() - 60000),
-      },
-      {
-        id: "2",
-        type: "tip",
-        username: "BassHead",
-        message: "sent 25 Neon",
-        timestamp: new Date(Date.now() - 30000),
-      },
-    ]
-    setActivities(initial)
-
+    setActivities([
+      { id: "1", type: "join", username: "NightOwl", message: "joined the room", timestamp: new Date(Date.now() - 60000) },
+      { id: "2", type: "tip", username: "BassHead", message: "sent 25 Neon", timestamp: new Date(Date.now() - 30000) },
+    ])
     const interval = setInterval(() => {
       const types: ActivityType[] = ["join", "tip"]
       const names = ["VibeChaser", "MelodyMaker", "BeatDropper", "SoundWave"]
       const type = types[Math.floor(Math.random() * types.length)]
       const username = names[Math.floor(Math.random() * names.length)]
-
       setActivities((prev) => [
         ...prev.slice(-10),
         {
           id: `act-${Date.now()}`,
           type,
           username,
-          message:
-            type === "join"
-              ? "joined the room"
-              : `sent ${Math.floor(Math.random() * 90 + 10)} Neon`,
+          message: type === "join" ? "joined the room" : `sent ${Math.floor(Math.random() * 90 + 10)} Neon`,
           timestamp: new Date(),
         },
       ])
     }, 7000)
-
     return () => clearInterval(interval)
   }, [])
-
   return activities
 }

@@ -25,7 +25,6 @@ import { parseTrackUrl } from "@/lib/track-utils"
 import { NeonTubeViz } from "@/components/room/neon-tube"
 import { SendNeonModal } from "@/components/room/send-neon-modal"
 import { DJSubscribeCard } from "@/components/room/dj-subscribe-card"
-import { EngagementTicker } from "@/components/room/engagement-ticker"
 import { useAuth } from "@/lib/auth-context"
 
 export default function RoomPage() {
@@ -753,19 +752,14 @@ export default function RoomPage() {
               </Button>
             </div>
 
-            {/* Engagement ticker + Action buttons for listeners */}
+            {/* Action buttons for listeners */}
             {!isDJ && (
-              <div className="flex flex-col items-center gap-3 py-3">
-                {/* Live engagement ticker */}
-                <EngagementTicker />
-
-                {/* Action buttons */}
-                <div className="flex flex-wrap items-center justify-center gap-4">
-                  <button
-                    onClick={() => setSendNeonOpen(true)}
-                    className="send-neon-btn group relative flex items-center gap-2.5 rounded-full px-6 py-3 font-sans text-sm font-bold transition-all"
-                  >
-                    <Zap className="icon-zap h-4.5 w-4.5" />
+              <div className="flex flex-wrap items-center justify-center gap-4 py-3">
+                <button
+                  onClick={() => setSendNeonOpen(true)}
+                  className="send-neon-btn group relative flex items-center gap-2.5 rounded-full px-6 py-3 font-sans text-sm font-bold transition-all"
+                >
+                  <Zap className="icon-zap h-4.5 w-4.5" />
                     Send Neon
                   </button>
                   {serverPolicy !== "closed" && (
@@ -777,7 +771,6 @@ export default function RoomPage() {
                       Request a Track
                     </button>
                   )}
-                </div>
               </div>
             )}
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { Send, Music, Users, MessageSquare } from "lucide-react"
+import { Send, Music, Users, MessageSquare, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { type ChatMessage } from "@/lib/mock-data"
@@ -83,6 +83,28 @@ export function ChatPanel({
     }, 5000 + Math.random() * 8000)
     return () => clearInterval(interval)
   }, [connected])
+
+  // Inject join/tip activity events into chat stream
+  const activityUsernames = ["NightOwl", "BassHead", "VibeChaser", "MelodyMaker", "SoundWave", "EchoRoom", "BeatDropper", "WaveRider"]
+  const activityColors = ["oklch(0.65 0.15 155)", "oklch(0.65 0.20 250)", "oklch(0.70 0.18 30)", "oklch(0.68 0.22 80)", "oklch(0.72 0.15 200)"]
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const isTip = Math.random() > 0.5
+      const username = activityUsernames[Math.floor(Math.random() * activityUsernames.length)]
+      const color = activityColors[Math.floor(Math.random() * activityColors.length)]
+      const newMsg: ChatMessage = {
+        id: `activity-${Date.now()}`,
+        username,
+        avatarColor: color,
+        message: isTip ? `sent ${Math.floor(Math.random() * 90 + 10)} Neon` : "joined the room",
+        timestamp: new Date(),
+        type: isTip ? "activity_tip" : "activity_join",
+      }
+      setMessages((prev) => [...prev.slice(-50), newMsg])
+    }, 10000 + Math.random() * 12000)
+    return () => clearInterval(interval)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // --- Smooth emoji float animation ---
   const spawnEmoji = useCallback((emoji: string) => {
@@ -230,45 +252,79 @@ export function ChatPanel({
             />
 
             <div ref={scrollContainerRef} className="relative z-20 h-full overflow-y-auto px-3 py-2 scrollbar-thin">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`mb-2 flex gap-2.5 rounded-lg px-2.5 py-1.5 animate-in fade-in slide-in-from-right-3 duration-200 ${
-                    msg.type === "announcement"
-                      ? "bg-primary/10 border border-primary/20"
-                      : msg.type === "request"
-                        ? "bg-accent/10 border border-accent/20"
-                        : ""
-                  }`}
-                >
-                  <div
-                    className="mt-0.5 h-6 w-6 shrink-0 rounded-full"
-                    style={{ background: msg.avatarColor }}
-                  />
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <div className="flex items-baseline gap-2">
-                      <UserPopover username={msg.username} avatarColor={msg.avatarColor}>
-                        <button
-                          type="button"
-                          className="relative z-10 font-sans text-xs font-semibold cursor-pointer hover:underline"
-                          style={{
-                            color: msg.type === "announcement" ? "var(--neon-amber)" : "var(--foreground)",
-                          }}
-                        >
-                          {msg.username}
-                        </button>
-                      </UserPopover>
-                      <span className="font-sans text-[10px] text-muted-foreground" suppressHydrationWarning>
-                        {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              {messages.map((msg) => {
+                const isActivity = msg.type === "activity_join" || msg.type === "activity_tip"
+
+                if (isActivity) {
+                  const isTip = msg.type === "activity_tip"
+                  return (
+                    <div
+                      key={msg.id}
+                      className="mb-1.5 flex items-center justify-center animate-in fade-in duration-300"
+                    >
+                      <span
+                        className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-sans text-xs"
+                        style={{
+                          background: isTip
+                            ? "oklch(0.72 0.18 195 / 0.12)"
+                            : "oklch(0.65 0.15 155 / 0.10)",
+                          border: isTip
+                            ? "1px solid oklch(0.72 0.18 195 / 0.25)"
+                            : "1px solid oklch(0.65 0.15 155 / 0.20)",
+                          color: isTip ? "oklch(0.82 0.16 195)" : "oklch(0.72 0.12 155)",
+                        }}
+                      >
+                        {isTip
+                          ? <Zap className="h-3 w-3 shrink-0" />
+                          : <Users className="h-3 w-3 shrink-0" />
+                        }
+                        <span className="font-semibold">{msg.username}</span>
+                        <span className="opacity-80">{msg.message}</span>
                       </span>
                     </div>
-                    <div className="flex items-start gap-1">
-                      {msg.type === "request" && <Music className="mt-0.5 h-3 w-3 shrink-0 text-accent" />}
-                      <p className="font-sans text-sm text-foreground/90 break-words">{msg.message}</p>
+                  )
+                }
+
+                return (
+                  <div
+                    key={msg.id}
+                    className={`mb-2 flex gap-2.5 rounded-lg px-2.5 py-1.5 animate-in fade-in slide-in-from-right-3 duration-200 ${
+                      msg.type === "announcement"
+                        ? "bg-primary/10 border border-primary/20"
+                        : msg.type === "request"
+                          ? "bg-accent/10 border border-accent/20"
+                          : ""
+                    }`}
+                  >
+                    <div
+                      className="mt-0.5 h-6 w-6 shrink-0 rounded-full"
+                      style={{ background: msg.avatarColor }}
+                    />
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <div className="flex items-baseline gap-2">
+                        <UserPopover username={msg.username} avatarColor={msg.avatarColor}>
+                          <button
+                            type="button"
+                            className="relative z-10 font-sans text-xs font-semibold cursor-pointer hover:underline"
+                            style={{
+                              color: msg.type === "announcement" ? "var(--neon-amber)" : "var(--foreground)",
+                            }}
+                          >
+                            {msg.username}
+                          </button>
+                        </UserPopover>
+                        <span className="font-sans text-[10px] text-muted-foreground" suppressHydrationWarning>
+                          {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-1">
+                        {msg.type === "request" && <Music className="mt-0.5 h-3 w-3 shrink-0 text-accent" />}
+                        <p className="font-sans text-sm text-foreground/90 break-words">{msg.message}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 
