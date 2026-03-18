@@ -27,7 +27,7 @@ import { DJSubscribeCard } from "@/components/room/dj-subscribe-card"
 import { TrackHistory } from "@/components/room/track-history"
 import { QuickTipButton } from "@/components/room/quick-tip-button"
 import { TrackCountdown } from "@/components/room/track-countdown"
-import { useMockActivityMessages } from "@/components/room/activity-messages"
+import { useMockActivityMessages } from "@/components/room/activity-feed"
 import { useAuth } from "@/lib/auth-context"
 
 export default function RoomPage() {
@@ -155,7 +155,7 @@ export default function RoomPage() {
   const serverPolicy = ws.connected ? ws.requestPolicy : (room?.requestPolicy ?? "open")
   const requestStatus = serverPolicy === "approval" ? "paused" : serverPolicy as "open" | "closed"
 
-  // Mock activity messages (join/tip) injected into chat - these are merged into chat stream
+  // Mock activity messages (join/tip) injected into chat
   const mockActivityMessages = useMockActivityMessages()
 
   // Track history - combine current + queue for demo

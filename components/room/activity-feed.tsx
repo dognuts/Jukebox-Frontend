@@ -1,5 +1,8 @@
 "use client"
 
+// This file is deprecated - use activity-messages.tsx instead
+// Kept for bundler cache compatibility
+
 import { useState, useEffect } from "react"
 import type { ChatMessage } from "@/lib/mock-data"
 
