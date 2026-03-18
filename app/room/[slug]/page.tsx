@@ -27,37 +27,8 @@ import { DJSubscribeCard } from "@/components/room/dj-subscribe-card"
 import { TrackHistory } from "@/components/room/track-history"
 import { QuickTipButton } from "@/components/room/quick-tip-button"
 import { TrackCountdown } from "@/components/room/track-countdown"
+import { useMockActivityMessages } from "@/components/room/activity-feed"
 import { useAuth } from "@/lib/auth-context"
-
-// Inline activity messages hook to bypass module cache issues
-function useMockActivityMessages(): ChatMessage[] {
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  useEffect(() => {
-    const mockUsernames = ["DJ_Shadow", "NightOwl", "BassHead", "VibeChaser", "MelodyMaker"]
-    const avatarColors = ["oklch(0.65 0.15 155)", "oklch(0.65 0.20 250)", "oklch(0.70 0.18 30)"]
-    const initialMessages: ChatMessage[] = [
-      { id: "activity-1", username: "NightOwl", avatarColor: avatarColors[1], message: "joined the room", timestamp: new Date(Date.now() - 60000), type: "activity_join" },
-      { id: "activity-2", username: "BassHead", avatarColor: avatarColors[2], message: "sent 25 Neon", timestamp: new Date(Date.now() - 30000), type: "activity_tip" },
-    ]
-    setMessages(initialMessages)
-    const interval = setInterval(() => {
-      const isJoin = Math.random() > 0.4
-      const username = mockUsernames[Math.floor(Math.random() * mockUsernames.length)]
-      const color = avatarColors[Math.floor(Math.random() * avatarColors.length)]
-      const newMsg: ChatMessage = {
-        id: `activity-${Date.now()}`,
-        username,
-        avatarColor: color,
-        message: isJoin ? "joined the room" : `sent ${Math.floor(Math.random() * 90 + 10)} Neon`,
-        timestamp: new Date(),
-        type: isJoin ? "activity_join" : "activity_tip",
-      }
-      setMessages((prev) => [...prev.slice(-20), newMsg])
-    }, 6000 + Math.random() * 8000)
-    return () => clearInterval(interval)
-  }, [])
-  return messages
-}
 
 export default function RoomPage() {
   const params = useParams()
