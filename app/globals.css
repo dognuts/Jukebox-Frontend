@@ -992,7 +992,12 @@
   .animate-ambient-drift-2,
   .animate-ambient-drift-3,
   .upgrade-button-premium:hover,
-  .upgrade-button-premium:active {
+  .upgrade-button-premium:active,
+  .send-neon-btn,
+  .send-neon-btn:hover,
+  .send-neon-btn::before,
+  .request-track-btn,
+  .request-track-btn:hover {
     animation: none !important;
     transform: none !important;
   }
@@ -1000,6 +1005,120 @@
   .stagger-animate {
     opacity: 1 !important;
   }
+}
+
+/* ===== ELECTRIC BUTTON ANIMATIONS ===== */
+
+/* Send Neon Button - Cyan electric pulse */
+@keyframes neon-pulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 8px oklch(0.72 0.18 195 / 0.4),
+      0 0 16px oklch(0.72 0.18 195 / 0.2),
+      inset 0 0 8px oklch(0.72 0.18 195 / 0.1);
+  }
+  50% {
+    box-shadow: 
+      0 0 16px oklch(0.82 0.22 195 / 0.6),
+      0 0 32px oklch(0.72 0.18 195 / 0.3),
+      0 0 48px oklch(0.72 0.18 195 / 0.15),
+      inset 0 0 12px oklch(0.82 0.22 195 / 0.15);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes icon-zap {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+.send-neon-btn {
+  position: relative;
+  background: linear-gradient(135deg, oklch(0.72 0.18 195), oklch(0.65 0.20 210)) !important;
+  border: 1px solid oklch(0.82 0.22 195 / 0.6) !important;
+  color: oklch(0.98 0.01 195) !important;
+  animation: neon-pulse 2.5s ease-in-out infinite;
+  overflow: hidden;
+}
+
+.send-neon-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    oklch(1 0 0 / 0.15) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.send-neon-btn:hover::before {
+  opacity: 1;
+  animation: shimmer 1.5s linear infinite;
+}
+
+.send-neon-btn:hover {
+  transform: scale(1.05);
+  animation: neon-pulse 1.2s ease-in-out infinite;
+}
+
+.send-neon-btn:hover .icon-zap {
+  animation: icon-zap 0.6s ease-in-out infinite;
+}
+
+.send-neon-btn:active {
+  transform: scale(0.95);
+  filter: brightness(1.2);
+}
+
+/* Request Track Button - Purple breathing glow */
+@keyframes purple-breathe {
+  0%, 100% {
+    box-shadow: 
+      0 0 12px oklch(0.55 0.22 270 / 0.4),
+      0 0 24px oklch(0.55 0.22 270 / 0.2);
+  }
+  50% {
+    box-shadow: 
+      0 0 20px oklch(0.60 0.25 270 / 0.5),
+      0 0 40px oklch(0.55 0.22 270 / 0.3),
+      0 0 60px oklch(0.48 0.24 300 / 0.15);
+  }
+}
+
+@keyframes icon-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+.request-track-btn {
+  position: relative;
+  background: linear-gradient(135deg, oklch(0.55 0.22 270), oklch(0.48 0.24 300)) !important;
+  border: 1px solid oklch(0.65 0.20 270 / 0.5) !important;
+  color: white !important;
+  animation: purple-breathe 3s ease-in-out infinite;
+}
+
+.request-track-btn:hover {
+  transform: scale(1.05);
+  animation: purple-breathe 1.5s ease-in-out infinite;
+}
+
+.request-track-btn:hover .icon-music {
+  animation: icon-float 0.8s ease-in-out infinite;
+}
+
+.request-track-btn:active {
+  transform: scale(0.95);
+  filter: brightness(1.15);
 }
 
 /* Scrollbar styling */

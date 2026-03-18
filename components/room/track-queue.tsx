@@ -126,10 +126,16 @@ export function TrackQueue({ tracks, isDJ, requestPolicy = "open", onSubmitTrack
   return (
     <div className="flex h-full flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h3 className="font-sans text-sm font-semibold text-foreground">
+        <h3 className="font-sans text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Up Next
         </h3>
-        <span className="font-sans text-xs text-muted-foreground">
+        <span
+          className="rounded-full px-2 py-0.5 font-sans text-[10px] font-medium"
+          style={{
+            background: "oklch(0.72 0.18 250 / 0.15)",
+            color: "oklch(0.72 0.18 250)",
+          }}
+        >
           {tracks.length} track{tracks.length !== 1 ? "s" : ""}
         </span>
       </div>
@@ -146,39 +152,67 @@ export function TrackQueue({ tracks, isDJ, requestPolicy = "open", onSubmitTrack
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -30 }}
                 transition={{ duration: 0.25, delay: index * 0.05 }}
-                className="group mb-2 flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/30"
+                className="group mb-2 flex items-center gap-3 rounded-xl p-3 transition-all hover:scale-[1.01]"
+                style={{
+                  background: index === 0
+                    ? "linear-gradient(135deg, oklch(0.18 0.02 280 / 0.8), oklch(0.15 0.015 280 / 0.6))"
+                    : "oklch(0.14 0.01 280 / 0.5)",
+                  border: index === 0
+                    ? "1px solid oklch(0.72 0.18 250 / 0.25)"
+                    : "1px solid oklch(0.25 0.015 280 / 0.3)",
+                  backdropFilter: "blur(8px)",
+                }}
               >
                 {isDJ && (
                   <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground/50 cursor-grab" />
                 )}
 
-                {/* Index */}
-                <span className="w-5 shrink-0 text-center font-mono text-xs text-muted-foreground">
+                {/* Position badge */}
+                <span
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full font-sans text-[10px] font-bold"
+                  style={{
+                    background: index === 0 ? "oklch(0.72 0.18 250)" : "oklch(0.25 0.02 280)",
+                    color: index === 0 ? "oklch(0.12 0.02 280)" : "oklch(0.55 0.02 280)",
+                  }}
+                >
                   {index + 1}
                 </span>
 
                 {/* Album art placeholder */}
                 <div
-                  className="h-9 w-9 shrink-0 rounded-lg"
+                  className="h-10 w-10 shrink-0 rounded-lg shadow-md"
                   style={{ background: track.albumGradient }}
                 />
 
                 {/* Track info */}
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="truncate font-sans text-sm text-foreground">
+                  <span className="truncate font-sans text-sm font-medium text-foreground">
                     {track.title}
                   </span>
-                  <span className="truncate font-sans text-xs text-muted-foreground">
-                    {track.artist}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate font-sans text-xs text-muted-foreground">
+                      {track.artist}
+                    </span>
+                    {track.submittedBy && (
+                      <>
+                        <span className="text-muted-foreground/40">·</span>
+                        <span
+                          className="truncate font-sans text-[10px]"
+                          style={{ color: "oklch(0.65 0.12 250)" }}
+                        >
+                          {track.submittedBy}
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {/* Meta + Save */}
-                <div className="flex shrink-0 items-center gap-1">
+                <div className="flex shrink-0 items-center gap-1.5">
                   <SaveTrackMenu track={track} size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <SourceIcon className="h-3.5 w-3.5 text-muted-foreground/50" />
+                  <SourceIcon className="h-3.5 w-3.5 text-muted-foreground/40" />
                   {track.duration > 0 && (
-                    <span className="font-mono text-xs text-muted-foreground">
+                    <span className="font-mono text-[10px] text-muted-foreground/60">
                       {formatDuration(track.duration)}
                     </span>
                   )}
