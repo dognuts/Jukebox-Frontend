@@ -92,7 +92,23 @@ export default function RoomPage() {
     onReaction: handleIncomingReaction,
   })
 
-  const isDJ = !!djKey
+  const _isDJFromKey = !!djKey
+  const [demoMode, setDemoMode] = useState(false) // Toggle DJ view for demo
+
+  // Toggle DJ view (for demo purposes when no real djKey)
+  const handleToggleDJ = useCallback(() => {
+    if (_isDJFromKey) {
+      // Real DJ - can switch back to listener view
+      sessionStorage.removeItem(`djKey:${slug}`)
+      setDjKey(null)
+    } else {
+      // Demo mode - toggle DJ view
+      setDemoMode((prev) => !prev)
+    }
+  }, [_isDJFromKey, slug])
+
+  const isDJ = _isDJFromKey || demoMode
+
   const [requestModalOpen, setRequestModalOpen] = useState(false)
   const [sendNeonOpen, setSendNeonOpen] = useState(false)
   const { user: authUser } = useAuth()
@@ -381,7 +397,7 @@ export default function RoomPage() {
                 isLive={room.isLive}
                 djName={room.djName}
                 isDJ={isDJ}
-                onToggleDJ={() => {}}
+                onToggleDJ={handleToggleDJ}
                 minimal
               />
             </div>
