@@ -1,6 +1,6 @@
 "use client"
-
-import { useState, useMemo, useEffect, useRef } from "react"
+// Cache clear v3
+import { useEffect, useMemo, useRef, useState } from "react"
 import { ArrowLeft, HelpCircle } from "lucide-react"
 import { toast } from "sonner"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
