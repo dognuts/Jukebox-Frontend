@@ -1007,76 +1007,38 @@
   }
 }
 
-/* ===== ELECTRIC BUTTON ANIMATIONS ===== */
+/* ===== NEON TUBE ANIMATIONS ===== */
 
-/* Send Neon Button - Cyan electric pulse */
-@keyframes neon-pulse {
-  0%, 100% {
-    box-shadow: 
-      0 0 8px oklch(0.72 0.18 195 / 0.4),
-      0 0 16px oklch(0.72 0.18 195 / 0.2),
-      inset 0 0 8px oklch(0.72 0.18 195 / 0.1);
-  }
-  50% {
-    box-shadow: 
-      0 0 16px oklch(0.82 0.22 195 / 0.6),
-      0 0 32px oklch(0.72 0.18 195 / 0.3),
-      0 0 48px oklch(0.72 0.18 195 / 0.15),
-      inset 0 0 12px oklch(0.82 0.22 195 / 0.15);
-  }
+@keyframes tube-pulse {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.4; }
 }
 
-@keyframes shimmer {
-  0% { background-position: -200% center; }
+@keyframes rainbow-shift {
+  0% { background-position: 0% center; }
   100% { background-position: 200% center; }
 }
 
-@keyframes icon-zap {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.15); }
-}
+/* ===== BUTTON STYLES ===== */
 
+/* Send Neon Button - Subtle cyan glow */
 .send-neon-btn {
   position: relative;
-  background: linear-gradient(135deg, oklch(0.72 0.18 195), oklch(0.65 0.20 210)) !important;
-  border: 1px solid oklch(0.82 0.22 195 / 0.6) !important;
+  background: linear-gradient(135deg, oklch(0.72 0.18 195), oklch(0.65 0.18 210)) !important;
+  border: 1px solid oklch(0.78 0.18 195 / 0.5) !important;
   color: oklch(0.98 0.01 195) !important;
-  animation: neon-pulse 2.5s ease-in-out infinite;
-  overflow: hidden;
-}
-
-.send-neon-btn::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    oklch(1 0 0 / 0.15) 50%,
-    transparent 100%
-  );
-  background-size: 200% 100%;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.send-neon-btn:hover::before {
-  opacity: 1;
-  animation: shimmer 1.5s linear infinite;
+  box-shadow: 0 0 12px oklch(0.72 0.18 195 / 0.25);
+  transition: all 0.2s ease;
 }
 
 .send-neon-btn:hover {
-  transform: scale(1.05);
-  animation: neon-pulse 1.2s ease-in-out infinite;
-}
-
-.send-neon-btn:hover .icon-zap {
-  animation: icon-zap 0.6s ease-in-out infinite;
+  transform: scale(1.02);
+  box-shadow: 0 0 20px oklch(0.72 0.18 195 / 0.4), 0 0 40px oklch(0.72 0.18 195 / 0.15);
 }
 
 .send-neon-btn:active {
-  transform: scale(0.95);
-  filter: brightness(1.2);
+  transform: scale(0.98);
+  filter: brightness(1.1);
 }
 
 /* Request Track Button - Purple breathing glow */
