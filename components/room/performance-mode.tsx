@@ -1,8 +1,9 @@
 "use client"
-
+// Performance Mode - fullscreen DJ view with minimal distractions
 import { useState, useEffect } from "react"
 import { X, Users, Flame, SkipForward, Mic, MicOff } from "lucide-react"
 import { VinylSpinner } from "@/components/effects/vinyl-spinner"
+// AudioVisualizer is in components/room, not effects
 import { AudioVisualizer } from "@/components/room/audio-visualizer"
 import type { Track } from "@/lib/mock-data"
 
@@ -71,16 +72,21 @@ export function PerformanceMode({
       onMouseMove={handleMouseMove}
       onClick={() => setShowControls(true)}
     >
-      {/* Close button - always visible on hover */}
-      <button
-        onClick={onClose}
-        className={`absolute top-6 right-6 p-2 rounded-full transition-opacity duration-300 ${
+      {/* Close button with ESC hint */}
+      <div
+        className={`absolute top-6 right-6 flex items-center gap-2 transition-opacity duration-300 ${
           showControls ? "opacity-100" : "opacity-0"
-        } hover:bg-white/10`}
-        aria-label="Exit performance mode"
+        }`}
       >
-        <X className="h-6 w-6 text-white/70" />
-      </button>
+        <span className="rounded bg-white/10 px-2 py-1 font-mono text-[10px] text-white/40">ESC</span>
+        <button
+          onClick={onClose}
+          className="p-2 rounded-full hover:bg-white/10"
+          aria-label="Exit performance mode"
+        >
+          <X className="h-6 w-6 text-white/70" />
+        </button>
+      </div>
 
       {/* Top stats bar */}
       <div
