@@ -28,7 +28,7 @@ import { DJSubscribeCard } from "@/components/room/dj-subscribe-card"
 import { TrackHistory } from "@/components/room/track-history"
 import { QuickTipButton } from "@/components/room/quick-tip-button"
 import { TrackCountdown } from "@/components/room/track-countdown"
-import { useMockActivityMessages } from "@/components/room/activity-feed"
+import { useMockActivityMessages } from "@/components/room/activity-messages"
 import { useAuth } from "@/lib/auth-context"
 
 export default function RoomPage() {
@@ -782,12 +782,7 @@ export default function RoomPage() {
                   {serverPolicy !== "closed" && (
                     <button
                       onClick={() => setRequestModalOpen(true)}
-                      className="request-glow-btn group relative flex items-center gap-2.5 rounded-full px-6 py-2.5 font-sans text-sm font-semibold transition-all hover:scale-105 active:scale-95"
-                      style={{
-                        background: "linear-gradient(135deg, oklch(0.55 0.22 270), oklch(0.48 0.24 300))",
-                        color: "white",
-                        boxShadow: "0 0 15px oklch(0.55 0.22 270 / 0.4), 0 0 30px oklch(0.48 0.24 300 / 0.2)",
-                      }}
+                      className="request-track-btn group relative flex items-center gap-2.5 rounded-full px-6 py-2.5 font-sans text-sm font-bold text-white transition-all"
                     >
                       <ListMusic className="h-4 w-4" />
                       Request a Track

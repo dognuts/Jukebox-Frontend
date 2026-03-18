@@ -70,19 +70,13 @@ export function QuickTipButton({ djName, onTip }: QuickTipButtonProps) {
       <div className="flex items-center gap-2">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className={`relative flex items-center gap-2 rounded-full px-4 py-2 font-sans text-sm font-semibold transition-all duration-300 ${
-            isCelebrating ? "scale-110" : "hover:scale-105"
+          className={`send-neon-btn relative flex items-center gap-2 rounded-full px-5 py-2.5 font-sans text-sm font-bold transition-all duration-300 ${
+            isCelebrating ? "scale-110" : ""
           }`}
-          style={{
-            background: isCelebrating
-              ? "linear-gradient(135deg, oklch(0.82 0.18 80), oklch(0.85 0.20 60))"
-              : "linear-gradient(135deg, oklch(0.82 0.18 80 / 0.15), oklch(0.85 0.20 60 / 0.15))",
-            border: "1px solid oklch(0.82 0.18 80 / 0.5)",
-            color: isCelebrating ? "oklch(0.15 0.02 80)" : "oklch(0.82 0.18 80)",
-            boxShadow: isCelebrating
-              ? "0 0 30px oklch(0.82 0.18 80 / 0.6), 0 0 60px oklch(0.85 0.20 60 / 0.3)"
-              : "0 0 10px oklch(0.82 0.18 80 / 0.2)",
-          }}
+          style={isCelebrating ? {
+            background: "linear-gradient(135deg, oklch(0.82 0.22 195), oklch(0.90 0.18 180))",
+            boxShadow: "0 0 40px oklch(0.82 0.22 195 / 0.8), 0 0 80px oklch(0.72 0.18 195 / 0.4)",
+          } : undefined}
         >
           {isCelebrating ? (
             <Sparkles className="h-4 w-4 animate-spin" />
