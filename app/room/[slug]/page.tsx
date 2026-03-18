@@ -25,10 +25,10 @@ import { parseTrackUrl } from "@/lib/track-utils"
 import { NeonTubeViz } from "@/components/room/neon-tube"
 import { SendNeonModal } from "@/components/room/send-neon-modal"
 import { DJSubscribeCard } from "@/components/room/dj-subscribe-card"
-import { ActivityFeed, useMockActivities } from "@/components/room/activity-feed"
 import { TrackHistory } from "@/components/room/track-history"
 import { QuickTipButton } from "@/components/room/quick-tip-button"
 import { TrackCountdown } from "@/components/room/track-countdown"
+import { useMockActivityMessages } from "@/components/room/activity-feed"
 import { useAuth } from "@/lib/auth-context"
 
 export default function RoomPage() {
@@ -156,9 +156,9 @@ export default function RoomPage() {
   const serverPolicy = ws.connected ? ws.requestPolicy : (room?.requestPolicy ?? "open")
   const requestStatus = serverPolicy === "approval" ? "paused" : serverPolicy as "open" | "closed"
 
-  // Mock activity feed for demo
-  const mockActivities = useMockActivities()
-  
+  // Mock activity messages (join/tip) injected into chat
+  const mockActivityMessages = useMockActivityMessages()
+
   // Track history - combine current + queue for demo
   const trackHistory = useMemo(() => {
     const history: Track[] = []
@@ -829,20 +829,6 @@ export default function RoomPage() {
               </div>
             )}
 
-            {/* Live Activity Feed - secondary panel */}
-            {!isDJ && (
-              <div
-                className="relative overflow-hidden rounded-2xl p-3"
-                style={{
-                  background: "oklch(0.11 0.008 280)",
-                  border: "1px solid oklch(0.25 0.015 280 / 0.4)",
-                }}
-              >
-                <h3 className="mb-2 font-sans text-xs font-medium uppercase tracking-wide text-muted-foreground/70">Live Activity</h3>
-                <ActivityFeed activities={mockActivities} maxVisible={3} />
-              </div>
-            )}
-
             {/* Pending Requests — DJ only, below queue */}
             {isDJ && requestStatus !== "closed" && (
               <div
@@ -870,6 +856,7 @@ export default function RoomPage() {
             <div className="h-[520px] lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)]">
               <ChatPanel
                 initialMessages={chatMessages}
+                activityMessages={mockActivityMessages}
                 roomName={room.name}
                 onSendMessage={ws.connected ? ws.sendChat : undefined}
                 onSendReaction={ws.connected ? ws.sendReaction : undefined}
