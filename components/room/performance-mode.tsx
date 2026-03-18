@@ -1,9 +1,9 @@
 "use client"
-
+// Performance mode v2 - cache invalidation
 import { useState, useEffect } from "react"
 import { X, Users, Flame, SkipForward, Mic, MicOff } from "lucide-react"
 import { VinylSpinner } from "@/components/effects/vinyl-spinner"
-import { AudioVisualizer } from "@/components/effects/audio-visualizer"
+import { AudioVisualizer } from "@/components/room/audio-visualizer"
 import type { Track } from "@/lib/mock-data"
 
 interface PerformanceModeProps {

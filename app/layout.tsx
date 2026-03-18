@@ -1,4 +1,4 @@
-// Force rebuild v6 - performance-mode imports fixed
+// Force rebuild v7 - performance-mode audio-visualizer path fixed to @/components/room/
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
