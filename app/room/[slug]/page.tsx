@@ -454,34 +454,34 @@ export default function RoomPage() {
 
                 {/* Room info header */}
                 <div className="relative z-30 px-8 pt-6 pb-4 text-center">
-                  <div className="flex flex-wrap items-center justify-center gap-3">
+                  <div className="flex flex-wrap items-center justify-center gap-2">
                     <h1 className="font-sans text-xl font-bold text-foreground neon-text-amber">
                       {room.name}
                     </h1>
                     {room.isLive && (
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className="flex items-center gap-1 rounded px-1.5 py-0.5"
-                          style={{
-                            background: "oklch(0.08 0.01 280 / 0.9)",
-                            border: "1.5px solid oklch(0.50 0.24 30)",
-                            boxShadow: "0 0 6px oklch(0.50 0.24 30 / 0.6), 0 0 12px oklch(0.50 0.24 30 / 0.3)",
-                          }}
+                      <div
+                        className="flex items-center gap-1 rounded px-1.5 py-0.5"
+                        style={{
+                          background: "oklch(0.08 0.01 280 / 0.9)",
+                          border: "1.5px solid oklch(0.50 0.24 30)",
+                          boxShadow: "0 0 6px oklch(0.50 0.24 30 / 0.6), 0 0 12px oklch(0.50 0.24 30 / 0.3)",
+                        }}
+                      >
+                        <span
+                          className="font-sans text-[9px] font-bold tracking-wide"
+                          style={{ color: "oklch(0.58 0.26 30)", textShadow: "0 0 4px oklch(0.58 0.26 30 / 0.8)" }}
                         >
-                          <span
-                            className="font-sans text-[9px] font-bold tracking-wide"
-                            style={{ color: "oklch(0.58 0.26 30)", textShadow: "0 0 4px oklch(0.58 0.26 30 / 0.8)" }}
-                          >
-                            ON AIR
-                          </span>
-                        </div>
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {listenerCount.toLocaleString()} listening
+                          ON AIR
                         </span>
                       </div>
                     )}
                   </div>
-                  <p className="mt-0.5 font-sans text-xs font-medium text-primary">
+                  {room.isLive && (
+                    <span className="mt-1 block font-mono text-xs text-muted-foreground">
+                      {listenerCount.toLocaleString()} listening
+                    </span>
+                  )}
+                  <p className="mt-2 font-sans text-xs font-medium text-primary">
                     {room.djName}
                   </p>
                   <p className="mt-1.5 font-sans text-sm text-muted-foreground leading-relaxed">
