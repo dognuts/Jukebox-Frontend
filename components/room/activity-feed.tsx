@@ -1,7 +1,9 @@
-"use client"
-// Stub file - not imported anywhere, exists only to satisfy stale bundler cache
-export type ActivityType = "join" | "leave" | "reaction" | "tip" | "skip" | "track_change" | "chat"
-export interface ActivityItem { id: string; type: ActivityType; username?: string; message: string; timestamp: Date }
-export const activityIcons = {}
-export function ActivityFeed() { return null }
-export function useMockActivities() { return [] }
+// @ts-nocheck
+// This file exists only as a stub - not imported anywhere in the codebase
+// The bundler has stale cache referencing an old version of this file
+
+export const activityIcons = null
+export const ActivityFeed = null
+export const useMockActivities = () => []
+export type ActivityType = string
+export type ActivityItem = { id: string }

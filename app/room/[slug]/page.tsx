@@ -852,6 +852,8 @@ export default function RoomPage() {
                     requests={ws.pendingRequests}
                     onApprove={ws.djApprove}
                     onReject={ws.djReject}
+                    onApproveAll={() => ws.pendingRequests.forEach((r) => ws.djApprove(r.id))}
+                    onRejectAll={() => ws.pendingRequests.forEach((r) => ws.djReject(r.id))}
                   />
                 </div>
               </div>
