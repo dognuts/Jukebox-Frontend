@@ -1,12 +1,11 @@
 "use client"
 
-import { useState, useCallback, useMemo, useEffect, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, ListMusic, MessageCircle, Inbox, PauseCircle, XCircle, Play, Radio, SkipForward, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Navbar } from "@/components/layout/navbar"
-import { BubbleBackground } from "@/components/effects/bubble-background"
 import { NowPlaying } from "@/components/room/now-playing"
 import { SaveTrackMenu } from "@/components/room/save-track-menu"
 import { TrackQueue } from "@/components/room/track-queue"
