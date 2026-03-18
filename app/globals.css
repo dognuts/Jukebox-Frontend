@@ -992,11 +992,7 @@
   .animate-ambient-drift-2,
   .animate-ambient-drift-3,
   .upgrade-button-premium:hover,
-  .upgrade-button-premium:active,
-  .send-neon-btn,
-  .send-neon-btn:hover,
-  .request-track-btn,
-  .request-track-btn:hover {
+  .upgrade-button-premium:active {
     animation: none !important;
     transform: none !important;
   }
@@ -1004,127 +1000,6 @@
   .stagger-animate {
     opacity: 1 !important;
   }
-}
-
-/* Send Neon button - electric pulsing effect */
-@keyframes neon-electric-pulse {
-  0%, 100% {
-    box-shadow: 
-      0 0 10px oklch(0.72 0.18 195),
-      0 0 20px oklch(0.72 0.18 195 / 0.5),
-      0 0 30px oklch(0.72 0.18 195 / 0.3),
-      inset 0 0 10px oklch(0.72 0.18 195 / 0.1);
-    filter: brightness(1);
-  }
-  50% {
-    box-shadow: 
-      0 0 15px oklch(0.82 0.22 195),
-      0 0 35px oklch(0.82 0.22 195 / 0.6),
-      0 0 50px oklch(0.72 0.18 250 / 0.4),
-      0 0 70px oklch(0.72 0.18 195 / 0.2),
-      inset 0 0 15px oklch(0.82 0.22 195 / 0.15);
-    filter: brightness(1.1);
-  }
-}
-
-@keyframes neon-shimmer {
-  0% {
-    background-position: -200% center;
-  }
-  100% {
-    background-position: 200% center;
-  }
-}
-
-@keyframes electric-flicker {
-  0%, 100% { opacity: 1; }
-  92% { opacity: 1; }
-  93% { opacity: 0.8; }
-  94% { opacity: 1; }
-  96% { opacity: 0.9; }
-  97% { opacity: 1; }
-}
-
-.send-neon-btn {
-  position: relative;
-  background: linear-gradient(
-    135deg,
-    oklch(0.72 0.18 195) 0%,
-    oklch(0.65 0.20 220) 50%,
-    oklch(0.72 0.18 195) 100%
-  ) !important;
-  background-size: 200% auto;
-  animation: 
-    neon-electric-pulse 2s ease-in-out infinite,
-    electric-flicker 4s linear infinite;
-  border: 1px solid oklch(0.82 0.22 195 / 0.6) !important;
-  color: oklch(0.98 0.01 195) !important;
-}
-
-.send-neon-btn:hover {
-  animation: 
-    neon-electric-pulse 1s ease-in-out infinite,
-    neon-shimmer 1.5s linear infinite,
-    electric-flicker 2s linear infinite;
-  background: linear-gradient(
-    90deg,
-    oklch(0.72 0.18 195) 0%,
-    oklch(0.82 0.22 250) 25%,
-    oklch(0.85 0.18 195) 50%,
-    oklch(0.82 0.22 250) 75%,
-    oklch(0.72 0.18 195) 100%
-  ) !important;
-  background-size: 200% auto;
-  transform: scale(1.08);
-}
-
-.send-neon-btn:active {
-  transform: scale(0.95);
-  filter: brightness(1.3);
-}
-
-/* Request Track button - purple electric */
-@keyframes request-pulse {
-  0%, 100% {
-    box-shadow: 
-      0 0 12px oklch(0.55 0.22 270),
-      0 0 24px oklch(0.55 0.22 270 / 0.4),
-      0 0 36px oklch(0.48 0.24 300 / 0.2);
-  }
-  50% {
-    box-shadow: 
-      0 0 18px oklch(0.60 0.25 270),
-      0 0 40px oklch(0.55 0.22 270 / 0.5),
-      0 0 60px oklch(0.48 0.24 300 / 0.3),
-      0 0 80px oklch(0.55 0.22 270 / 0.15);
-  }
-}
-
-.request-track-btn {
-  position: relative;
-  background: linear-gradient(
-    135deg,
-    oklch(0.55 0.22 270) 0%,
-    oklch(0.50 0.24 290) 50%,
-    oklch(0.48 0.24 300) 100%
-  ) !important;
-  animation: request-pulse 2.5s ease-in-out infinite;
-}
-
-.request-track-btn:hover {
-  animation: request-pulse 1.2s ease-in-out infinite;
-  transform: scale(1.08);
-  background: linear-gradient(
-    135deg,
-    oklch(0.60 0.24 270) 0%,
-    oklch(0.55 0.26 290) 50%,
-    oklch(0.52 0.26 300) 100%
-  ) !important;
-}
-
-.request-track-btn:active {
-  transform: scale(0.95);
-  filter: brightness(1.2);
 }
 
 /* Scrollbar styling */
