@@ -1,5 +1,5 @@
 "use client"
-
+// Activity feed component v2
 import { useState, useEffect } from "react"
 import { Users, Heart, Zap, MessageCircle, SkipForward, Music } from "lucide-react"
 
