@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+// Cache invalidation: 2026-03-17
 const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
