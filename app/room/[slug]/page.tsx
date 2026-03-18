@@ -703,7 +703,7 @@ export default function RoomPage() {
                 </div>
 
                 {/* Neon Tube */}
-                <div className="relative z-10 px-6 py-3">
+                <div className="relative z-10 px-6 py-2">
                   <NeonTubeViz tube={ws.tube ?? mockTube} powerUp={ws.lastPowerUp ?? mockPowerUp} />
                 </div>
 
@@ -777,23 +777,23 @@ export default function RoomPage() {
 
             {/* Action buttons for listeners */}
             {!isDJ && (
-              <div className="flex flex-wrap items-center justify-center gap-4 py-3">
+              <div className="flex flex-wrap items-center justify-center gap-3 py-2">
                 <button
                   onClick={() => setSendNeonOpen(true)}
-                  className="send-neon-btn group relative flex items-center gap-2.5 rounded-full px-6 py-3 font-sans text-sm font-bold transition-all"
+                  className="send-neon-btn group relative flex items-center gap-1.5 rounded-full px-4 py-2 font-sans text-xs font-semibold transition-all"
                 >
-                  <Zap className="icon-zap h-4.5 w-4.5" />
-                    Send Neon
+                  <Zap className="icon-zap h-3.5 w-3.5" />
+                  Send Neon
+                </button>
+                {serverPolicy !== "closed" && (
+                  <button
+                    onClick={() => setRequestModalOpen(true)}
+                    className="request-track-btn group relative flex items-center gap-1.5 rounded-full px-4 py-2 font-sans text-xs font-semibold transition-all"
+                  >
+                    <ListMusic className="icon-music h-3.5 w-3.5" />
+                    Request a Track
                   </button>
-                  {serverPolicy !== "closed" && (
-                    <button
-                      onClick={() => setRequestModalOpen(true)}
-                      className="request-track-btn group relative flex items-center gap-2.5 rounded-full px-6 py-3 font-sans text-sm font-bold transition-all"
-                    >
-                      <ListMusic className="icon-music h-4.5 w-4.5" />
-                      Request a Track
-                    </button>
-                  )}
+                )}
               </div>
             )}
 
