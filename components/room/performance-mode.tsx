@@ -1,5 +1,5 @@
 "use client"
-// Performance mode v2 - cache invalidation
+
 import { useState, useEffect } from "react"
 import { X, Users, Flame, SkipForward, Mic, MicOff } from "lucide-react"
 import { VinylSpinner } from "@/components/effects/vinyl-spinner"
