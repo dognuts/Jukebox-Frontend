@@ -797,13 +797,32 @@ export default function RoomPage() {
               </div>
             )}
 
-            {/* Track History Carousel - higher priority */}
+            {/* Queue - Up Next (second priority after Now Playing) */}
+            <div
+              className={`relative overflow-hidden rounded-2xl ${mobilePanel !== "queue" ? "hidden lg:block" : ""}`}
+              style={{
+                background: "oklch(0.13 0.01 280)",
+                border: "1px solid oklch(0.30 0.03 60 / 0.3)",
+              }}
+            >
+              <div className="p-4">
+                <TrackQueue
+                  tracks={queueTracks}
+                  isDJ={isDJ}
+                  requestPolicy={serverPolicy as "open" | "closed" | "approval"}
+                  onSubmitTrack={handleSubmitTrack}
+                />
+              </div>
+              <div className="h-px" style={{ background: "linear-gradient(90deg, transparent, oklch(0.72 0.18 250 / 0.3), transparent)" }} />
+            </div>
+
+            {/* Track History Carousel */}
             {trackHistory.length > 0 && (
               <div
                 className="relative overflow-hidden rounded-2xl p-4"
                 style={{
-                  background: "oklch(0.14 0.01 280)",
-                  border: "1px solid oklch(0.30 0.03 60 / 0.3)",
+                  background: "oklch(0.12 0.008 280)",
+                  border: "1px solid oklch(0.26 0.015 280 / 0.35)",
                 }}
               >
                 <TrackHistory tracks={trackHistory} currentTrackId={currentTrack?.id} />
@@ -823,25 +842,6 @@ export default function RoomPage() {
                 <ActivityFeed activities={mockActivities} maxVisible={3} />
               </div>
             )}
-
-            {/* Queue - secondary panel */}
-            <div
-              className={`relative overflow-hidden rounded-2xl ${mobilePanel !== "queue" ? "hidden lg:block" : ""}`}
-              style={{
-                background: "oklch(0.12 0.008 280)",
-                border: "1px solid oklch(0.26 0.015 280 / 0.35)",
-              }}
-            >
-              <div className="p-4">
-                <TrackQueue
-                  tracks={queueTracks}
-                  isDJ={isDJ}
-                  requestPolicy={serverPolicy as "open" | "closed" | "approval"}
-                  onSubmitTrack={handleSubmitTrack}
-                />
-              </div>
-              <div className="h-px" style={{ background: "linear-gradient(90deg, transparent, oklch(0.72 0.18 250 / 0.3), transparent)" }} />
-            </div>
 
             {/* Pending Requests — DJ only, below queue */}
             {isDJ && requestStatus !== "closed" && (
