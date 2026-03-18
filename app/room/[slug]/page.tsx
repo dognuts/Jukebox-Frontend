@@ -468,7 +468,7 @@ export default function RoomPage() {
                         }}
                       >
                         <span
-                          className="font-sans text-[9px] font-bold tracking-wide"
+                          className="font-sans text-[10px] font-bold tracking-wider"
                           style={{ color: "oklch(0.58 0.26 30)", textShadow: "0 0 4px oklch(0.58 0.26 30 / 0.8)" }}
                         >
                           ON AIR
@@ -477,14 +477,14 @@ export default function RoomPage() {
                     )}
                   </div>
                   {room.isLive && (
-                    <span className="mt-1 block font-mono text-xs text-muted-foreground">
+                    <span className="mt-1 block font-mono text-xs font-medium text-muted-foreground">
                       {listenerCount.toLocaleString()} listening
                     </span>
                   )}
-                  <p className="mt-2 font-sans text-xs font-medium text-primary">
+                  <p className="mt-2 font-sans text-sm font-medium text-primary">
                     {room.djName}
                   </p>
-                  <p className="mt-1.5 font-sans text-sm text-muted-foreground leading-relaxed">
+                  <p className="mt-1.5 font-sans text-xs text-muted-foreground leading-relaxed">
                     {room.description}
                   </p>
                   {/* Request status */}
@@ -500,7 +500,7 @@ export default function RoomPage() {
                     {requestStatus === "open" && <Inbox className="h-3 w-3" style={{ color: "oklch(0.82 0.18 80)" }} />}
                     {requestStatus === "paused" && <PauseCircle className="h-3 w-3" style={{ color: "oklch(0.78 0.14 60)" }} />}
                     {requestStatus === "closed" && <XCircle className="h-3 w-3 text-muted-foreground" />}
-                    <span className="font-sans text-[10px] font-medium"
+                    <span className="font-sans text-xs font-semibold"
                       style={{
                         color: requestStatus === "open"
                           ? "oklch(0.82 0.18 80)"

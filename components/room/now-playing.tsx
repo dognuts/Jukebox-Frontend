@@ -146,18 +146,18 @@ export function NowPlaying({
         <div className="flex flex-1 flex-col items-center gap-4 lg:items-start">
           <div className="text-center lg:text-left">
             <div className="flex items-start justify-center gap-1.5 lg:justify-start">
-              <h2 className="font-sans text-xl font-bold tracking-tight text-foreground sm:text-2xl text-balance leading-tight">
+              <h2 className="font-sans text-2xl font-bold tracking-tight text-foreground sm:text-3xl text-balance leading-tight">
                 {track.title}
               </h2>
-              <SaveTrackMenu track={track} size={16} />
+              <SaveTrackMenu track={track} size={18} />
             </div>
             <p
-              className="mt-1 font-sans text-sm font-medium"
+              className="mt-2 font-sans text-base font-medium"
               style={{ color: "oklch(0.82 0.16 80)" }}
             >
               {track.artist}
             </p>
-            <p className="mt-0.5 font-sans text-xs text-muted-foreground">
+            <p className="mt-1 font-sans text-xs text-muted-foreground">
               Queued by{" "}
               <span className="font-medium" style={{ color: "oklch(0.72 0.12 250)" }}>
                 {track.submittedBy}
