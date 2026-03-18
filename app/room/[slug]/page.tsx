@@ -694,25 +694,9 @@ export default function RoomPage() {
                   </div>
                 </div>
 
-                {/* Neon Tube + Send Neon */}
+                {/* Neon Tube */}
                 <div className="relative z-10 px-6 py-3">
                   <NeonTubeViz tube={ws.tube} powerUp={ws.lastPowerUp} />
-                  {!isDJ && (
-                    <div className="mt-2 flex justify-center">
-                      <button
-                        onClick={() => setSendNeonOpen(true)}
-                        className="flex items-center gap-1.5 rounded-full px-4 py-1.5 font-sans text-xs font-semibold transition-all hover:scale-105 active:scale-95"
-                        style={{
-                          background: "oklch(0.72 0.18 195 / 0.15)",
-                          border: "1px solid oklch(0.72 0.18 195 / 0.4)",
-                          color: "oklch(0.72 0.18 195)",
-                        }}
-                      >
-                        <Zap className="h-3.5 w-3.5" />
-                        Send Neon
-                      </button>
-                    </div>
-                  )}
                 </div>
 
                 {/* DJ Controls */}
@@ -783,60 +767,69 @@ export default function RoomPage() {
               </Button>
             </div>
 
-            {/* Live Activity Feed - listeners only */}
+            {/* Listener Action Bar - prominent CTA area */}
             {!isDJ && (
               <div
                 className="relative overflow-hidden rounded-2xl p-4"
                 style={{
-                  background: "oklch(0.13 0.01 280)",
-                  border: "1px solid oklch(0.28 0.02 60 / 0.25)",
+                  background: "linear-gradient(135deg, oklch(0.14 0.02 280), oklch(0.12 0.015 300))",
+                  border: "1px solid oklch(0.35 0.04 80 / 0.3)",
+                  boxShadow: "0 4px 20px oklch(0 0 0 / 0.3), inset 0 1px 0 oklch(1 0 0 / 0.03)",
                 }}
               >
-                <h3 className="mb-3 font-sans text-sm font-medium text-muted-foreground">Live Activity</h3>
-                <ActivityFeed activities={mockActivities} maxVisible={4} />
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <QuickTipButton djName={room.djName} />
+                  {serverPolicy !== "closed" && (
+                    <button
+                      onClick={() => setRequestModalOpen(true)}
+                      className="request-glow-btn group relative flex items-center gap-2.5 rounded-full px-6 py-2.5 font-sans text-sm font-semibold transition-all hover:scale-105 active:scale-95"
+                      style={{
+                        background: "linear-gradient(135deg, oklch(0.55 0.22 270), oklch(0.48 0.24 300))",
+                        color: "white",
+                        boxShadow: "0 0 15px oklch(0.55 0.22 270 / 0.4), 0 0 30px oklch(0.48 0.24 300 / 0.2)",
+                      }}
+                    >
+                      <ListMusic className="h-4 w-4" />
+                      Request a Track
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
-            {/* Quick Tip & Request buttons for listeners */}
-            {!isDJ && (
-              <div className="flex flex-wrap items-center justify-center gap-3 py-2">
-                <QuickTipButton djName={room.djName} />
-                {serverPolicy !== "closed" && (
-                  <button
-                    onClick={() => setRequestModalOpen(true)}
-                    className="request-glow-btn group relative flex items-center gap-2.5 rounded-full px-7 py-3 font-sans text-sm font-semibold transition-all hover:scale-105 active:scale-95"
-                    style={{
-                      background: "linear-gradient(135deg, oklch(0.55 0.22 270), oklch(0.48 0.24 300))",
-                      color: "white",
-                      boxShadow: "0 0 20px oklch(0.55 0.22 270 / 0.4), 0 0 40px oklch(0.48 0.24 300 / 0.2), 0 0 60px oklch(0.55 0.22 270 / 0.1)",
-                    }}
-                  >
-                    <ListMusic className="h-4.5 w-4.5" />
-                    Request a Track
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Track History Carousel */}
+            {/* Track History Carousel - higher priority */}
             {trackHistory.length > 0 && (
               <div
                 className="relative overflow-hidden rounded-2xl p-4"
                 style={{
-                  background: "oklch(0.13 0.01 280)",
-                  border: "1px solid oklch(0.28 0.02 60 / 0.25)",
+                  background: "oklch(0.14 0.01 280)",
+                  border: "1px solid oklch(0.30 0.03 60 / 0.3)",
                 }}
               >
                 <TrackHistory tracks={trackHistory} currentTrackId={currentTrack?.id} />
               </div>
             )}
 
-            {/* Queue */}
+            {/* Live Activity Feed - secondary panel */}
+            {!isDJ && (
+              <div
+                className="relative overflow-hidden rounded-2xl p-3"
+                style={{
+                  background: "oklch(0.11 0.008 280)",
+                  border: "1px solid oklch(0.25 0.015 280 / 0.4)",
+                }}
+              >
+                <h3 className="mb-2 font-sans text-xs font-medium uppercase tracking-wide text-muted-foreground/70">Live Activity</h3>
+                <ActivityFeed activities={mockActivities} maxVisible={3} />
+              </div>
+            )}
+
+            {/* Queue - secondary panel */}
             <div
               className={`relative overflow-hidden rounded-2xl ${mobilePanel !== "queue" ? "hidden lg:block" : ""}`}
               style={{
-                background: "oklch(0.13 0.01 280)",
-                border: "1px solid oklch(0.28 0.02 60 / 0.25)",
+                background: "oklch(0.12 0.008 280)",
+                border: "1px solid oklch(0.26 0.015 280 / 0.35)",
               }}
             >
               <div className="p-4">
@@ -855,8 +848,8 @@ export default function RoomPage() {
               <div
                 className={`relative overflow-hidden rounded-2xl ${mobilePanel !== "queue" ? "hidden lg:block" : ""}`}
                 style={{
-                  background: "oklch(0.13 0.01 280)",
-                  border: "1px solid oklch(0.28 0.02 60 / 0.25)",
+                  background: "oklch(0.12 0.008 280)",
+                  border: "1px solid oklch(0.26 0.015 280 / 0.35)",
                 }}
               >
                 <div className="p-4">
