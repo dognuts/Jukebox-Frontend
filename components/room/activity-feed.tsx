@@ -1,8 +1,3 @@
-"use client"
-
-// This file is kept minimal to satisfy bundler cache
-// Activity messages are no longer used
-
-export function useMockActivityMessages() {
-  return []
-}
+// Minimal stub - activity feed feature removed
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+export const useMockActivityMessages = () => []
