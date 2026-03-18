@@ -25,6 +25,10 @@ import { parseTrackUrl } from "@/lib/track-utils"
 import { NeonTubeViz } from "@/components/room/neon-tube"
 import { SendNeonModal } from "@/components/room/send-neon-modal"
 import { DJSubscribeCard } from "@/components/room/dj-subscribe-card"
+import { ActivityFeed, useMockActivities } from "@/components/room/activity-feed"
+import { TrackHistory } from "@/components/room/track-history"
+import { QuickTipButton } from "@/components/room/quick-tip-button"
+import { TrackCountdown } from "@/components/room/track-countdown"
 import { useAuth } from "@/lib/auth-context"
 
 export default function RoomPage() {
@@ -151,6 +155,17 @@ export default function RoomPage() {
   // Map server request policy to UI status
   const serverPolicy = ws.connected ? ws.requestPolicy : (room?.requestPolicy ?? "open")
   const requestStatus = serverPolicy === "approval" ? "paused" : serverPolicy as "open" | "closed"
+
+  // Mock activity feed for demo
+  const mockActivities = useMockActivities()
+  
+  // Track history - combine current + queue for demo
+  const trackHistory = useMemo(() => {
+    const history: Track[] = []
+    if (currentTrack) history.push(currentTrack)
+    if (room?.queue) history.push(...room.queue.slice(0, 5))
+    return history
+  }, [currentTrack, room?.queue])
 
   // Sync player context
   useEffect(() => {
@@ -768,21 +783,51 @@ export default function RoomPage() {
               </Button>
             </div>
 
-            {/* Request button for listeners */}
-            {!isDJ && serverPolicy !== "closed" && (
-              <div className="flex justify-center py-2">
-                <button
-                  onClick={() => setRequestModalOpen(true)}
-                  className="request-glow-btn group relative flex items-center gap-2.5 rounded-full px-7 py-3 font-sans text-sm font-semibold transition-all hover:scale-105 active:scale-95"
-                  style={{
-                    background: "linear-gradient(135deg, oklch(0.55 0.22 270), oklch(0.48 0.24 300))",
-                    color: "white",
-                    boxShadow: "0 0 20px oklch(0.55 0.22 270 / 0.4), 0 0 40px oklch(0.48 0.24 300 / 0.2), 0 0 60px oklch(0.55 0.22 270 / 0.1)",
-                  }}
-                >
-                  <ListMusic className="h-4.5 w-4.5" />
-                  Request a Track
-                </button>
+            {/* Live Activity Feed - listeners only */}
+            {!isDJ && (
+              <div
+                className="relative overflow-hidden rounded-2xl p-4"
+                style={{
+                  background: "oklch(0.13 0.01 280)",
+                  border: "1px solid oklch(0.28 0.02 60 / 0.25)",
+                }}
+              >
+                <h3 className="mb-3 font-sans text-sm font-medium text-muted-foreground">Live Activity</h3>
+                <ActivityFeed activities={mockActivities} maxVisible={4} />
+              </div>
+            )}
+
+            {/* Quick Tip & Request buttons for listeners */}
+            {!isDJ && (
+              <div className="flex flex-wrap items-center justify-center gap-3 py-2">
+                <QuickTipButton djName={room.djName} />
+                {serverPolicy !== "closed" && (
+                  <button
+                    onClick={() => setRequestModalOpen(true)}
+                    className="request-glow-btn group relative flex items-center gap-2.5 rounded-full px-7 py-3 font-sans text-sm font-semibold transition-all hover:scale-105 active:scale-95"
+                    style={{
+                      background: "linear-gradient(135deg, oklch(0.55 0.22 270), oklch(0.48 0.24 300))",
+                      color: "white",
+                      boxShadow: "0 0 20px oklch(0.55 0.22 270 / 0.4), 0 0 40px oklch(0.48 0.24 300 / 0.2), 0 0 60px oklch(0.55 0.22 270 / 0.1)",
+                    }}
+                  >
+                    <ListMusic className="h-4.5 w-4.5" />
+                    Request a Track
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Track History Carousel */}
+            {trackHistory.length > 0 && (
+              <div
+                className="relative overflow-hidden rounded-2xl p-4"
+                style={{
+                  background: "oklch(0.13 0.01 280)",
+                  border: "1px solid oklch(0.28 0.02 60 / 0.25)",
+                }}
+              >
+                <TrackHistory tracks={trackHistory} currentTrackId={currentTrack?.id} />
               </div>
             )}
 
@@ -844,6 +889,16 @@ export default function RoomPage() {
           </div>
         </div>
       </div>
+
+      {/* Track Countdown - shows when track is ending */}
+      {!isDJ && queueTracks.length > 0 && (
+        <TrackCountdown
+          nextTrack={queueTracks[0]}
+          currentTime={audioCurrentTime}
+          currentDuration={audioDuration}
+          showThreshold={15}
+        />
+      )}
 
       {/* Request modal */}
       <RequestModal
