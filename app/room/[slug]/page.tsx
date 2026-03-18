@@ -752,21 +752,36 @@ export default function RoomPage() {
               </Button>
             </div>
 
-            {/* Request button for listeners */}
-            {!isDJ && serverPolicy !== "closed" && (
-              <div className="flex justify-center py-2">
+            {/* Action buttons for listeners */}
+            {!isDJ && (
+              <div className="flex flex-wrap items-center justify-center gap-3 py-2">
                 <button
-                  onClick={() => setRequestModalOpen(true)}
-                  className="request-glow-btn group relative flex items-center gap-2.5 rounded-full px-7 py-3 font-sans text-sm font-semibold transition-all hover:scale-105 active:scale-95"
+                  onClick={() => setSendNeonOpen(true)}
+                  className="group relative flex items-center gap-2 rounded-full px-5 py-2.5 font-sans text-sm font-semibold transition-all hover:scale-105 active:scale-95"
                   style={{
-                    background: "linear-gradient(135deg, oklch(0.55 0.22 270), oklch(0.48 0.24 300))",
-                    color: "white",
-                    boxShadow: "0 0 20px oklch(0.55 0.22 270 / 0.4), 0 0 40px oklch(0.48 0.24 300 / 0.2), 0 0 60px oklch(0.55 0.22 270 / 0.1)",
+                    background: "linear-gradient(135deg, oklch(0.82 0.18 80 / 0.15), oklch(0.85 0.20 60 / 0.15))",
+                    border: "1px solid oklch(0.82 0.18 80 / 0.5)",
+                    color: "oklch(0.82 0.18 80)",
+                    boxShadow: "0 0 10px oklch(0.82 0.18 80 / 0.2)",
                   }}
                 >
-                  <ListMusic className="h-4.5 w-4.5" />
-                  Request a Track
+                  <Zap className="h-4 w-4" />
+                  Send Neon
                 </button>
+                {serverPolicy !== "closed" && (
+                  <button
+                    onClick={() => setRequestModalOpen(true)}
+                    className="request-glow-btn group relative flex items-center gap-2.5 rounded-full px-5 py-2.5 font-sans text-sm font-semibold transition-all hover:scale-105 active:scale-95"
+                    style={{
+                      background: "linear-gradient(135deg, oklch(0.55 0.22 270), oklch(0.48 0.24 300))",
+                      color: "white",
+                      boxShadow: "0 0 20px oklch(0.55 0.22 270 / 0.4), 0 0 40px oklch(0.48 0.24 300 / 0.2)",
+                    }}
+                  >
+                    <ListMusic className="h-4 w-4" />
+                    Request a Track
+                  </button>
+                )}
               </div>
             )}
 
