@@ -61,10 +61,16 @@ export default function HomePage() {
     }
     fetchRooms()
     // Re-fetch every 30s
-    const interval = setInterval(fetchRooms, 30000)
+    const interval = setInterval(fetchRooms, 15000)
+    // Also re-fetch when user returns to this tab
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") fetchRooms()
+    }
+    document.addEventListener("visibilitychange", handleVisibility)
     return () => {
       cancelled = true
       clearInterval(interval)
+      document.removeEventListener("visibilitychange", handleVisibility)
     }
   }, [])
 
@@ -120,6 +126,14 @@ export default function HomePage() {
           const bTime = b.endedAt?.getTime() ?? b.lastActive?.getTime() ?? 0
           return bTime - aTime
         }),
+    [allRooms]
+  )
+  // Rooms created but not yet live (no scheduledStart, no endedAt)
+  const waitingRooms = useMemo(
+    () =>
+      allRooms.filter(
+        (r) => !r.isLive && !r.scheduledStart && !r.endedAt && !r.lastActive
+      ),
     [allRooms]
   )
 
@@ -235,6 +249,20 @@ export default function HomePage() {
                   rooms={upcomingRooms}
                   title="Upcoming"
                   subtitle="Scheduled shows starting soon"
+                />
+              </ScrollReveal>
+            </>
+          )}
+
+          {/* Waiting to Go Live */}
+          {!selectedGenre && waitingRooms.length > 0 && (
+            <>
+              <SectionDivider />
+              <ScrollReveal delay={350} className="mb-8 sm:mb-10">
+                <RoomGrid
+                  rooms={waitingRooms}
+                  title="Ready to Go Live"
+                  subtitle="Newly created rooms waiting for their DJ"
                 />
               </ScrollReveal>
             </>

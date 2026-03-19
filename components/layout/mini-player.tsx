@@ -35,11 +35,11 @@ export function MiniPlayer() {
     return {
       roomId: "",
       trackId: player.track.id,
-      startedAtUnix: Date.now(), // start from beginning (server doesn't track mini player position)
+      startedAt: player.playbackStartedAt ?? Date.now(),
       isPlaying: player.isPlaying,
       pausePosition: 0,
     }
-  }, [player?.isPlaying, player?.track?.id])
+  }, [player?.isPlaying, player?.track?.id, player?.playbackStartedAt])
 
   // Don't render audio on room pages — the room's own AudioEngine handles it there
   const isOnRoomPage = pathname.startsWith("/room/")

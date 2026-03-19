@@ -50,6 +50,7 @@ export interface RoomWSState {
   chatMessages: APIChatMessage[]
   requestPolicy: string
   pendingRequests: APIQueueEntry[]
+  playedTracks: APITrack[]
   roomEnded: boolean
   roomEndedReason: string
   tube: NeonTubeState | null
@@ -79,6 +80,7 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
     chatMessages: [],
     requestPolicy: "open",
     pendingRequests: [],
+    playedTracks: [],
     roomEnded: false,
     roomEndedReason: "",
     tube: null,
@@ -117,44 +119,34 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
 
       const qs = params.toString()
       const url = `${getWsBase()}/ws/room/${slug}${qs ? `?${qs}` : ""}`
-
-      console.log("[ws] connecting to:", url)
       const ws = new WebSocket(url)
       wsRef.current = ws
 
       ws.onopen = () => {
         if (!cancelled) {
-          console.log("[ws] connected to", url)
-          reconnectCount = 0 // reset on successful connection
+          reconnectCount = 0
           setState((s) => ({ ...s, connected: true }))
         }
       }
 
       ws.onclose = (ev) => {
         if (!cancelled) {
-          console.log("[ws] disconnected:", ev.code, ev.reason)
           setState((s) => ({ ...s, connected: false }))
-          // Reconnect with backoff, up to MAX_RECONNECTS
           if (reconnectCount < MAX_RECONNECTS) {
             reconnectCount++
             const delay = Math.min(3000 * reconnectCount, 15000)
-            console.log(`[ws] reconnecting in ${delay}ms (attempt ${reconnectCount}/${MAX_RECONNECTS})`)
             reconnectTimer.current = setTimeout(connect, delay)
-          } else {
-            console.warn("[ws] max reconnect attempts reached, giving up")
           }
         }
       }
 
-      ws.onerror = (ev) => {
-        console.warn("[ws] connection error — will retry", ev)
+      ws.onerror = () => {
         ws.close()
       }
 
       ws.onmessage = (event) => {
         try {
           const msg: WSMessage = JSON.parse(event.data)
-          console.log("[ws] received:", msg.event, msg.payload)
           handleMessage(msg)
         } catch (err) {
           console.error("[ws] failed to parse message:", err)
@@ -169,12 +161,19 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
           break
 
         case "track_changed":
-          setState((s) => ({
-            ...s,
-            currentTrack: msg.payload as APITrack | null,
-            // Clear playback state when track is cleared (queue empty)
-            playbackState: msg.payload ? s.playbackState : null,
-          }))
+          setState((s) => {
+            const newTrack = msg.payload as APITrack | null
+            // Push the previous track into played history (if it existed)
+            const newPlayed = s.currentTrack && s.currentTrack.id !== "placeholder"
+              ? [s.currentTrack, ...s.playedTracks]
+              : s.playedTracks
+            return {
+              ...s,
+              currentTrack: newTrack,
+              playedTracks: newPlayed.slice(0, 100), // cap at 100
+              playbackState: newTrack ? s.playbackState : null,
+            }
+          })
           break
 
         case "queue_update":
@@ -214,20 +213,56 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
           break
 
         case "neon_gift":
-          // Could trigger a chat announcement or animation
+          // Show as activity pill in chat
           if (msg.payload?.from && msg.payload?.amount) {
             const giftMsg: APIChatMessage = {
-              id: `neon-${Date.now()}`,
+              id: `neon-${Date.now()}-${Math.random()}`,
               roomId: "",
-              username: "System",
-              avatarColor: "oklch(0.55 0.22 270)",
-              message: `${msg.payload.from} sent ${msg.payload.amount} Neon!`,
-              type: "announcement",
+              username: msg.payload.from,
+              avatarColor: "oklch(0.72 0.18 195)",
+              message: `sent ${msg.payload.amount} Neon`,
+              type: "activity_tip" as any,
               timestamp: new Date().toISOString(),
             }
             setState((s) => ({
               ...s,
               chatMessages: [...s.chatMessages.slice(-100), giftMsg],
+            }))
+          }
+          break
+
+        case "listener_join":
+          if (msg.payload?.username) {
+            const joinMsg: APIChatMessage = {
+              id: `join-${Date.now()}-${Math.random()}`,
+              roomId: "",
+              username: msg.payload.username,
+              avatarColor: msg.payload.avatarColor || "oklch(0.65 0.15 155)",
+              message: "joined the room",
+              type: "activity_join" as any,
+              timestamp: new Date().toISOString(),
+            }
+            setState((s) => ({
+              ...s,
+              chatMessages: [...s.chatMessages.slice(-100), joinMsg],
+            }))
+          }
+          break
+
+        case "listener_leave":
+          if (msg.payload?.username) {
+            const leaveMsg: APIChatMessage = {
+              id: `leave-${Date.now()}-${Math.random()}`,
+              roomId: "",
+              username: msg.payload.username,
+              avatarColor: msg.payload.avatarColor || "oklch(0.55 0.08 280)",
+              message: "left the room",
+              type: "activity_leave" as any,
+              timestamp: new Date().toISOString(),
+            }
+            setState((s) => ({
+              ...s,
+              chatMessages: [...s.chatMessages.slice(-100), leaveMsg],
             }))
           }
           break
@@ -301,11 +336,7 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
   const send = useCallback((action: string, payload?: any) => {
     const ws = wsRef.current
     if (ws && ws.readyState === WebSocket.OPEN) {
-      const msg = JSON.stringify({ action, payload: payload ?? {} })
-      console.log("[ws] sending:", msg)
-      ws.send(msg)
-    } else {
-      console.warn("[ws] cannot send, not connected. readyState:", ws?.readyState)
+      ws.send(JSON.stringify({ action, payload: payload ?? {} }))
     }
   }, [])
 

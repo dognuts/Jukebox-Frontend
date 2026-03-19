@@ -30,6 +30,9 @@ interface AudioEngineProps {
  * AudioEngine is an invisible component that manages the actual audio playback.
  * It renders the appropriate player (YouTube, SoundCloud, or HTML5 audio) based
  * on the track source, and syncs playback position to the server's playback state.
+ * 
+ * On initial load, audio is muted until the first sync seek completes to prevent
+ * the "plays from 0 then jumps" artifact.
  */
 export function AudioEngine({
   track,
@@ -45,16 +48,21 @@ export function AudioEngine({
 }: AudioEngineProps) {
   const playerRef = useRef<AudioPlayerHandle>(null)
   const [ready, setReady] = useState(false)
+  const [synced, setSynced] = useState(false) // true once first seek+play completes
   const [playerState, setPlayerState] = useState<"playing" | "paused" | "ended" | "buffering">("paused")
   const lastSyncRef = useRef(0)
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Volume control
+  // Volume control — suppress volume until synced to prevent hearing audio at position 0
   useEffect(() => {
     if (ready && playerRef.current) {
-      playerRef.current.setVolume(muted ? 0 : volume)
+      if (!synced) {
+        playerRef.current.setVolume(0)
+      } else {
+        playerRef.current.setVolume(muted ? 0 : volume)
+      }
     }
-  }, [volume, muted, ready])
+  }, [volume, muted, ready, synced])
 
   // Sync to server playback state
   const syncToServer = useCallback(() => {
@@ -71,6 +79,7 @@ export function AudioEngine({
       if (playbackState.pausePosition > 0) {
         playerRef.current.seekTo(playbackState.pausePosition)
       }
+      setSynced(true)
       onPlayStateChange?.(false)
       return
     }
@@ -84,15 +93,22 @@ export function AudioEngine({
     const currentPos = playerRef.current.getCurrentTime()
     const drift = Math.abs(currentPos - targetSeconds)
 
-    // Only seek if drift > 2 seconds (our sync tolerance)
+    // Seek if drift > 2 seconds
     if (drift > 2) {
-      console.log(`[audio-engine] sync: drift ${drift.toFixed(1)}s, seeking to ${targetSeconds.toFixed(1)}s`)
       playerRef.current.seekTo(targetSeconds)
     }
 
     playerRef.current.play()
-    onPlayStateChange?.(true)
-  }, [playbackState, ready, onPlayStateChange])
+
+    // Restore volume after a short delay to let the seek take effect
+    if (!synced) {
+      setTimeout(() => {
+        setSynced(true)
+      }, 600)
+    } else {
+      onPlayStateChange?.(true)
+    }
+  }, [playbackState, ready, synced, onPlayStateChange])
 
   // Sync when playback state changes
   useEffect(() => {
@@ -125,6 +141,7 @@ export function AudioEngine({
   // Reset ready state when track changes
   useEffect(() => {
     setReady(false)
+    setSynced(false)
     lastSyncRef.current = 0
     hasPlayedRef.current = false
   }, [track?.id])

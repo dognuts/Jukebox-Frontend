@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState } from "react"
 import { Zap } from "lucide-react"
 import type { NeonTubeState } from "@/hooks/use-room-websocket"
 
@@ -9,6 +9,7 @@ const TUBE_COLORS: Record<number, { primary: string; glow: string; label: string
   2: { primary: "oklch(0.65 0.24 330)", glow: "oklch(0.65 0.24 330 / 0.5)", label: "Magenta" },
   3: { primary: "oklch(0.82 0.18 80)", glow: "oklch(0.82 0.18 80 / 0.5)", label: "Amber" },
   4: { primary: "oklch(0.90 0.05 0)", glow: "oklch(0.90 0.05 0 / 0.6)", label: "Rainbow" },
+  5: { primary: "oklch(0.97 0.01 0)", glow: "oklch(0.97 0.02 0 / 0.8)", label: "Supernova" },
 }
 
 interface NeonTubeProps {
@@ -18,7 +19,6 @@ interface NeonTubeProps {
 
 export function NeonTubeViz({ tube, powerUp }: NeonTubeProps) {
   const [showPowerUp, setShowPowerUp] = useState(false)
-  const prevFill = useRef(0)
 
   useEffect(() => {
     if (powerUp) {
@@ -31,15 +31,19 @@ export function NeonTubeViz({ tube, powerUp }: NeonTubeProps) {
   const level = tube?.level ?? 1
   const fillAmount = tube?.fillAmount ?? 0
   const fillTarget = tube?.fillTarget ?? 100
-  const fillPct = Math.min(100, Math.round((fillAmount / fillTarget) * 100))
+  const fillPct = Math.min(100, fillTarget > 0 ? Math.round((fillAmount / fillTarget) * 100) : 0)
   const colors = TUBE_COLORS[level] ?? TUBE_COLORS[1]
-
-  // Track fill for smooth animation
-  useEffect(() => {
-    prevFill.current = fillPct
-  }, [fillPct])
-
   const isRainbow = level === 4
+  const isSupernova = level === 5
+
+  const fillBackground = isSupernova
+    ? "linear-gradient(90deg, oklch(0.92 0.02 0), oklch(0.99 0.005 0), oklch(0.92 0.02 270), oklch(0.99 0.005 0), oklch(0.92 0.02 0))"
+    : isRainbow
+    ? "linear-gradient(90deg, oklch(0.72 0.18 195), oklch(0.65 0.24 330), oklch(0.82 0.18 80), oklch(0.72 0.18 195))"
+    : `linear-gradient(180deg, ${colors.primary}, ${colors.primary})`
+
+  const fillBgSize = isSupernova || isRainbow ? "200% 100%" : "100% 100%"
+  const fillAnimation = isSupernova ? "rainbow-shift 1.5s linear infinite" : isRainbow ? "rainbow-shift 3s linear infinite" : "none"
 
   return (
     <div className="relative flex flex-col items-center gap-1.5">
@@ -49,7 +53,7 @@ export function NeonTubeViz({ tube, powerUp }: NeonTubeProps) {
           <div
             className="flex flex-col items-center gap-1 rounded-xl px-4 py-3"
             style={{
-              background: "oklch(0.10 0.02 280 / 0.9)",
+              backgroundColor: "oklch(0.10 0.02 280 / 0.9)",
               border: `2px solid ${colors.primary}`,
               boxShadow: `0 0 30px ${colors.glow}, 0 0 60px ${colors.glow}`,
               animation: "power-up-flash 0.6s ease-out",
@@ -57,7 +61,7 @@ export function NeonTubeViz({ tube, powerUp }: NeonTubeProps) {
           >
             <Zap className="h-6 w-6" style={{ color: colors.primary, filter: `drop-shadow(0 0 8px ${colors.glow})` }} />
             <span className="font-sans text-xs font-bold" style={{ color: colors.primary }}>
-              POWER UP!
+              {isSupernova ? "⚡ SUPERNOVA ⚡" : "POWER UP!"}
             </span>
             <span className="font-sans text-[10px] text-muted-foreground">
               Level {level} — {colors.label}
@@ -79,44 +83,33 @@ export function NeonTubeViz({ tube, powerUp }: NeonTubeProps) {
         className="relative w-full overflow-hidden rounded-full"
         style={{
           height: "12px",
-          background: "linear-gradient(180deg, oklch(0.12 0.02 280), oklch(0.16 0.02 280))",
-          border: `1px solid oklch(0.28 0.03 280 / 0.6)`,
+          backgroundColor: "oklch(0.14 0.02 280)",
+          border: "1px solid oklch(0.28 0.03 280 / 0.6)",
           boxShadow: fillPct > 0
             ? `inset 0 0 10px ${colors.glow}, 0 0 8px oklch(0 0 0 / 0.5)`
             : "inset 0 2px 4px oklch(0 0 0 / 0.3)",
         }}
       >
-        {/* Ambient glow layer */}
-        {fillPct > 0 && (
-          <div
-            className="absolute inset-0 rounded-full opacity-30"
-            style={{
-              background: `radial-gradient(ellipse at ${fillPct / 2}% 50%, ${colors.glow}, transparent 70%)`,
-              animation: "tube-pulse 2s ease-in-out infinite",
-            }}
-          />
-        )}
-
         {/* Fill bar */}
         <div
           className="absolute inset-y-0 left-0 rounded-full"
           style={{
             width: `${fillPct}%`,
-            background: isRainbow
-              ? "linear-gradient(90deg, oklch(0.72 0.18 195), oklch(0.65 0.24 330), oklch(0.82 0.18 80), oklch(0.72 0.18 195))"
-              : `linear-gradient(180deg, ${colors.primary}, oklch(from ${colors.primary} calc(l - 0.1) c h))`,
-            boxShadow: `0 0 10px ${colors.glow}, 0 0 20px ${colors.glow}, inset 0 1px 2px oklch(1 0 0 / 0.2)`,
-            backgroundSize: isRainbow ? "200% 100%" : undefined,
-            animation: isRainbow ? "rainbow-shift 3s linear infinite" : undefined,
+            backgroundImage: fillBackground,
+            backgroundSize: fillBgSize,
+            boxShadow: isSupernova
+              ? `0 0 12px ${colors.glow}, 0 0 25px ${colors.glow}, 0 0 40px oklch(0.95 0.02 0 / 0.4), inset 0 1px 2px oklch(1 0 0 / 0.4)`
+              : `0 0 10px ${colors.glow}, 0 0 20px ${colors.glow}, inset 0 1px 2px oklch(1 0 0 / 0.2)`,
+            animation: fillAnimation,
             transition: "width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
           }}
         />
 
         {/* Highlight reflection */}
         <div
-          className="absolute inset-x-0 top-0 h-[3px] rounded-t-full"
+          className="absolute inset-x-0 top-0 h-[3px] rounded-t-full pointer-events-none"
           style={{
-            background: "linear-gradient(90deg, transparent, oklch(1 0 0 / 0.08), transparent)",
+            backgroundImage: "linear-gradient(90deg, transparent, oklch(1 0 0 / 0.08), transparent)",
           }}
         />
       </div>

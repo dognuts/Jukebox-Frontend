@@ -25,7 +25,7 @@ const NEON_PACKS = [
 ]
 
 export default function PricingPage() {
-  const { isLoggedIn, user } = useAuth()
+  const { isLoggedIn, user, refreshAuth } = useAuth()
   const [subscribing, setSubscribing] = useState(false)
   const [buyingPack, setBuyingPack] = useState<string | null>(null)
   const [boughtPack, setBoughtPack] = useState<string | null>(null)
@@ -36,6 +36,7 @@ export default function PricingPage() {
     setSubscribing(true)
     try {
       await authRequest("/api/billing/plus/subscribe", { method: "POST" })
+      await refreshAuth() // update user.isPlus in auth context
       window.location.reload()
     } catch {
       alert("Failed to subscribe. Please try again.")
@@ -53,6 +54,7 @@ export default function PricingPage() {
         body: JSON.stringify({ packId }),
       })
       setNeonBalance(res.balance)
+      refreshAuth() // update neon balance in navbar
       setBoughtPack(packId)
       setTimeout(() => setBoughtPack(null), 2000)
     } catch {

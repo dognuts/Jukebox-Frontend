@@ -25,6 +25,7 @@ import { parseTrackUrl } from "@/lib/track-utils"
 import { NeonTubeViz } from "@/components/room/neon-tube"
 import { SendNeonModal } from "@/components/room/send-neon-modal"
 import { DJSubscribeCard } from "@/components/room/dj-subscribe-card"
+import { SupernovaSparksCascade } from "@/components/room/supernova-sparks"
 import { useAuth } from "@/lib/auth-context"
 import { HypeMeter, useHypeTracking } from "@/components/room/hype-meter"
 import { CollapsibleSection } from "@/components/room/collapsible-section"
@@ -47,7 +48,7 @@ export default function RoomPage() {
   const [room, setRoom] = useState<Room | null>(null)
   const [usingMock, setUsingMock] = useState(false)
   const [notFound, setNotFound] = useState(false)
-  const { setRoom: setPlayerRoom, updateTrack, close: closePlayer } = usePlayer()
+  const { setRoom: setPlayerRoom, updateTrack, updatePlaybackTime, close: closePlayer } = usePlayer()
 
   useEffect(() => {
     let cancelled = false
@@ -59,12 +60,10 @@ export default function RoomPage() {
         }
       } catch {
         if (!cancelled) {
-          // Always fall back to mock — only show not found if mock also has nothing
           setUsingMock(true)
           const mock = getRoomBySlug(slug) || rooms[0]
           if (!mock) {
             setNotFound(true)
-            closePlayer()
             return
           }
           setRoom(mock)
@@ -73,17 +72,19 @@ export default function RoomPage() {
     }
     load()
     return () => { cancelled = true }
-  }, [slug, closePlayer])
+  }, [slug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Ref for chat panel reaction overlay (to fire incoming WS reactions)
   const chatOverlayRef = useRef<HTMLDivElement>(null)
 
+  const hypeReactionRef = useRef<() => void>(() => {})
+
   const handleIncomingReaction = useCallback((emoji: string) => {
-    // Call _fireReaction on the chat overlay element (set by ChatPanel)
     const overlay = chatOverlayRef.current as any
     if (overlay?._fireReaction) {
       overlay._fireReaction(emoji)
     }
+    hypeReactionRef.current()
   }, [])
 
   // WebSocket for real-time updates (only when not using mock)
@@ -114,6 +115,7 @@ export default function RoomPage() {
 
   const [requestModalOpen, setRequestModalOpen] = useState(false)
   const [sendNeonOpen, setSendNeonOpen] = useState(false)
+  const tubeBarRef = useRef<HTMLDivElement>(null)
   const { user: authUser } = useAuth()
   const [mobilePanel, setMobilePanel] = useState<"queue" | "chat">("chat")
   const [micActive, setMicActive] = useState(false)
@@ -122,9 +124,40 @@ export default function RoomPage() {
   // Hype tracking for DJ view
   const hypeTracking = useHypeTracking()
 
+  // Connect hype tracking to real WS events
+  const prevChatCountRef = useRef(0)
+  useEffect(() => {
+    if (!ws.connected) return
+    const newCount = ws.chatMessages.length
+    if (newCount > prevChatCountRef.current) {
+      // Check what type the new messages are
+      const newMessages = ws.chatMessages.slice(prevChatCountRef.current)
+      for (const msg of newMessages) {
+        if ((msg.type as string) === "activity_tip") {
+          hypeTracking.recordTip()
+        } else if (msg.type === "message") {
+          hypeTracking.recordChat()
+        }
+      }
+    }
+    prevChatCountRef.current = newCount
+  }, [ws.chatMessages.length, ws.connected]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Track reactions via the onReaction callback
+  hypeReactionRef.current = hypeTracking.recordReaction
+
   // Mock tube state for when backend is not connected
-  const [mockTube, setMockTube] = useState({ roomId: slug || "", level: 1, fillAmount: 35, fillTarget: 100, totalNeon: 35 })
+  const [mockTube, setMockTube] = useState({ roomId: slug || "", level: 1, fillAmount: 0, fillTarget: 100, totalNeon: 0 })
   const [mockPowerUp, setMockPowerUp] = useState<{ newLevel: number; color: string } | null>(null)
+
+  // Fetch real tube state on room load
+  useEffect(() => {
+    if (!room?.id) return
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/rooms/${room.id}/tube`, { credentials: "include" })
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => { if (data) setMockTube(data) })
+      .catch(() => {})
+  }, [room?.id])
 
   // Handle neon sent - update tube locally in mock mode
   const handleNeonSent = useCallback((amount: number) => {
@@ -178,6 +211,52 @@ export default function RoomPage() {
     return room?.queue ?? []
   }, [ws.connected, ws.queue, room?.queue])
 
+  // Played tracks — accumulated from WS + initial fetch from API
+  const [fetchedHistory, setFetchedHistory] = useState<Track[]>([])
+  useEffect(() => {
+    if (!slug) return
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/rooms/${slug}/history`, { credentials: "include" })
+      .then((res) => res.ok ? res.json() : [])
+      .then((entries: any[]) => {
+        if (Array.isArray(entries)) {
+          setFetchedHistory(entries.map((e: any) => ({
+            id: e.track?.id || e.id,
+            title: e.track?.title || e.title || "",
+            artist: e.track?.artist || e.artist || "",
+            duration: e.track?.duration || e.duration || 0,
+            source: e.track?.source || e.source || "mp3",
+            sourceUrl: e.track?.sourceUrl || e.sourceUrl || "",
+            submittedBy: e.submittedBy || "",
+            albumGradient: e.track?.albumGradient || e.albumGradient || "linear-gradient(135deg, oklch(0.35 0.10 280), oklch(0.25 0.10 280))",
+          })))
+        }
+      })
+      .catch(() => {})
+  }, [slug])
+
+  const playedTracks: Track[] = useMemo(() => {
+    // WS-tracked played tracks (most recent first) + fetched history, deduplicated
+    const wsPlayed: Track[] = ws.playedTracks.map((t) => ({
+      id: t.id,
+      title: t.title,
+      artist: t.artist,
+      duration: t.duration,
+      source: t.source,
+      sourceUrl: t.sourceUrl,
+      submittedBy: "",
+      albumGradient: t.albumGradient || "linear-gradient(135deg, oklch(0.35 0.10 280), oklch(0.25 0.10 280))",
+    }))
+    const seen = new Set(wsPlayed.map((t) => t.id))
+    const merged = [...wsPlayed]
+    for (const t of fetchedHistory) {
+      if (!seen.has(t.id)) {
+        seen.add(t.id)
+        merged.push(t)
+      }
+    }
+    return merged
+  }, [ws.playedTracks, fetchedHistory])
+
   const chatMessages: ChatMessage[] = useMemo(() => {
     if (ws.connected) {
       return ws.chatMessages.map((m) => ({
@@ -200,7 +279,8 @@ export default function RoomPage() {
   // Sync player context
   useEffect(() => {
     if (room && currentTrack) {
-      setPlayerRoom(room.slug, room.name, room.djName, currentTrack)
+      const startedAt = ws.playbackState?.startedAt ?? Date.now()
+      setPlayerRoom(room.slug, room.name, room.djName, currentTrack, startedAt)
     }
   }, [room?.slug, room?.name, room?.djName, currentTrack]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -209,6 +289,13 @@ export default function RoomPage() {
       updateTrack(currentTrack)
     }
   }, [currentTrack, updateTrack])
+
+  // Keep playback time synced for mini player continuity
+  useEffect(() => {
+    if (ws.playbackState?.startedAt) {
+      updatePlaybackTime(ws.playbackState.startedAt)
+    }
+  }, [ws.playbackState?.startedAt, updatePlaybackTime])
 
   // Close mini player when room ends
   useEffect(() => {
@@ -730,9 +817,11 @@ export default function RoomPage() {
                   </div>
                 </div>
 
-                {/* Neon Tube */}
-                <div className="relative z-10 px-6 py-2">
-                  <NeonTubeViz tube={ws.tube ?? mockTube} powerUp={ws.lastPowerUp ?? mockPowerUp} />
+                {/* Neon Tube + Supernova spark zone starts here */}
+                <div className="relative">
+                  <div ref={tubeBarRef} className="relative z-10 px-6 py-2">
+                    <NeonTubeViz tube={ws.tube ?? mockTube} powerUp={ws.lastPowerUp ?? mockPowerUp} />
+                  </div>
                 </div>
 
                 {/* DJ Controls */}
@@ -804,8 +893,16 @@ export default function RoomPage() {
             </div>
 
             {/* Action buttons for listeners */}
+            <div className="relative">
+              {/* Supernova sparks — canvas spans from tube bar down through entire queue */}
+              <SupernovaSparksCascade
+                active={(ws.tube ?? mockTube).level === 5 && (ws.tube ?? mockTube).fillAmount > 0}
+                fillPct={Math.min(100, Math.round(((ws.tube ?? mockTube).fillAmount / ((ws.tube ?? mockTube).fillTarget || 100)) * 100))}
+                tubeRef={tubeBarRef}
+              />
+
             {!isDJ && (
-              <div className="flex flex-wrap items-center justify-center gap-3 py-2">
+              <div className="relative z-10 flex flex-wrap items-center justify-center gap-3 py-2">
                 <button
                   onClick={() => setSendNeonOpen(true)}
                   className="send-neon-btn group relative flex items-center gap-1.5 rounded-full px-4 py-2 font-sans text-xs font-semibold transition-all"
@@ -852,7 +949,11 @@ export default function RoomPage() {
             >
               <TrackQueue
                 tracks={queueTracks}
+                playedTracks={playedTracks}
                 isDJ={isDJ}
+                roomSlug={room?.slug}
+                roomName={room?.name}
+                djName={room?.djName}
                 requestPolicy={serverPolicy as "open" | "closed" | "approval"}
                 onSubmitTrack={handleSubmitTrack}
               />
@@ -881,6 +982,7 @@ export default function RoomPage() {
                 />
               </CollapsibleSection>
             )}
+            </div>{/* end supernova sparks wrapper */}
           </div>
 
           {/* Right: Chat */}

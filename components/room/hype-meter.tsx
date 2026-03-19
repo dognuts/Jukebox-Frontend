@@ -84,10 +84,18 @@ export function HypeMeter({ recentTips, recentChats, recentReactions }: HypeMete
       </div>
 
       {/* Activity breakdown */}
-      <div className="flex items-center justify-between mt-2 text-[9px] text-muted-foreground">
-        <span>{recentTips} tips</span>
-        <span>{recentChats} chats</span>
-        <span>{recentReactions} reactions</span>
+      <div className="flex items-center justify-between mt-2">
+        <span className="flex items-center gap-1 text-[9px] text-muted-foreground">
+          <Zap className="h-2.5 w-2.5" style={{ color: "oklch(0.72 0.18 195)" }} />
+          <span className="font-mono font-bold" style={{ color: "oklch(0.72 0.18 195)" }}>{recentTips}</span> neon
+        </span>
+        <span className="flex items-center gap-1 text-[9px] text-muted-foreground">
+          <span className="font-mono font-bold">{recentChats}</span> chats
+        </span>
+        <span className="flex items-center gap-1 text-[9px] text-muted-foreground">
+          <span className="font-mono font-bold">{recentReactions}</span> reactions
+        </span>
+        <span className="text-[9px] text-muted-foreground/50">/ 60s</span>
       </div>
     </div>
   )

@@ -18,6 +18,7 @@ interface PlayerState {
   isPlaying: boolean
   volume: number
   muted: boolean
+  playbackStartedAt?: number // server's startedAt timestamp for sync
 }
 
 interface PlayerContextType {
@@ -26,9 +27,11 @@ interface PlayerContextType {
     roomSlug: string,
     roomName: string,
     djName: string,
-    track: Track
+    track: Track,
+    playbackStartedAt?: number
   ) => void
   updateTrack: (track: Track) => void
+  updatePlaybackTime: (startedAt: number) => void
   togglePlay: () => void
   setVolume: (v: number) => void
   toggleMute: () => void
@@ -84,7 +87,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [player, hydrated])
 
   const setRoom = useCallback(
-    (roomSlug: string, roomName: string, djName: string, track: Track) => {
+    (roomSlug: string, roomName: string, djName: string, track: Track, playbackStartedAt?: number) => {
       setPlayer((prev) => {
         const next = {
           roomSlug,
@@ -94,8 +97,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           isPlaying: true,
           volume: prev?.volume ?? 75,
           muted: prev?.muted ?? false,
+          playbackStartedAt,
         }
-        // Synchronously persist so it survives immediate navigation
         saveToStorage(next)
         return next
       })
@@ -107,6 +110,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setPlayer((prev) => {
       if (!prev) return null
       const next = { ...prev, track }
+      saveToStorage(next)
+      return next
+    })
+  }, [])
+
+  const updatePlaybackTime = useCallback((startedAt: number) => {
+    setPlayer((prev) => {
+      if (!prev) return null
+      const next = { ...prev, playbackStartedAt: startedAt }
       saveToStorage(next)
       return next
     })
@@ -150,6 +162,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         player: hydrated ? player : null,
         setRoom,
         updateTrack,
+        updatePlaybackTime,
         togglePlay,
         setVolume,
         toggleMute,

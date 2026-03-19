@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Zap, Loader2, Sparkles, ArrowLeft, Plus, ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { authRequest } from "@/lib/api"
+import { useAuth } from "@/lib/auth-context"
 
 const QUICK_AMOUNTS = [10, 25, 50, 100, 250, 500]
 
@@ -27,6 +28,7 @@ interface SendNeonModalProps {
 }
 
 export function SendNeonModal({ open, onClose, roomId, neonBalance: initialBalance, onBalanceChange, onNeonSent }: SendNeonModalProps) {
+  const { refreshAuth } = useAuth()
   const [view, setView] = useState<View>("send")
   const [balance, setBalance] = useState(initialBalance)
   const [amount, setAmount] = useState(25)
@@ -36,8 +38,18 @@ export function SendNeonModal({ open, onClose, roomId, neonBalance: initialBalan
   const [buySuccess, setBuySuccess] = useState<string | null>(null)
   const [error, setError] = useState("")
 
-  // Sync balance from props when modal opens
-  useState(() => { setBalance(initialBalance) })
+  // Sync balance from props whenever modal opens or initialBalance changes
+  useEffect(() => {
+    setBalance(initialBalance)
+  }, [initialBalance, open])
+
+  // Fetch real balance from server when modal opens
+  useEffect(() => {
+    if (!open) return
+    authRequest<{ balance: number }>("/api/billing/neon/balance")
+      .then((res) => setBalance(res.balance))
+      .catch(() => {})
+  }, [open])
 
   const updateBalance = useCallback((newBal: number) => {
     setBalance(newBal)
@@ -56,6 +68,7 @@ export function SendNeonModal({ open, onClose, roomId, neonBalance: initialBalan
       })
       updateBalance(res.balance)
       onNeonSent?.(amount)
+      refreshAuth() // update neon balance in navbar
       setSuccess(true)
       setTimeout(() => {
         setSuccess(false)
@@ -64,7 +77,16 @@ export function SendNeonModal({ open, onClose, roomId, neonBalance: initialBalan
         setView("send")
       }, 1200)
     } catch (err: any) {
-      setError(err.message?.includes("insufficient") ? "Not enough Neon! Top up below." : "Failed to send Neon")
+      const msg = err.message || ""
+      if (msg.includes("insufficient") || msg.includes("balance")) {
+        setError("Not enough Neon! Top up below.")
+      } else if (msg.includes("login") || msg.includes("401")) {
+        setError("Please log in to send Neon.")
+      } else if (msg.includes("room not found") || msg.includes("404")) {
+        setError("Room not found. Try refreshing the page.")
+      } else {
+        setError(msg || "Failed to send Neon")
+      }
     } finally {
       setSending(false)
     }
@@ -80,17 +102,18 @@ export function SendNeonModal({ open, onClose, roomId, neonBalance: initialBalan
         body: JSON.stringify({ packId }),
       })
       updateBalance(res.balance)
+      refreshAuth() // update neon balance in navbar
       setBuySuccess(packId)
       setTimeout(() => {
         setBuySuccess(null)
-        setView("send") // return to send view with updated balance
+        setView("send")
       }, 1200)
     } catch (err: any) {
       setError("Purchase failed. Please try again.")
     } finally {
       setBuying(null)
     }
-  }, [updateBalance])
+  }, [updateBalance, refreshAuth])
 
   const handleClose = useCallback(() => {
     onClose()

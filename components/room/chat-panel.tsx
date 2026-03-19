@@ -84,10 +84,11 @@ export function ChatPanel({
     return () => clearInterval(interval)
   }, [connected])
 
-  // Inject join/tip activity events into chat stream
+  // Inject join/tip activity events into chat stream (mock mode only)
   const activityUsernames = ["NightOwl", "BassHead", "VibeChaser", "MelodyMaker", "SoundWave", "EchoRoom", "BeatDropper", "WaveRider"]
   const activityColors = ["oklch(0.65 0.15 155)", "oklch(0.65 0.20 250)", "oklch(0.70 0.18 30)", "oklch(0.68 0.22 80)", "oklch(0.72 0.15 200)"]
   useEffect(() => {
+    if (connected) return // real activity comes from WebSocket when connected
     const interval = setInterval(() => {
       const isTip = Math.random() > 0.5
       const username = activityUsernames[Math.floor(Math.random() * activityUsernames.length)]
@@ -104,7 +105,7 @@ export function ChatPanel({
     }, 10000 + Math.random() * 12000)
     return () => clearInterval(interval)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [connected])
 
   // --- Smooth emoji float animation ---
   const spawnEmoji = useCallback((emoji: string) => {
@@ -253,10 +254,11 @@ export function ChatPanel({
 
             <div ref={scrollContainerRef} className="relative z-20 h-full overflow-y-auto px-3 py-2 scrollbar-thin">
               {messages.map((msg) => {
-                const isActivity = msg.type === "activity_join" || msg.type === "activity_tip"
+                const isActivity = msg.type === "activity_join" || msg.type === "activity_tip" || msg.type === "activity_leave"
 
                 if (isActivity) {
                   const isTip = msg.type === "activity_tip"
+                  const isLeave = msg.type === "activity_leave"
                   return (
                     <div
                       key={msg.id}
@@ -267,11 +269,19 @@ export function ChatPanel({
                         style={{
                           background: isTip
                             ? "oklch(0.72 0.18 195 / 0.12)"
+                            : isLeave
+                            ? "oklch(0.50 0.05 280 / 0.10)"
                             : "oklch(0.65 0.15 155 / 0.10)",
                           border: isTip
                             ? "1px solid oklch(0.72 0.18 195 / 0.25)"
+                            : isLeave
+                            ? "1px solid oklch(0.50 0.05 280 / 0.15)"
                             : "1px solid oklch(0.65 0.15 155 / 0.20)",
-                          color: isTip ? "oklch(0.82 0.16 195)" : "oklch(0.72 0.12 155)",
+                          color: isTip
+                            ? "oklch(0.82 0.16 195)"
+                            : isLeave
+                            ? "oklch(0.55 0.05 280)"
+                            : "oklch(0.72 0.12 155)",
                         }}
                       >
                         {isTip
