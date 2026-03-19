@@ -9,7 +9,7 @@ const nextConfig = {
   },
   onDemandEntries: {
     maxInactiveAge: 0,
-    maxSize: 0,
+    pagesBufferLength: 2,
   },
   async rewrites() {
     return [
