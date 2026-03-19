@@ -146,8 +146,11 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
         }
       }
 
-      ws.onerror = (ev) => {
-        console.warn("[ws] connection error — will retry", ev)
+      ws.onerror = () => {
+        // Only log on first connection attempt to avoid console spam
+        if (reconnectCount === 0) {
+          console.info("[ws] backend unavailable — running in offline mode")
+        }
         ws.close()
       }
 
