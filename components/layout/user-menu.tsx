@@ -1,8 +1,9 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { User, LogOut, LogIn, Crown, Shield } from "lucide-react"
+import { User, LogOut, LogIn, Crown, Shield, Mail } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,9 +62,7 @@ export function UserMenu() {
           <div className="font-semibold text-foreground">{user.displayName}</div>
           <div className="text-xs text-muted-foreground">{user.email}</div>
           {!user.emailVerified && (
-            <div className="mt-1 text-[10px] font-medium" style={{ color: "oklch(0.75 0.15 60)" }}>
-              Email not verified
-            </div>
+            <ResendVerificationLink />
           )}
         </DropdownMenuLabel>
         <DropdownMenuSeparator className="bg-border/30" />
@@ -118,5 +117,37 @@ export function UserMenu() {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  )
+}
+
+function ResendVerificationLink() {
+  const { resendVerification } = useAuth()
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle")
+
+  const handleResend = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (status === "sending" || status === "sent") return
+    setStatus("sending")
+    try {
+      await resendVerification()
+      setStatus("sent")
+    } catch {
+      setStatus("error")
+      setTimeout(() => setStatus("idle"), 3000)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleResend}
+      className="mt-1 flex items-center gap-1 text-[10px] font-medium transition-colors hover:underline"
+      style={{
+        color: status === "sent" ? "oklch(0.65 0.18 150)" : status === "error" ? "oklch(0.65 0.15 25)" : "oklch(0.75 0.15 60)",
+      }}
+    >
+      <Mail className="h-2.5 w-2.5" />
+      {status === "sending" ? "Sending..." : status === "sent" ? "Verification sent!" : status === "error" ? "Failed — try again" : "Resend verification email"}
+    </button>
   )
 }
