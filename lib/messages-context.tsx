@@ -241,18 +241,50 @@ export function MessagesProvider({ children }: { children: ReactNode }) {
   const sendMessage = useCallback(
     async (toUsername: string, text: string) => {
       if (isRealAPI) {
-        const sent = await apiSendMessage(toUsername, text)
-        if (sent) {
-          const newMsg: DirectMessage = {
-            id: sent.id,
-            fromUsername: sent.fromUserId,
-            text: sent.message,
-            timestamp: new Date(sent.createdAt),
+        try {
+          const sent = await apiSendMessage(toUsername, text)
+          if (sent) {
+            const newMsg: DirectMessage = {
+              id: sent.id,
+              fromUsername: sent.fromUserId,
+              text: sent.message,
+              timestamp: new Date(sent.createdAt),
+            }
+            setConversations((prev) =>
+              prev.map((c) =>
+                c.withUser.username === toUsername
+                  ? { ...c, messages: [...c.messages, newMsg] }
+                  : c
+              )
+            )
+          } else {
+            // API returned null — user can't receive DMs (likely anonymous)
+            // Add a local error message to the conversation so the drawer doesn't vanish
+            const errMsg: DirectMessage = {
+              id: `err-${Date.now()}`,
+              fromUsername: "__system__",
+              text: "Unable to send — this user may not have an account.",
+              timestamp: new Date(),
+            }
+            setConversations((prev) =>
+              prev.map((c) =>
+                c.withUser.username === toUsername
+                  ? { ...c, messages: [...c.messages, errMsg] }
+                  : c
+              )
+            )
+          }
+        } catch {
+          const errMsg: DirectMessage = {
+            id: `err-${Date.now()}`,
+            fromUsername: "__system__",
+            text: "Failed to send message. Please try again.",
+            timestamp: new Date(),
           }
           setConversations((prev) =>
             prev.map((c) =>
               c.withUser.username === toUsername
-                ? { ...c, messages: [...c.messages, newMsg] }
+                ? { ...c, messages: [...c.messages, errMsg] }
                 : c
             )
           )

@@ -1,7 +1,7 @@
 /**
  * Jukebox API client
  * Talks to the Go backend at /api/...
- * Session cookie is handled automatically by the browser.
+ * Session ID persisted in localStorage for cross-origin stability.
  */
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || ""
@@ -12,11 +12,27 @@ function getToken(): string | null {
     : null
 }
 
+/** Get stored session ID (persists across browser backgrounding on mobile) */
+export function getSessionId(): string | null {
+  return typeof window !== "undefined"
+    ? localStorage.getItem("jukebox_session_id")
+    : null
+}
+
+/** Store session ID */
+export function setSessionId(id: string) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("jukebox_session_id", id)
+  }
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const sessionId = getSessionId()
   const res = await fetch(`${API_BASE}${path}`, {
     credentials: "include", // send session cookie
     headers: {
       "Content-Type": "application/json",
+      ...(sessionId ? { "X-Session-ID": sessionId } : {}),
       ...options?.headers,
     },
     ...options,
@@ -53,7 +69,9 @@ export interface Session {
 }
 
 export async function getSession(): Promise<Session> {
-  return request<Session>("/api/session")
+  const session = await request<Session>("/api/session")
+  if (session?.id) setSessionId(session.id)
+  return session
 }
 
 export async function updateDisplayName(displayName: string): Promise<Session> {

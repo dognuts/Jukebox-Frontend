@@ -30,6 +30,7 @@ import { useAuth } from "@/lib/auth-context"
 import { HypeMeter, useHypeTracking } from "@/components/room/hype-meter"
 import { CollapsibleSection } from "@/components/room/collapsible-section"
 import { IntermissionScheduler } from "@/components/room/intermission-scheduler"
+import { useLiveKitVoice } from "@/hooks/use-livekit-voice"
 
 export default function RoomPage() {
   const params = useParams()
@@ -96,22 +97,7 @@ export default function RoomPage() {
     onReaction: handleIncomingReaction,
   })
 
-  const _isDJFromKey = !!djKey
-  const [demoMode, setDemoMode] = useState(false) // Toggle DJ view for demo
-
-  // Toggle DJ view (for demo purposes when no real djKey)
-  const handleToggleDJ = useCallback(() => {
-    if (_isDJFromKey) {
-      // Real DJ - can switch back to listener view
-      sessionStorage.removeItem(`djKey:${slug}`)
-      setDjKey(null)
-    } else {
-      // Demo mode - toggle DJ view
-      setDemoMode((prev) => !prev)
-    }
-  }, [_isDJFromKey, slug])
-
-  const isDJ = _isDJFromKey || demoMode
+  const isDJ = !!djKey
 
   const [requestModalOpen, setRequestModalOpen] = useState(false)
   const [sendNeonOpen, setSendNeonOpen] = useState(false)
@@ -120,6 +106,13 @@ export default function RoomPage() {
   const [mobilePanel, setMobilePanel] = useState<"queue" | "chat">("chat")
   const [micActive, setMicActive] = useState(false)
   const [micPausesMusic, setMicPausesMusic] = useState(true)
+
+  // LiveKit voice — DJ broadcasts mic, listeners receive DJ audio
+  const liveKit = useLiveKitVoice({
+    roomSlug: slug || "",
+    isDJ,
+    enabled: !!room && room.isLive,
+  })
 
   // Hype tracking for DJ view
   const hypeTracking = useHypeTracking()
@@ -304,10 +297,15 @@ export default function RoomPage() {
     }
   }, [ws.roomEnded, closePlayer])
 
-  const handleMicChange = useCallback((active: boolean, pauseMusic: boolean) => {
+  const handleMicChange = useCallback((active: boolean, pauseMusic: boolean, deviceId?: string) => {
     setMicActive(active)
     setMicPausesMusic(pauseMusic)
-  }, [])
+    if (active) {
+      liveKit.startBroadcasting(deviceId)
+    } else {
+      liveKit.stopBroadcasting()
+    }
+  }, [liveKit]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Audio engine state
   const [audioCurrentTime, setAudioCurrentTime] = useState(0)
@@ -490,7 +488,6 @@ export default function RoomPage() {
                 isLive={room.isLive}
                 djName={room.djName}
                 isDJ={isDJ}
-                onToggleDJ={handleToggleDJ}
                 minimal
               />
             </div>
@@ -658,6 +655,27 @@ export default function RoomPage() {
                       style={{ background: "linear-gradient(90deg, transparent, oklch(1 0 0 / 0.12), transparent)" }}
                     />
                     <div className="p-5">
+                      {/* DJ Speaking indicator — visible to listeners when DJ is broadcasting */}
+                      {!isDJ && liveKit.djSpeaking && (
+                        <div
+                          className="mb-4 flex items-center justify-center gap-2 rounded-xl px-4 py-2.5"
+                          style={{
+                            background: "oklch(0.18 0.06 30 / 0.5)",
+                            border: "1px solid oklch(0.50 0.24 30 / 0.4)",
+                            animation: "pulse 2s ease-in-out infinite",
+                          }}
+                        >
+                          <div className="flex gap-0.5">
+                            <span className="inline-block h-3 w-0.5 rounded-full animate-bounce" style={{ background: "oklch(0.68 0.22 30)", animationDelay: "0ms", animationDuration: "0.8s" }} />
+                            <span className="inline-block h-3 w-0.5 rounded-full animate-bounce" style={{ background: "oklch(0.68 0.22 30)", animationDelay: "150ms", animationDuration: "0.8s" }} />
+                            <span className="inline-block h-3 w-0.5 rounded-full animate-bounce" style={{ background: "oklch(0.68 0.22 30)", animationDelay: "300ms", animationDuration: "0.8s" }} />
+                          </div>
+                          <span className="font-sans text-xs font-semibold" style={{ color: "oklch(0.68 0.22 30)" }}>
+                            DJ is speaking
+                          </span>
+                        </div>
+                      )}
+
                       {/* Determine if there's a real track playing (from server, not mock) */}
                       {(() => {
                         // A track is playing if we have it from WS, from the API response, or from playback state
@@ -741,6 +759,7 @@ export default function RoomPage() {
                                 muted={false}
                                 isDJ={isDJ}
                                 visible={isYouTube}
+                                forcePaused={micActive && micPausesMusic}
                                 onTimeUpdate={setAudioCurrentTime}
                                 onDuration={setAudioDuration}
                                 onTrackEnd={handleTrackEnd}
@@ -804,6 +823,7 @@ export default function RoomPage() {
                               muted={false}
                               isDJ={isDJ}
                               visible={false}
+                              forcePaused={micActive && micPausesMusic}
                               onTimeUpdate={setAudioCurrentTime}
                               onDuration={setAudioDuration}
                               onTrackEnd={handleTrackEnd}
@@ -892,9 +912,8 @@ export default function RoomPage() {
               </Button>
             </div>
 
-            {/* Action buttons for listeners */}
-            <div className="relative">
-              {/* Supernova sparks — canvas spans from tube bar down through entire queue */}
+            {/* ── Spark zone: wraps buttons + queue so sparks can fall from tube through everything ── */}
+            <div className="relative" style={{ overflow: "visible" }}>
               <SupernovaSparksCascade
                 active={(ws.tube ?? mockTube).level === 5 && (ws.tube ?? mockTube).fillAmount > 0}
                 fillPct={Math.min(100, Math.round(((ws.tube ?? mockTube).fillAmount / ((ws.tube ?? mockTube).fillTarget || 100)) * 100))}

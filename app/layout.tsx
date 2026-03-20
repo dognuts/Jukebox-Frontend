@@ -12,6 +12,7 @@ import { AuthProvider } from "@/lib/auth-context"
 import { FavoritesProvider } from "@/lib/favorites-context"
 import { MiniPlayer } from "@/components/layout/mini-player"
 import { MessagesDrawer } from "@/components/messages/messages-drawer"
+import { PricingModalProvider } from "@/components/pricing-modal"
 import { UpgradeDialog } from "@/components/upgrade/upgrade-dialog"
 import { Toaster } from "@/components/ui/sonner"
 import { AmbientBackground } from "@/components/effects/ambient-background"
@@ -66,6 +67,7 @@ export default function RootLayout({
         <AuthProvider>
         <FavoritesProvider>
         <UpgradeProvider>
+          <PricingModalProvider>
           <PlaylistProvider>
             <MessagesProvider>
               <PlayerProvider>
@@ -80,6 +82,7 @@ export default function RootLayout({
               </PlayerProvider>
             </MessagesProvider>
           </PlaylistProvider>
+          </PricingModalProvider>
         </UpgradeProvider>
         </FavoritesProvider>
         </AuthProvider>

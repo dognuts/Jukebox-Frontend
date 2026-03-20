@@ -15,7 +15,7 @@ import { FeaturedRoomSkeleton, RoomCardSkeleton, GenrePillsSkeleton } from "@/co
 import { EmptyState } from "@/components/ui/empty-state"
 import { SectionDivider } from "@/components/ui/section-divider"
 import { type Room } from "@/lib/mock-data"
-import { listRooms, toFrontendRoom } from "@/lib/api"
+import { listRooms, toFrontendRoom, getSession, getSessionId } from "@/lib/api"
 
 // Fallback to mock data if backend is unreachable
 import { getLiveRooms as getMockLive, getUpcomingRooms as getMockUpcoming, getRecentlyActiveRooms as getMockRecent } from "@/lib/mock-data"
@@ -27,6 +27,13 @@ export default function HomePage() {
   const [usingMock, setUsingMock] = useState(false)
   const { registerShortcut } = useKeyboardShortcuts()
   const scrollToTopRef = useRef<() => void>(() => {})
+
+  // Ensure anonymous session ID is stored before any WS connections
+  useEffect(() => {
+    if (!getSessionId()) {
+      getSession().catch(() => {})
+    }
+  }, [])
 
   // Fetch rooms from backend
   useEffect(() => {

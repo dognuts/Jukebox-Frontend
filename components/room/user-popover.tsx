@@ -10,21 +10,25 @@ import {
 import { Button } from "@/components/ui/button"
 import { getChatUser, currentUser, type ChatUser } from "@/lib/mock-data"
 import { useMessages } from "@/lib/messages-context"
+import { useAuth } from "@/lib/auth-context"
 import Link from "next/link"
 
 interface UserPopoverProps {
   username: string
   avatarColor: string
+  userId?: string // real user ID — empty/undefined for anonymous session users
   children: React.ReactNode
 }
 
 export function UserPopover({
   username,
   avatarColor,
+  userId,
   children,
 }: UserPopoverProps) {
   const [open, setOpen] = useState(false)
   const { startConversation } = useMessages()
+  const { isLoggedIn } = useAuth()
 
   // Don't show popover for the current user
   if (username === currentUser.username || username === "You") {
@@ -32,14 +36,16 @@ export function UserPopover({
   }
 
   const user = getChatUser(username)
+  const isRegistered = !!userId
+  const canDM = isLoggedIn && isRegistered
 
   const handleDM = () => {
+    if (!canDM) return
     if (user) {
       startConversation(user)
     } else {
-      // Create a minimal ChatUser from the username + color
       startConversation({
-        username,
+        username: userId!, // use the real user ID as the username key for DM routing
         displayName: username,
         avatarColor,
         bio: "",
@@ -75,14 +81,14 @@ export function UserPopover({
                 color: "oklch(0.10 0.01 280)",
               }}
             >
-              {username[0].toUpperCase()}
+              {username[0]?.toUpperCase()}
             </div>
             <div className="min-w-0">
               <p className="truncate font-sans text-sm font-semibold text-foreground">
                 {user?.displayName ?? username}
               </p>
               <p className="truncate font-sans text-xs text-muted-foreground">
-                @{username}
+                {isRegistered ? `@${username}` : "Guest listener"}
               </p>
             </div>
           </div>
@@ -114,28 +120,60 @@ export function UserPopover({
 
           {/* Action buttons */}
           <div className="mt-3 flex gap-2">
-            <Button
-              size="sm"
-              onClick={handleDM}
-              className="flex-1 gap-1.5 rounded-lg font-sans text-xs"
-              style={{
-                background: "oklch(0.55 0.20 270)",
-                color: "oklch(0.95 0.01 280)",
-              }}
-            >
-              <MessageCircle className="h-3.5 w-3.5" />
-              Message
-            </Button>
-            <Link href={`/user/${encodeURIComponent(username)}`} onClick={() => setOpen(false)}>
+            {canDM ? (
               <Button
                 size="sm"
-                variant="ghost"
-                className="gap-1.5 rounded-lg font-sans text-xs text-muted-foreground hover:text-foreground"
+                onClick={handleDM}
+                className="flex-1 gap-1.5 rounded-lg font-sans text-xs"
+                style={{
+                  background: "oklch(0.55 0.20 270)",
+                  color: "oklch(0.95 0.01 280)",
+                }}
               >
-                <User className="h-3.5 w-3.5" />
-                Profile
+                <MessageCircle className="h-3.5 w-3.5" />
+                Message
               </Button>
-            </Link>
+            ) : !isLoggedIn ? (
+              <Link href="/login" onClick={() => setOpen(false)} className="flex-1">
+                <Button
+                  size="sm"
+                  className="w-full gap-1.5 rounded-lg font-sans text-xs"
+                  style={{
+                    background: "oklch(0.25 0.02 280)",
+                    color: "oklch(0.60 0.02 280)",
+                    border: "1px solid oklch(0.30 0.02 280 / 0.5)",
+                  }}
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  Log in to message
+                </Button>
+              </Link>
+            ) : (
+              <Button
+                size="sm"
+                disabled
+                className="flex-1 gap-1.5 rounded-lg font-sans text-xs opacity-50"
+                style={{
+                  background: "oklch(0.20 0.02 280)",
+                  color: "oklch(0.50 0.02 280)",
+                }}
+              >
+                <MessageCircle className="h-3.5 w-3.5" />
+                Guest — no DMs
+              </Button>
+            )}
+            {isRegistered && (
+              <Link href={`/user/${encodeURIComponent(username)}`} onClick={() => setOpen(false)}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="gap-1.5 rounded-lg font-sans text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <User className="h-3.5 w-3.5" />
+                  Profile
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </PopoverContent>

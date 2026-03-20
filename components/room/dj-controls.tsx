@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useCallback, useEffect, useRef } from "react"
-import { Plus, Check, X, Mic, MicOff, Music, Radio, Inbox, PauseCircle, XCircle, ChevronDown, Power, Loader2, AlertCircle, Users } from "lucide-react"
+import { Plus, Check, X, Mic, MicOff, Music, Radio, Inbox, PauseCircle, XCircle, ChevronDown, Power, Loader2, AlertCircle, Users, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { parseTrackUrl, guessTitleFromUrl } from "@/lib/track-utils"
+import { useMicrophone } from "@/hooks/use-microphone"
 
 type RequestStatus = "open" | "paused" | "closed"
 
@@ -14,7 +15,7 @@ interface DJControlsProps {
   requestStatus: RequestStatus
   onRequestStatusChange: (status: RequestStatus) => void
   onSubmitTrack?: (track: { title: string; artist: string; duration: number; source: string; sourceUrl: string }) => void
-  onMicChange?: (active: boolean, pauseMusic: boolean) => void
+  onMicChange?: (active: boolean, pauseMusic: boolean, deviceId?: string) => void
   onEndRoom?: () => void
   listenerCount?: number
 }
@@ -39,10 +40,13 @@ export function DJControls({
   const addInputRef = useRef<HTMLInputElement>(null)
 
   // Mic state
+  const mic = useMicrophone()
   const [micActive, setMicActive] = useState(false)
   const [pauseMusic, setPauseMusic] = useState(true)
   const [showMicOptions, setShowMicOptions] = useState(false)
+  const [showDeviceSelect, setShowDeviceSelect] = useState(false)
   const [micSeconds, setMicSeconds] = useState(0)
+  const [micStarting, setMicStarting] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Live timer while mic is active
@@ -58,22 +62,40 @@ export function DJControls({
     }
   }, [micActive])
 
+  // Enumerate devices when mic options panel opens
+  useEffect(() => {
+    if (showMicOptions && mic.devices.length === 0) {
+      mic.refreshDevices()
+    }
+  }, [showMicOptions]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const formatMicTime = (s: number) => {
     const m = Math.floor(s / 60)
     const sec = s % 60
     return `${m}:${sec.toString().padStart(2, "0")}`
   }
 
-  const handleGoLive = useCallback(() => {
-    setMicActive(true)
-    setShowMicOptions(false)
-    onMicChange?.(true, pauseMusic)
-  }, [pauseMusic, onMicChange])
+  const handleGoLive = useCallback(async () => {
+    setMicStarting(true)
+    // Validate mic access locally first
+    const success = await mic.start()
+    setMicStarting(false)
+    if (success) {
+      // Stop local capture — LiveKit will handle the actual stream
+      mic.stop()
+      setMicActive(true)
+      setShowMicOptions(false)
+      setShowDeviceSelect(false)
+      // Pass device ID so LiveKit uses the same device
+      onMicChange?.(true, pauseMusic, mic.selectedDeviceId || undefined)
+    }
+  }, [pauseMusic, onMicChange, mic])
 
   const handleEndMic = useCallback(() => {
+    mic.stop()
     setMicActive(false)
     onMicChange?.(false, pauseMusic)
-  }, [pauseMusic, onMicChange])
+  }, [pauseMusic, onMicChange, mic])
 
   // Add track handler — same logic as track-queue
   const handleAddTrack = useCallback(async () => {
@@ -213,7 +235,7 @@ export function DJControls({
           </Button>
         </div>
       ) : showMicOptions ? (
-        /* Mic mode picker */
+        /* Mic mode picker + device selector */
         <div
           className="flex flex-col gap-3 rounded-xl p-3"
           style={{
@@ -221,6 +243,68 @@ export function DJControls({
             border: "1px solid oklch(0.30 0.02 280 / 0.5)",
           }}
         >
+          {/* Mic error */}
+          {mic.error && (
+            <div className="flex items-start gap-2 rounded-lg px-2.5 py-2 text-xs"
+              style={{ background: "oklch(0.30 0.12 25 / 0.3)", border: "1px solid oklch(0.50 0.18 25 / 0.4)", color: "oklch(0.75 0.12 25)" }}>
+              <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <span>{mic.error}</span>
+            </div>
+          )}
+
+          {/* Device selector */}
+          <div>
+            <button
+              onClick={() => {
+                setShowDeviceSelect(!showDeviceSelect)
+                if (mic.devices.length === 0) mic.refreshDevices()
+              }}
+              className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left transition-colors"
+              style={{
+                background: "oklch(0.18 0.01 280 / 0.5)",
+                border: "1px solid oklch(0.28 0.02 280 / 0.4)",
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <Settings className="h-3.5 w-3.5 text-muted-foreground" />
+                <div>
+                  <p className="font-sans text-xs font-medium text-foreground">Microphone</p>
+                  <p className="font-sans text-[10px] text-muted-foreground truncate max-w-[200px]">
+                    {mic.devices.find((d) => d.deviceId === mic.selectedDeviceId)?.label || "Select device..."}
+                  </p>
+                </div>
+              </div>
+              <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${showDeviceSelect ? "rotate-180" : ""}`} />
+            </button>
+
+            {showDeviceSelect && (
+              <div className="mt-1.5 flex flex-col gap-1 rounded-lg p-1.5"
+                style={{ background: "oklch(0.12 0.01 280 / 0.8)", border: "1px solid oklch(0.25 0.02 280 / 0.4)" }}
+              >
+                {mic.devices.length === 0 ? (
+                  <p className="px-2 py-1.5 font-sans text-[10px] text-muted-foreground">
+                    {mic.error ? "No devices available" : "Loading devices..."}
+                  </p>
+                ) : (
+                  mic.devices.map((device) => (
+                    <button
+                      key={device.deviceId}
+                      onClick={() => { mic.selectDevice(device.deviceId); setShowDeviceSelect(false) }}
+                      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted/20"
+                    >
+                      {mic.selectedDeviceId === device.deviceId ? (
+                        <Check className="h-3 w-3 shrink-0" style={{ color: "oklch(0.72 0.18 150)" }} />
+                      ) : (
+                        <div className="h-3 w-3 shrink-0" />
+                      )}
+                      <span className="font-sans text-[11px] text-foreground/80 truncate">{device.label}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
           <span className="font-sans text-xs font-medium text-foreground">
             Music while you speak?
           </span>
@@ -294,7 +378,7 @@ export function DJControls({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setShowMicOptions(false)}
+              onClick={() => { setShowMicOptions(false); setShowDeviceSelect(false) }}
               className="flex-1 rounded-xl font-sans text-xs text-muted-foreground hover:bg-muted/30"
             >
               Cancel
@@ -302,14 +386,19 @@ export function DJControls({
             <Button
               size="sm"
               onClick={handleGoLive}
+              disabled={micStarting}
               className="flex-1 gap-1.5 rounded-xl font-sans text-xs"
               style={{
                 background: "oklch(0.50 0.24 30 / 0.85)",
                 color: "oklch(0.95 0.02 60)",
               }}
             >
-              <Radio className="h-3.5 w-3.5" />
-              Go Live
+              {micStarting ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Radio className="h-3.5 w-3.5" />
+              )}
+              {micStarting ? "Starting..." : "Go Live"}
             </Button>
           </div>
         </div>

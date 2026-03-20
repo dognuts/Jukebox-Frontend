@@ -394,6 +394,7 @@ export function ChatPanel({
                   key={listener.username}
                   username={listener.username}
                   avatarColor={listener.avatarColor}
+                  userId={listener.userId}
                 >
                   <button
                     type="button"

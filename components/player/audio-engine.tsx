@@ -20,6 +20,7 @@ interface AudioEngineProps {
   muted: boolean
   isDJ: boolean
   visible?: boolean
+  forcePaused?: boolean // DJ mic pause — temporarily pauses audio
   onTimeUpdate?: (seconds: number) => void
   onDuration?: (seconds: number) => void
   onTrackEnd?: () => void
@@ -41,6 +42,7 @@ export function AudioEngine({
   muted,
   isDJ,
   visible = false,
+  forcePaused = false,
   onTimeUpdate,
   onDuration,
   onTrackEnd,
@@ -67,6 +69,7 @@ export function AudioEngine({
   // Sync to server playback state
   const syncToServer = useCallback(() => {
     if (!playbackState || !ready || !playerRef.current) return
+    if (forcePaused) return // DJ mic is active — don't resume
 
     const now = Date.now()
     // Don't sync more than once per second
@@ -108,7 +111,7 @@ export function AudioEngine({
     } else {
       onPlayStateChange?.(true)
     }
-  }, [playbackState, ready, synced, onPlayStateChange])
+  }, [playbackState, ready, synced, forcePaused, onPlayStateChange])
 
   // Sync when playback state changes
   useEffect(() => {
@@ -130,6 +133,18 @@ export function AudioEngine({
       if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current)
     }
   }, [])
+
+  // DJ mic pause — temporarily pause audio when forcePaused is true, resume when false
+  useEffect(() => {
+    if (!ready || !playerRef.current) return
+    if (forcePaused) {
+      playerRef.current.pause()
+      onPlayStateChange?.(false)
+    } else if (playbackState?.isPlaying) {
+      // Resume — re-sync to server position since time has passed
+      syncToServer()
+    }
+  }, [forcePaused]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-sync periodically to correct any drift (every 10s)
   useEffect(() => {

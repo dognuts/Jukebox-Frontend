@@ -131,8 +131,8 @@ export function SendNeonModal({ open, onClose, roomId, neonBalance: initialBalan
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose() }}>
       <DialogContent
-        className="border-border/30 sm:max-w-sm"
-        style={{ background: "oklch(0.12 0.02 270 / 0.97)", backdropFilter: "blur(20px)" }}
+        className="border-border/30 sm:max-w-sm max-h-[85vh] overflow-y-auto"
+        style={{ background: "oklch(0.12 0.02 270 / 0.98)" }}
       >
         {/* ============ SEND VIEW ============ */}
         {view === "send" && (

@@ -1021,19 +1021,39 @@
 
 /* ===== BUTTON STYLES ===== */
 
-/* Send Neon Button - Subtle cyan glow */
+/* Send Neon Button - Smooth cyan glow */
 .send-neon-btn {
   position: relative;
   background: linear-gradient(135deg, oklch(0.72 0.18 195), oklch(0.65 0.18 210)) !important;
   border: 1px solid oklch(0.78 0.18 195 / 0.5) !important;
   color: oklch(0.98 0.01 195) !important;
-  box-shadow: 0 0 12px oklch(0.72 0.18 195 / 0.25);
-  transition: all 0.2s ease;
+  box-shadow: 
+    0 0 8px oklch(0.72 0.18 195 / 0.2),
+    0 0 20px oklch(0.72 0.18 195 / 0.1);
+  transition: box-shadow 0.6s ease, transform 0.2s ease, filter 0.2s ease;
+  animation: cyan-breathe 4s ease-in-out infinite;
+}
+
+@keyframes cyan-breathe {
+  0%, 100% {
+    box-shadow: 
+      0 0 8px oklch(0.72 0.18 195 / 0.2),
+      0 0 20px oklch(0.72 0.18 195 / 0.1);
+  }
+  50% {
+    box-shadow: 
+      0 0 14px oklch(0.72 0.18 195 / 0.35),
+      0 0 30px oklch(0.72 0.18 195 / 0.18);
+  }
 }
 
 .send-neon-btn:hover {
   transform: scale(1.02);
-  box-shadow: 0 0 20px oklch(0.72 0.18 195 / 0.4), 0 0 40px oklch(0.72 0.18 195 / 0.15);
+  box-shadow: 
+    0 0 20px oklch(0.72 0.18 195 / 0.45),
+    0 0 40px oklch(0.72 0.18 195 / 0.2);
+  animation: none;
+  transition: box-shadow 0.4s ease, transform 0.2s ease;
 }
 
 .send-neon-btn:active {
@@ -1041,37 +1061,46 @@
   filter: brightness(1.1);
 }
 
-/* Request Track Button - Purple breathing glow */
-@keyframes purple-breathe {
-  0%, 100% {
-    box-shadow: 
-      0 0 12px oklch(0.55 0.22 270 / 0.4),
-      0 0 24px oklch(0.55 0.22 270 / 0.2);
-  }
-  50% {
-    box-shadow: 
-      0 0 20px oklch(0.60 0.25 270 / 0.5),
-      0 0 40px oklch(0.55 0.22 270 / 0.3),
-      0 0 60px oklch(0.48 0.24 300 / 0.15);
-  }
-}
-
-@keyframes icon-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-2px); }
-}
-
+/* Request Track Button - Smooth purple breathing glow */
 .request-track-btn {
   position: relative;
   background: linear-gradient(135deg, oklch(0.55 0.22 270), oklch(0.48 0.24 300)) !important;
   border: 1px solid oklch(0.65 0.20 270 / 0.5) !important;
   color: white !important;
-  animation: purple-breathe 3s ease-in-out infinite;
+  box-shadow: 
+    0 0 10px oklch(0.55 0.22 270 / 0.3),
+    0 0 22px oklch(0.55 0.22 270 / 0.15);
+  transition: box-shadow 0.6s ease, transform 0.2s ease, filter 0.2s ease;
+  animation: purple-breathe 4s ease-in-out infinite;
+}
+
+@keyframes purple-breathe {
+  0%, 100% {
+    box-shadow: 
+      0 0 10px oklch(0.55 0.22 270 / 0.3),
+      0 0 22px oklch(0.55 0.22 270 / 0.15);
+  }
+  50% {
+    box-shadow: 
+      0 0 18px oklch(0.60 0.25 270 / 0.45),
+      0 0 36px oklch(0.55 0.22 270 / 0.25),
+      0 0 56px oklch(0.48 0.24 300 / 0.1);
+  }
 }
 
 .request-track-btn:hover {
   transform: scale(1.05);
-  animation: purple-breathe 1.5s ease-in-out infinite;
+  box-shadow: 
+    0 0 22px oklch(0.60 0.25 270 / 0.55),
+    0 0 44px oklch(0.55 0.22 270 / 0.35),
+    0 0 66px oklch(0.48 0.24 300 / 0.15);
+  animation: none;
+  transition: box-shadow 0.4s ease, transform 0.2s ease;
+}
+
+@keyframes icon-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
 }
 
 .request-track-btn:hover .icon-music {

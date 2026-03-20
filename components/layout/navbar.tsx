@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { useEasterEggs } from "@/hooks/use-easter-eggs"
 import { useMessages } from "@/lib/messages-context"
 import { useUpgrade } from "@/lib/upgrade-context"
+import { usePricingModal } from "@/components/pricing-modal"
 import { useAuth } from "@/lib/auth-context"
 import { UserMenu } from "@/components/layout/user-menu"
 import { NeonJukeboxLogo } from "@/components/effects/neon-jukebox-logo"
@@ -17,6 +18,7 @@ export function Navbar() {
   const { triggerRainbow, classicModeBadge } = useEasterEggs()
   const { totalUnread, openDrawer } = useMessages()
   const { plan, openUpgradeDialog } = useUpgrade()
+  const pricingModal = usePricingModal()
   const { isLoggedIn, user } = useAuth()
   const clickCount = useRef(0)
   const clickTimer = useRef<NodeJS.Timeout | null>(null)
@@ -126,8 +128,8 @@ export function Navbar() {
 
           {/* Neon balance */}
           {isLoggedIn && (
-            <Link
-              href="/pricing"
+            <button
+              onClick={pricingModal.open}
               className="hidden items-center gap-1 rounded-full px-2.5 py-1 font-mono text-xs font-semibold transition-all hover:opacity-80 sm:flex"
               style={{
                 background: "oklch(0.72 0.18 195 / 0.1)",
@@ -137,26 +139,25 @@ export function Navbar() {
             >
               <Zap className="h-3 w-3" />
               {((user as any)?.neonBalance ?? 0).toLocaleString()}
-            </Link>
+            </button>
           )}
 
           <UserMenu />
 
           {plan === "free" && (
-            <Link href="/pricing" className="hidden sm:block">
-              <button
-                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 font-sans text-xs font-semibold transition-all upgrade-button-premium"
-                style={{
-                  background: "linear-gradient(135deg, oklch(0.82 0.18 80) 0%, oklch(0.85 0.20 60) 50%, oklch(0.72 0.18 250) 100%)",
-                  backgroundSize: "200% auto",
-                  border: "1px solid oklch(0.82 0.18 80 / 0.5)",
-                  color: "oklch(0.15 0.02 80)",
-                }}
-              >
-                <Crown className="h-3.5 w-3.5" />
-                Upgrade
-              </button>
-            </Link>
+            <button
+              onClick={pricingModal.open}
+              className="hidden sm:flex items-center gap-1.5 rounded-full px-3 py-1.5 font-sans text-xs font-semibold transition-all upgrade-button-premium"
+              style={{
+                background: "linear-gradient(135deg, oklch(0.82 0.18 80) 0%, oklch(0.85 0.20 60) 50%, oklch(0.72 0.18 250) 100%)",
+                backgroundSize: "200% auto",
+                border: "1px solid oklch(0.82 0.18 80 / 0.5)",
+                color: "oklch(0.15 0.02 80)",
+              }}
+            >
+              <Crown className="h-3.5 w-3.5" />
+              Upgrade
+            </button>
           )}
         </div>
       </div>

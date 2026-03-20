@@ -30,6 +30,7 @@ export interface ListenerInfo {
   username: string
   avatarColor: string
   isDJ: boolean
+  userId?: string
 }
 
 export interface NeonTubeState {
@@ -102,13 +103,10 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
       const params = new URLSearchParams()
       if (djKey) params.set("djKey", djKey)
       
-      // Pass session cookie value as query param for cross-origin WebSocket
+      // Pass persistent session ID from localStorage (works across browser backgrounding)
       try {
-        const sessionCookie = document.cookie
-          .split("; ")
-          .find((c) => c.startsWith("jukebox_session="))
-          ?.split("=")[1]
-        if (sessionCookie) params.set("session", sessionCookie)
+        const sessionId = localStorage.getItem("jukebox_session_id")
+        if (sessionId) params.set("session", sessionId)
       } catch {}
 
       // Pass JWT token for user identity on WS connection

@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { NeonJukeboxLogo } from "@/components/effects/neon-jukebox-logo"
 
 export function Footer() {
@@ -8,18 +9,15 @@ export function Footer() {
           <NeonJukeboxLogo size="sm" />
         </div>
         <nav className="flex gap-6" aria-label="Footer navigation">
-          <span className="font-sans text-sm text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
-            About
-          </span>
-          <span className="font-sans text-sm text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
+          <Link href="/terms" className="font-sans text-sm text-muted-foreground hover:text-foreground transition-colors">
             Terms
-          </span>
-          <span className="font-sans text-sm text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
+          </Link>
+          <Link href="/privacy" className="font-sans text-sm text-muted-foreground hover:text-foreground transition-colors">
             Privacy
-          </span>
-          <span className="font-sans text-sm text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
+          </Link>
+          <Link href="/support" className="font-sans text-sm text-muted-foreground hover:text-foreground transition-colors">
             Support
-          </span>
+          </Link>
         </nav>
         <p className="font-sans text-xs text-muted-foreground">
           {"Jukebox \u00A9 2026. Listen together."}

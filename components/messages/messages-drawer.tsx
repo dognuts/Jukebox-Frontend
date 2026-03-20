@@ -159,6 +159,25 @@ function ConversationChat({
           </p>
         )}
         {conversation.messages.map((msg) => {
+          // System messages (errors, notices)
+          if (msg.fromUsername === "__system__") {
+            return (
+              <div key={msg.id} className="mb-3 flex justify-center">
+                <div
+                  className="max-w-[90%] rounded-xl px-3 py-2 text-center"
+                  style={{
+                    background: "oklch(0.25 0.06 30 / 0.3)",
+                    border: "1px solid oklch(0.45 0.12 30 / 0.3)",
+                  }}
+                >
+                  <p className="font-sans text-xs" style={{ color: "oklch(0.70 0.12 30)" }}>
+                    {msg.text}
+                  </p>
+                </div>
+              </div>
+            )
+          }
+
           const isMe = isRealAPI
             ? msg.fromUsername === user?.id
             : msg.fromUsername === currentUser.username

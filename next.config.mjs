@@ -7,6 +7,8 @@ const nextConfig = {
     unoptimized: true,
   },
   async rewrites() {
+    // Only proxy to localhost in development — in production the frontend
+    // calls the backend directly via NEXT_PUBLIC_API_URL
     if (process.env.NODE_ENV === 'production') return []
     return [
       {

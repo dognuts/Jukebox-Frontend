@@ -4,13 +4,13 @@ import { useEffect, useRef, useCallback } from "react"
 
 interface SupernovaSparksCascadeProps {
   active: boolean
-  fillPct: number // 0-100, determines spark spawn width
-  tubeRef?: React.RefObject<HTMLDivElement | null> // ref to the tube bar element
+  fillPct: number
+  tubeRef?: React.RefObject<HTMLDivElement | null>
 }
 
 interface Spark {
   x: number
-  y: number
+  y: number // relative to canvas (which may start above parent)
   vx: number
   vy: number
   life: number
@@ -24,32 +24,62 @@ export function SupernovaSparksCascade({ active, fillPct, tubeRef }: SupernovaSp
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sparksRef = useRef<Spark[]>([])
   const frameRef = useRef<number>(0)
-  const spawnOffsetY = useRef(0)
+  const topExtension = useRef(0)
+  const mobileScaleRef = useRef(1)
 
-  // Calculate where sparks should spawn relative to the canvas
-  const updateSpawnOffset = useCallback(() => {
+  const measureLayout = useCallback(() => {
     const canvas = canvasRef.current
+    const parent = canvas?.parentElement
     const tube = tubeRef?.current
-    if (!canvas || !tube) {
-      spawnOffsetY.current = 0
-      return
+    if (!canvas || !parent) return
+
+    const parentRect = parent.getBoundingClientRect()
+    let canvasTop = parentRect.top
+    let canvasHeight = parentRect.height
+
+    if (tube) {
+      const tubeRect = tube.getBoundingClientRect()
+      const tubeCenter = tubeRect.top + tubeRect.height / 2
+      if (tubeCenter < parentRect.top) {
+        // Tube is above parent — extend canvas upward
+        topExtension.current = parentRect.top - tubeCenter
+        canvasTop = tubeCenter
+        canvasHeight = parentRect.height + topExtension.current
+      } else {
+        topExtension.current = 0
+      }
+    } else {
+      topExtension.current = 0
     }
-    const canvasRect = canvas.getBoundingClientRect()
-    const tubeRect = tube.getBoundingClientRect()
-    // Tube center relative to canvas top
-    spawnOffsetY.current = (tubeRect.top + tubeRect.height / 2) - canvasRect.top
+
+    const dpr = window.devicePixelRatio
+    canvas.width = parentRect.width * dpr
+    canvas.height = canvasHeight * dpr
+
+    // Position canvas to extend above parent
+    canvas.style.top = `-${topExtension.current}px`
+    canvas.style.height = `${canvasHeight}px`
+    canvas.style.width = `${parentRect.width}px`
+
+    const ctx = canvas.getContext("2d")
+    if (ctx) {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    }
   }, [tubeRef])
 
-  const spawnSpark = useCallback((width: number) => {
-    const spawnX = Math.random() * (width * fillPct / 100)
+  const spawnSpark = useCallback((canvasW: number) => {
+    // Scale down on mobile — sparks should be proportional to screen width
+    const mobileScale = Math.min(1, canvasW / 400)
+    mobileScaleRef.current = mobileScale
+    const spawnX = Math.random() * (canvasW * fillPct / 100)
     const spark: Spark = {
       x: spawnX,
-      y: spawnOffsetY.current,
-      vx: (Math.random() - 0.5) * 3.5,
-      vy: 1.5 + Math.random() * 3.5,
+      y: 2 + Math.random() * 4,
+      vx: (Math.random() - 0.5) * 3.5 * mobileScale,
+      vy: (1.5 + Math.random() * 3.5) * mobileScale,
       life: 1,
       maxLife: 70 + Math.random() * 90,
-      size: 1 + Math.random() * 2.2,
+      size: (0.8 + Math.random() * 1.5) * mobileScale,
       brightness: 0.8 + Math.random() * 0.2,
       trail: [],
     }
@@ -67,17 +97,8 @@ export function SupernovaSparksCascade({ active, fillPct, tubeRef }: SupernovaSp
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    const resizeCanvas = () => {
-      const rect = canvas.parentElement?.getBoundingClientRect()
-      if (rect) {
-        canvas.width = rect.width * window.devicePixelRatio
-        canvas.height = rect.height * window.devicePixelRatio
-        ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
-      }
-      updateSpawnOffset()
-    }
-    resizeCanvas()
-    window.addEventListener("resize", resizeCanvas)
+    measureLayout()
+    window.addEventListener("resize", measureLayout)
 
     const displayWidth = () => canvas.width / window.devicePixelRatio
     const displayHeight = () => canvas.height / window.devicePixelRatio
@@ -91,19 +112,17 @@ export function SupernovaSparksCascade({ active, fillPct, tubeRef }: SupernovaSp
         return
       }
       lastFrameTime = timestamp
-      updateSpawnOffset()
+      measureLayout()
 
       const w = displayWidth()
       const h = displayHeight()
       ctx.clearRect(0, 0, w, h)
 
-      // Spawn new sparks from the tube bar position
       spawnTimer++
       if (spawnTimer % 3 === 0 && sparksRef.current.length < 40) {
         spawnSpark(w)
       }
 
-      // Floor = bottom of canvas
       const floorY = h - 4
       let floorGlow = 0
 
@@ -118,7 +137,7 @@ export function SupernovaSparksCascade({ active, fillPct, tubeRef }: SupernovaSp
         spark.trail.push({ x: spark.x, y: spark.y, alpha: spark.life })
         if (spark.trail.length > 8) spark.trail.shift()
 
-        // Bounce off floor
+        // Floor bounce
         if (spark.y >= floorY) {
           spark.y = floorY
           spark.vy *= -0.3
@@ -126,15 +145,16 @@ export function SupernovaSparksCascade({ active, fillPct, tubeRef }: SupernovaSp
           floorGlow += spark.brightness * spark.life * 0.3
 
           if (spark.vy < -0.5 && sparksRef.current.length < 50) {
+            const ms = mobileScaleRef.current
             for (let i = 0; i < 2; i++) {
               sparksRef.current.push({
-                x: spark.x + (Math.random() - 0.5) * 6,
+                x: spark.x + (Math.random() - 0.5) * 6 * ms,
                 y: floorY - 1,
-                vx: (Math.random() - 0.5) * 4,
-                vy: -(1 + Math.random() * 2),
+                vx: (Math.random() - 0.5) * 4 * ms,
+                vy: -(1 + Math.random() * 2) * ms,
                 life: 1,
                 maxLife: 15 + Math.random() * 15,
-                size: 0.5 + Math.random() * 0.8,
+                size: (0.4 + Math.random() * 0.6) * ms,
                 brightness: 0.9,
                 trail: [],
               })
@@ -149,15 +169,11 @@ export function SupernovaSparksCascade({ active, fillPct, tubeRef }: SupernovaSp
         spark.life -= 1 / spark.maxLife
         if (spark.life <= 0) return false
 
-        // Don't draw sparks above the tube (they spawn there but should only be visible falling down)
-        if (spark.y < spawnOffsetY.current - 2) return true
-
         // Draw trail
         if (spark.trail.length > 1) {
           for (let i = 1; i < spark.trail.length; i++) {
             const t = spark.trail[i]
             const prev = spark.trail[i - 1]
-            if (t.y < spawnOffsetY.current - 2) continue
             const trailAlpha = (i / spark.trail.length) * spark.life * 0.4
             ctx.beginPath()
             ctx.moveTo(prev.x, prev.y)
@@ -231,18 +247,18 @@ export function SupernovaSparksCascade({ active, fillPct, tubeRef }: SupernovaSp
 
     return () => {
       cancelAnimationFrame(frameRef.current)
-      window.removeEventListener("resize", resizeCanvas)
+      window.removeEventListener("resize", measureLayout)
       document.removeEventListener("visibilitychange", handleVisibility)
     }
-  }, [active, spawnSpark, updateSpawnOffset])
+  }, [active, spawnSpark, measureLayout])
 
   if (!active) return null
 
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 pointer-events-none"
-      style={{ zIndex: 5 }}
+      className="absolute left-0 right-0 pointer-events-none"
+      style={{ zIndex: 5, top: 0 }}
     />
   )
 }
