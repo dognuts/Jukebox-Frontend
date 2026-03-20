@@ -241,7 +241,16 @@ export function BubbleBackground() {
       return !b.popping || b.popFrame < 14
     }
 
+    let lastFrameTime = 0
+
     function frame(time: number) {
+      // Cap at ~30fps — this is just background decoration
+      if (time - lastFrameTime < 33) {
+        animRef.current = requestAnimationFrame(frame)
+        return
+      }
+      lastFrameTime = time
+
       ctx!.clearRect(0, 0, w, h)
 
       // Draw and filter bubbles
@@ -283,9 +292,21 @@ export function BubbleBackground() {
 
     animRef.current = requestAnimationFrame(frame)
 
+    // Pause when tab hidden
+    const handleVisibility = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(animRef.current)
+      } else {
+        lastFrameTime = 0
+        animRef.current = requestAnimationFrame(frame)
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibility)
+
     return () => {
       cancelAnimationFrame(animRef.current)
       window.removeEventListener("resize", resize)
+      document.removeEventListener("visibilitychange", handleVisibility)
       bubblesRef.current = []
       dropletsRef.current = []
     }
@@ -316,8 +337,7 @@ export function BubbleBackground() {
   return (
     <canvas
       ref={canvasRef}
-      onClick={handleClick}
-      className="fixed inset-0 cursor-pointer"
+      className="fixed inset-0 pointer-events-none"
       style={{ zIndex: 1 }}
       aria-hidden="true"
     />

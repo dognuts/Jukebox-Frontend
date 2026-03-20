@@ -67,7 +67,7 @@ export function UserPopover({
         className="w-64 rounded-xl border-border/40 p-0"
         style={{
           background: "oklch(0.14 0.015 280 / 0.95)",
-          backdropFilter: "blur(16px)",
+          backdropFilter: "blur(8px)",
           zIndex: 50,
         }}
       >

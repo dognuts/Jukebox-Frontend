@@ -89,7 +89,7 @@ export function RequestModal({ open, onClose, isDJ, onSubmitTrack }: RequestModa
         className="border-border/30 glass-panel sm:max-w-md"
         style={{
           background: "oklch(0.14 0.01 280 / 0.95)",
-          backdropFilter: "blur(20px)",
+          backdropFilter: "blur(10px)",
         }}
       >
         <DialogHeader>

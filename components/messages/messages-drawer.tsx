@@ -264,7 +264,7 @@ export function MessagesDrawer() {
         className="flex flex-col p-0 border-border/30"
         style={{
           background: "oklch(0.12 0.015 280 / 0.97)",
-          backdropFilter: "blur(20px)",
+          backdropFilter: "blur(10px)",
         }}
       >
         {/* Header -- only shown when on conversation list */}

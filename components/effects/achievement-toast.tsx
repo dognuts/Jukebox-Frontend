@@ -30,7 +30,7 @@ export function AchievementToast({
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -20, scale: 0.9 }}
           className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-primary/30 px-5 py-3 neon-border-amber"
-          style={{ background: "var(--glass-bg)", backdropFilter: "blur(20px)" }}
+          style={{ background: "var(--glass-bg)", backdropFilter: "blur(10px)" }}
         >
           <Icon className="h-5 w-5 text-primary" />
           <span className="font-sans text-sm font-semibold text-foreground">

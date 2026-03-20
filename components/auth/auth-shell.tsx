@@ -20,7 +20,7 @@ export function AuthShell({ children, title, subtitle }: { children: React.React
           className="rounded-2xl border border-border/30 p-8"
           style={{
             background: "oklch(0.12 0.01 280 / 0.8)",
-            backdropFilter: "blur(16px)",
+            backdropFilter: "blur(8px)",
             boxShadow: "0 0 40px oklch(0.08 0.01 280 / 0.5)",
           }}
         >

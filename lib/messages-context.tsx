@@ -166,7 +166,7 @@ export function MessagesProvider({ children }: { children: ReactNode }) {
     loadConversations().then(() => setHydrated(true))
 
     if (isRealAPI) {
-      pollRef.current = setInterval(loadConversations, 15000)
+      pollRef.current = setInterval(loadConversations, 30000)
     }
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)

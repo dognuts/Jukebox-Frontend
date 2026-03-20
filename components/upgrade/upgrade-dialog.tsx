@@ -23,7 +23,7 @@ export function UpgradeDialog() {
     <Dialog open={isDialogOpen} onOpenChange={(o) => !o && closeUpgradeDialog()}>
       <DialogContent
         className="border-border/30 sm:max-w-md p-0 overflow-hidden"
-        style={{ background: "oklch(0.12 0.02 270 / 0.97)", backdropFilter: "blur(20px)" }}
+        style={{ background: "oklch(0.12 0.02 270 / 0.97)", backdropFilter: "blur(10px)" }}
       >
         {/* Header */}
         <div

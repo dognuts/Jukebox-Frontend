@@ -47,26 +47,26 @@ export function AmbientBackground() {
       style={{ zIndex: 0 }}
       aria-hidden="true"
     >
-      {/* Slow-moving gradient orbs */}
+      {/* Slow-moving gradient orbs — reduced blur for performance */}
       <div
         className="absolute inset-0 animate-ambient-drift-1"
         style={{
           background: "radial-gradient(ellipse 80% 60% at 20% 30%, oklch(0.30 0.14 80 / 0.18), transparent)",
-          filter: "blur(60px)",
+          filter: "blur(40px)",
         }}
       />
       <div
         className="absolute inset-0 animate-ambient-drift-2"
         style={{
           background: "radial-gradient(ellipse 60% 50% at 80% 70%, oklch(0.28 0.12 250 / 0.15), transparent)",
-          filter: "blur(80px)",
+          filter: "blur(50px)",
         }}
       />
       <div
         className="absolute inset-0 animate-ambient-drift-3"
         style={{
           background: "radial-gradient(ellipse 50% 40% at 50% 50%, oklch(0.25 0.10 350 / 0.10), transparent)",
-          filter: "blur(100px)",
+          filter: "blur(60px)",
         }}
       />
 

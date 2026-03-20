@@ -56,7 +56,7 @@ export function UserMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-56 rounded-xl border border-border/30 bg-background/95 p-1 backdrop-blur-xl"
+        className="w-56 rounded-xl border border-border/30 bg-background/95 p-1 backdrop-blur-md"
       >
         <DropdownMenuLabel className="px-3 py-2 font-sans text-sm">
           <div className="font-semibold text-foreground">{user.displayName}</div>

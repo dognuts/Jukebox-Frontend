@@ -68,7 +68,7 @@ export default function HomePage() {
     }
     fetchRooms()
     // Re-fetch every 30s
-    const interval = setInterval(fetchRooms, 15000)
+    const interval = setInterval(fetchRooms, 30000)
     // Also re-fetch when user returns to this tab
     const handleVisibility = () => {
       if (document.visibilityState === "visible") fetchRooms()

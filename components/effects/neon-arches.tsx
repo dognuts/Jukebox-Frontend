@@ -117,11 +117,19 @@ export function NeonArches({ className = "" }: { className?: string }) {
   const reducedMotion = useRef(false)
   const cachedW = useRef(0)
   const cachedH = useRef(0)
+  const lastFrameTime = useRef(0)
   const cachedPaths = useRef<
     { pts: { x: number; y: number }[]; path2d: Path2D }[]
   >([])
 
   const draw = useCallback((timestamp: number) => {
+    // Cap at ~30fps
+    if (timestamp - lastFrameTime.current < 33) {
+      animRef.current = requestAnimationFrame(draw)
+      return
+    }
+    lastFrameTime.current = timestamp
+
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext("2d")
@@ -215,7 +223,21 @@ export function NeonArches({ className = "" }: { className?: string }) {
       "(prefers-reduced-motion: reduce)"
     ).matches
     animRef.current = requestAnimationFrame(draw)
-    return () => cancelAnimationFrame(animRef.current)
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(animRef.current)
+      } else {
+        lastFrameTime.current = 0
+        animRef.current = requestAnimationFrame(draw)
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibility)
+
+    return () => {
+      cancelAnimationFrame(animRef.current)
+      document.removeEventListener("visibilitychange", handleVisibility)
+    }
   }, [draw])
 
   return (
