@@ -24,17 +24,32 @@ export function Navbar() {
   const clickTimer = useRef<NodeJS.Timeout | null>(null)
   const [hidden, setHidden] = useState(false)
   const lastScrollY = useRef(0)
+  const lastDirection = useRef<"up" | "down">("up")
+  const scrollAccum = useRef(0)
 
   useEffect(() => {
+    const THRESHOLD = 15 // px of scroll in same direction before toggling
     const onScroll = () => {
       const y = window.scrollY
-      // Only hide after scrolling past half the header height
-      if (y > 32) {
-        setHidden(y > lastScrollY.current)
-      } else {
-        setHidden(false)
+      const delta = y - lastScrollY.current
+      const direction = delta > 0 ? "down" : "up"
+
+      // Reset accumulator on direction change
+      if (direction !== lastDirection.current) {
+        scrollAccum.current = 0
+        lastDirection.current = direction
       }
+
+      scrollAccum.current += Math.abs(delta)
       lastScrollY.current = y
+
+      // Only toggle after accumulating enough scroll in one direction
+      if (y <= 32) {
+        setHidden(false)
+        scrollAccum.current = 0
+      } else if (scrollAccum.current > THRESHOLD) {
+        setHidden(direction === "down")
+      }
     }
     window.addEventListener("scroll", onScroll, { passive: true })
     return () => window.removeEventListener("scroll", onScroll)
@@ -55,7 +70,12 @@ export function Navbar() {
 
   return (
     <header
-      className={`sticky top-0 z-40 w-full border-b border-border/50 glass-panel transition-transform duration-300 ${hidden ? "-translate-y-full" : "translate-y-0"}`}
+      className={`sticky top-0 z-40 w-full border-b border-border/50 transition-transform duration-300 ${hidden ? "-translate-y-full" : "translate-y-0"}`}
+      style={{
+        background: "oklch(0.10 0.015 280 / 0.92)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+      }}
     >
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 lg:px-6">
         {/* Logo */}

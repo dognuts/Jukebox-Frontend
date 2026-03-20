@@ -300,17 +300,23 @@ export default function RoomPage() {
   const handleMicChange = useCallback((active: boolean, pauseMusic: boolean, deviceId?: string) => {
     setMicActive(active)
     setMicPausesMusic(pauseMusic)
+    // Broadcast mic state to all listeners via WebSocket
+    if (ws.connected && isDJ) {
+      ws.djSetMic(active, pauseMusic)
+    }
     if (active) {
       liveKit.startBroadcasting(deviceId)
     } else {
       liveKit.stopBroadcasting()
     }
-  }, [liveKit]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [liveKit, ws.connected, isDJ]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Audio engine state
   const [audioCurrentTime, setAudioCurrentTime] = useState(0)
   const [audioPlaying, setAudioPlaying] = useState(false)
   const [audioDuration, setAudioDuration] = useState(0)
+  const [roomVolume, setRoomVolume] = useState(75)
+  const [roomMuted, setRoomMuted] = useState(false)
 
   // Prepare audio engine track from current track
   const audioTrack: AudioEngineTrack | null = useMemo(() => {
@@ -656,7 +662,7 @@ export default function RoomPage() {
                     />
                     <div className="p-5">
                       {/* DJ Speaking indicator — visible to listeners when DJ is broadcasting */}
-                      {!isDJ && liveKit.djSpeaking && (
+                      {!isDJ && (ws.djMicActive || liveKit.djSpeaking) && (
                         <div
                           className="mb-4 flex items-center justify-center gap-2 rounded-xl px-4 py-2.5"
                           style={{
@@ -755,11 +761,11 @@ export default function RoomPage() {
                               <AudioEngine
                                 track={audioTrack}
                                 playbackState={ws.playbackState}
-                                volume={75}
-                                muted={false}
+                                volume={roomVolume}
+                                muted={roomMuted}
                                 isDJ={isDJ}
                                 visible={isYouTube}
-                                forcePaused={micActive && micPausesMusic}
+                                forcePaused={isDJ ? (micActive && micPausesMusic) : (ws.djMicActive && ws.djMicPauseMusic)}
                                 onTimeUpdate={setAudioCurrentTime}
                                 onDuration={setAudioDuration}
                                 onTrackEnd={handleTrackEnd}
@@ -808,6 +814,10 @@ export default function RoomPage() {
                                   currentTime={ws.connected ? audioCurrentTime : undefined}
                                   externalPlaying={ws.connected ? audioPlaying : undefined}
                                   soundCloudUrl={isSoundCloud ? audioTrack?.sourceUrl : undefined}
+                                  volume={roomVolume}
+                                  muted={roomMuted}
+                                  onVolumeChange={setRoomVolume}
+                                  onMutedChange={setRoomMuted}
                                 />
                               )}
                             </>
@@ -819,11 +829,11 @@ export default function RoomPage() {
                             <AudioEngine
                               track={audioTrack}
                               playbackState={ws.playbackState}
-                              volume={75}
-                              muted={false}
+                              volume={roomVolume}
+                              muted={roomMuted}
                               isDJ={isDJ}
                               visible={false}
-                              forcePaused={micActive && micPausesMusic}
+                              forcePaused={isDJ ? (micActive && micPausesMusic) : (ws.djMicActive && ws.djMicPauseMusic)}
                               onTimeUpdate={setAudioCurrentTime}
                               onDuration={setAudioDuration}
                               onTrackEnd={handleTrackEnd}

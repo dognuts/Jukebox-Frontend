@@ -18,12 +18,13 @@ interface NowPlayingProps {
   onTogglePlay?: () => void
   micActive?: boolean
   micPausesMusic?: boolean
-  /** When provided, use this as the current time instead of simulating */
   currentTime?: number
-  /** When provided, use this as playing state instead of internal state */
   externalPlaying?: boolean
-  /** When set, shows a SoundCloud logo linking to this URL */
   soundCloudUrl?: string
+  volume?: number
+  muted?: boolean
+  onVolumeChange?: (v: number) => void
+  onMutedChange?: (m: boolean) => void
 }
 
 export function NowPlaying({
@@ -37,12 +38,28 @@ export function NowPlaying({
   currentTime,
   externalPlaying,
   soundCloudUrl,
+  volume: volumeProp,
+  muted: mutedProp,
+  onVolumeChange,
+  onMutedChange,
 }: NowPlayingProps) {
   const useExternal = currentTime !== undefined
   const [isPlaying, setIsPlaying] = useState(true)
   const [progress, setProgress] = useState(0)
-  const [volume, setVolume] = useState(75)
-  const [muted, setMuted] = useState(false)
+  const [localVolume, setLocalVolume] = useState(75)
+  const [localMuted, setLocalMuted] = useState(false)
+
+  // Use lifted state if provided, otherwise use local state
+  const volume = volumeProp ?? localVolume
+  const muted = mutedProp ?? localMuted
+  const setVolume = useCallback((v: number) => {
+    if (onVolumeChange) onVolumeChange(v)
+    else setLocalVolume(v)
+  }, [onVolumeChange])
+  const setMuted = useCallback((m: boolean) => {
+    if (onMutedChange) onMutedChange(m)
+    else setLocalMuted(m)
+  }, [onMutedChange])
 
   // Sync from external audio engine when available
   useEffect(() => {
@@ -125,7 +142,7 @@ export function NowPlaying({
     }
   }, [micActive, micPausesMusic, onTogglePlay])
 
-  const toggleMute = useCallback(() => setMuted((m) => !m), [])
+  const toggleMute = useCallback(() => setMuted(!muted), [muted, setMuted])
 
   const progressPercent = track.duration > 0 ? (progress / track.duration) * 100 : 0
 

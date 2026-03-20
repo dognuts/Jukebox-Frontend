@@ -56,6 +56,8 @@ export interface RoomWSState {
   roomEndedReason: string
   tube: NeonTubeState | null
   lastPowerUp: { newLevel: number; color: string } | null
+  djMicActive: boolean
+  djMicPauseMusic: boolean
 }
 
 interface UseRoomWebSocketOptions {
@@ -86,6 +88,8 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
     roomEndedReason: "",
     tube: null,
     lastPowerUp: null,
+    djMicActive: false,
+    djMicPauseMusic: false,
   })
 
   // Connect — wait until djKey is resolved (undefined = still loading)
@@ -202,6 +206,14 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
 
         case "tube_update":
           setState((s) => ({ ...s, tube: msg.payload as NeonTubeState }))
+          break
+
+        case "dj_mic_state":
+          setState((s) => ({
+            ...s,
+            djMicActive: !!(msg.payload as any)?.active,
+            djMicPauseMusic: !!(msg.payload as any)?.pauseMusic,
+          }))
           break
 
         case "power_up":
@@ -391,6 +403,11 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
 
   const djEndRoom = useCallback(() => send("dj_end_session"), [send])
 
+  const djSetMic = useCallback(
+    (active: boolean, pauseMusic: boolean) => send("dj_mic", { active, pauseMusic }),
+    [send]
+  )
+
   const sendReaction = useCallback(
     (emoji: string) => send("reaction", { emoji }),
     [send]
@@ -409,6 +426,7 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
     djAnnounce,
     djGoLive,
     djEndRoom,
+    djSetMic,
     sendReaction,
   }
 }

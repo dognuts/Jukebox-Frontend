@@ -143,21 +143,36 @@ export default function AdminPage() {
                 </p>
               </div>
             </div>
-            <Link href="/admin/create">
-              <Button
-                size="sm"
-                className="gap-2 rounded-xl font-sans"
-                style={{
-                  background: "oklch(0.55 0.20 270 / 0.2)",
-                  border: "1px solid oklch(0.55 0.20 270 / 0.4)",
-                  color: "oklch(0.75 0.18 270)",
-                }}
-              >
+            <div className="flex items-center gap-2">
+              <Link href="/admin/create">
+                <Button
+                  size="sm"
+                  className="gap-2 rounded-xl font-sans"
+                  style={{
+                    background: "oklch(0.55 0.20 270 / 0.2)",
+                    border: "1px solid oklch(0.55 0.20 270 / 0.4)",
+                    color: "oklch(0.75 0.18 270)",
+                  }}
+                >
                 <Plus className="h-4 w-4" />
                 Official Room
               </Button>
             </Link>
-          </div>
+              <Link href="/admin/users">
+                <Button
+                  size="sm"
+                  className="gap-2 rounded-xl font-sans"
+                  style={{
+                    background: "oklch(0.20 0.02 280 / 0.6)",
+                    border: "1px solid oklch(0.35 0.02 280 / 0.4)",
+                    color: "oklch(0.70 0.02 280)",
+                  }}
+                >
+                  <Users className="h-4 w-4" />
+                  Users
+                </Button>
+              </Link>
+            </div>
 
           {error && (
             <div
