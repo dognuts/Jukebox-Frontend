@@ -151,6 +151,32 @@ export const SoundCloudPlayer = forwardRef<AudioPlayerHandle, SoundCloudPlayerPr
       }
     }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+    // Handle track URL changes — load the new track into the existing widget
+    const currentUrlRef = useRef(trackUrl)
+    useEffect(() => {
+      if (trackUrl !== currentUrlRef.current && widgetRef.current) {
+        currentUrlRef.current = trackUrl
+        durationRef.current = 0
+        positionRef.current = 0
+        widgetRef.current.load(trackUrl, {
+          auto_play: true,
+          show_artwork: false,
+          callback: () => {
+            // Get duration of new track
+            widgetRef.current?.getDuration?.((dur: number) => {
+              durationRef.current = dur / 1000
+              onDuration?.(dur / 1000)
+            })
+            onReady?.()
+            // Ensure playback starts
+            setTimeout(() => {
+              widgetRef.current?.play?.()
+            }, 300)
+          },
+        })
+      }
+    }, [trackUrl, onReady, onDuration])
+
     // Hidden iframe — audio only, no visible widget
     const embedUrl = `https://w.soundcloud.com/player/?url=${encodeURIComponent(trackUrl)}&auto_play=false&show_artwork=false&visual=false&hide_related=true&show_comments=false&show_user=false&show_reposts=false`
 

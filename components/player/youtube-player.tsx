@@ -158,13 +158,25 @@ export const YouTubePlayer = forwardRef<AudioPlayerHandle, YouTubePlayerProps>(
       if (videoId !== currentVideoId.current && playerRef.current?.loadVideoById) {
         currentVideoId.current = videoId
         playerRef.current.loadVideoById(videoId)
+        // Explicitly play after loading — loadVideoById can be blocked by autoplay policies
+        setTimeout(() => {
+          playerRef.current?.playVideo?.()
+        }, 300)
         // Re-fire onReady since the player is already initialized but has a new video
-        // Small delay to let the new video start loading
         setTimeout(() => {
           onReady?.()
-        }, 500)
+          // Also report duration of the new video
+          const dur = playerRef.current?.getDuration?.() ?? 0
+          if (dur > 0) onDuration?.(dur)
+        }, 800)
+        // Retry play and duration report
+        setTimeout(() => {
+          playerRef.current?.playVideo?.()
+          const dur = playerRef.current?.getDuration?.() ?? 0
+          if (dur > 0) onDuration?.(dur)
+        }, 2000)
       }
-    }, [videoId, onReady])
+    }, [videoId, onReady, onDuration])
 
     return (
       <div ref={containerRef} className="yt-embed-container w-full aspect-video rounded-xl overflow-hidden" aria-label="YouTube player" />
