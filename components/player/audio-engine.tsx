@@ -106,6 +106,14 @@ export function AudioEngine({
       else onPlayStateChange?.(true)
       return
     }
+    // If player doesn't know duration yet and target is very far ahead, start from beginning
+    if (playerDuration <= 0 && targetSeconds > 600) {
+      playerRef.current.seekTo(0)
+      playerRef.current.play()
+      if (!synced) setTimeout(() => setSynced(true), 600)
+      else onPlayStateChange?.(true)
+      return
+    }
 
     // Seek if drift > 2 seconds
     if (drift > 2) {
