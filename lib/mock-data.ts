@@ -46,6 +46,7 @@ export interface Room {
   lastActive?: Date // For recently active rooms
   endedAt?: Date // When the session was ended
   isFeatured?: boolean // Admin-selected featured room
+  isAutoplay?: boolean // 24/7 autoplay room
 }
 
 export interface DJ {

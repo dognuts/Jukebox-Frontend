@@ -27,11 +27,12 @@ interface TrackQueueProps {
   roomSlug?: string
   roomName?: string
   djName?: string
+  isAutoplay?: boolean
   requestPolicy?: "open" | "closed" | "approval"
   onSubmitTrack?: (track: { title: string; artist: string; duration: number; source: string; sourceUrl: string }) => void
 }
 
-export function TrackQueue({ tracks, playedTracks = [], isDJ, roomSlug, roomName, djName, requestPolicy = "open", onSubmitTrack }: TrackQueueProps) {
+export function TrackQueue({ tracks, playedTracks = [], isDJ, roomSlug, roomName, djName, isAutoplay, requestPolicy = "open", onSubmitTrack }: TrackQueueProps) {
   const [tab, setTab] = useState<QueueTab>("upcoming")
   const [trackUrl, setTrackUrl] = useState("")
   const [loading, setLoading] = useState(false)
@@ -40,7 +41,7 @@ export function TrackQueue({ tracks, playedTracks = [], isDJ, roomSlug, roomName
   const [saved, setSaved] = useState(false)
   const { isLoggedIn } = useAuth()
 
-  const canAdd = isDJ || requestPolicy === "open" || requestPolicy === "approval"
+  const canAdd = !isAutoplay && (isDJ || requestPolicy === "open" || requestPolicy === "approval")
 
   const handleAddTrack = useCallback(async () => {
     if (!trackUrl.trim()) return

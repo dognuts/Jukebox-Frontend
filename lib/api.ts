@@ -300,5 +300,6 @@ export function toFrontendRoom(r: APIRoom, nowPlaying?: APITrack | null, queue?:
     lastActive: r.lastActive ? new Date(r.lastActive) : undefined,
     endedAt: r.endedAt ? new Date(r.endedAt) : undefined,
     isFeatured: r.isFeatured,
+    isAutoplay: r.isAutoplay,
   }
 }

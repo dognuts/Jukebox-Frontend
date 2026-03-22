@@ -188,7 +188,40 @@ export default function RoomPage() {
     return room?.nowPlaying ?? null
   }, [ws.connected, ws.currentTrack, room?.nowPlaying])
 
+  // Autoplay playlist tracks — fetch for autoplay rooms
+  const [autoplayTracks, setAutoplayTracks] = useState<Track[]>([])
+  const [autoplayIndex, setAutoplayIndex] = useState(0)
+  useEffect(() => {
+    if (!slug || !room?.isAutoplay) return
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/rooms/${slug}/autoplay-tracks`, { credentials: "include" })
+      .then((res) => res.ok ? res.json() : { tracks: [], currentIndex: 0 })
+      .then((data: any) => {
+        if (Array.isArray(data.tracks)) {
+          setAutoplayTracks(data.tracks.map((t: any, i: number) => ({
+            id: `autoplay-${i}`,
+            title: t.title || "",
+            artist: t.artist || "",
+            duration: t.duration || 0,
+            source: t.source || "youtube",
+            sourceUrl: t.sourceUrl || "",
+            albumGradient: t.albumGradient || "linear-gradient(135deg, oklch(0.35 0.10 280), oklch(0.25 0.10 280))",
+          })))
+          setAutoplayIndex(data.currentIndex || 0)
+        }
+      })
+      .catch(() => {})
+  }, [slug, room?.isAutoplay])
+
   const queueTracks: Track[] = useMemo(() => {
+    // For autoplay rooms, show upcoming tracks from the playlist
+    if (room?.isAutoplay && autoplayTracks.length > 0) {
+      const upcoming: Track[] = []
+      for (let i = 0; i < autoplayTracks.length; i++) {
+        const idx = (autoplayIndex + i) % autoplayTracks.length
+        upcoming.push(autoplayTracks[idx])
+      }
+      return upcoming
+    }
     if (ws.connected && ws.queue.length > 0) {
       return ws.queue.map((e) => ({
         id: e.track.id,
@@ -202,7 +235,7 @@ export default function RoomPage() {
       }))
     }
     return room?.queue ?? []
-  }, [ws.connected, ws.queue, room?.queue])
+  }, [ws.connected, ws.queue, room?.queue, room?.isAutoplay, autoplayTracks, autoplayIndex])
 
   // Played tracks — accumulated from WS + initial fetch from API
   const [fetchedHistory, setFetchedHistory] = useState<Track[]>([])
@@ -983,6 +1016,7 @@ export default function RoomPage() {
                 roomSlug={room?.slug}
                 roomName={room?.name}
                 djName={room?.djName}
+                isAutoplay={room?.isAutoplay}
                 requestPolicy={serverPolicy as "open" | "closed" | "approval"}
                 onSubmitTrack={handleSubmitTrack}
               />
