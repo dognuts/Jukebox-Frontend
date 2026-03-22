@@ -50,10 +50,11 @@ export function AudioEngine({
 }: AudioEngineProps) {
   const playerRef = useRef<AudioPlayerHandle>(null)
   const [ready, setReady] = useState(false)
-  const [synced, setSynced] = useState(false) // true once first seek+play completes
+  const [synced, setSynced] = useState(false)
   const [playerState, setPlayerState] = useState<"playing" | "paused" | "ended" | "buffering">("paused")
   const lastSyncRef = useRef(0)
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const signaledEndRef = useRef("")  // trackID for which we've already signaled end
 
   // Volume control — suppress volume until synced to prevent hearing audio at position 0
   useEffect(() => {
@@ -92,28 +93,35 @@ export function AudioEngine({
     const elapsedMs = Date.now() - serverStartMs
     const targetSeconds = Math.max(0, elapsedMs / 1000)
 
+    // Check the player's actual duration
+    const playerDuration = playerRef.current.getDuration?.() || 0
+
+    // If we know the real duration and server time has passed it, the track is over
+    // Tell the server to advance rather than playing from a wrong position
+    if (playerDuration > 30 && targetSeconds > playerDuration + 2) {
+      // Track should have ended — trigger onTrackEnd to notify server (only once per track)
+      if (hasPlayedRef.current && signaledEndRef.current !== playbackState.trackId) {
+        signaledEndRef.current = playbackState.trackId || ""
+        onTrackEnd?.()
+      }
+      // Still play from current position while waiting for server to advance
+      playerRef.current.play()
+      if (!synced) setTimeout(() => setSynced(true), 600)
+      else onPlayStateChange?.(true)
+      return
+    }
+
+    // If player doesn't know duration yet and target is very far ahead, start from current position
+    if (playerDuration <= 0 && targetSeconds > 600) {
+      playerRef.current.play()
+      if (!synced) setTimeout(() => setSynced(true), 600)
+      else onPlayStateChange?.(true)
+      return
+    }
+
     // Check current position
     const currentPos = playerRef.current.getCurrentTime()
     const drift = Math.abs(currentPos - targetSeconds)
-
-    // Don't seek if target is unreasonably far ahead (e.g., autoplay track with no duration)
-    // The player's actual duration is more reliable than the server's elapsed time
-    const playerDuration = playerRef.current.getDuration?.() || 0
-    if (playerDuration > 0 && targetSeconds > playerDuration - 2) {
-      // We're past the end of this track — don't seek, let it play out naturally
-      playerRef.current.play()
-      if (!synced) setTimeout(() => setSynced(true), 600)
-      else onPlayStateChange?.(true)
-      return
-    }
-    // If player doesn't know duration yet and target is very far ahead, start from beginning
-    if (playerDuration <= 0 && targetSeconds > 600) {
-      playerRef.current.seekTo(0)
-      playerRef.current.play()
-      if (!synced) setTimeout(() => setSynced(true), 600)
-      else onPlayStateChange?.(true)
-      return
-    }
 
     // Seek if drift > 2 seconds
     if (drift > 2) {
@@ -130,7 +138,7 @@ export function AudioEngine({
     } else {
       onPlayStateChange?.(true)
     }
-  }, [playbackState, ready, synced, forcePaused, onPlayStateChange])
+  }, [playbackState, ready, synced, forcePaused, onPlayStateChange, onTrackEnd])
 
   // Sync when playback state changes
   useEffect(() => {
@@ -140,10 +148,11 @@ export function AudioEngine({
   // Also sync when player becomes ready
   const handleReady = useCallback(() => {
     setReady(true)
-    // Small delay to let player fully initialize
-    syncTimeoutRef.current = setTimeout(() => {
-      syncToServer()
-    }, 300)
+    // Sync with staggered retries to ensure YouTube is truly ready to seek
+    // Each attempt is >1s apart to pass the throttle guard in syncToServer
+    syncTimeoutRef.current = setTimeout(() => syncToServer(), 300)
+    setTimeout(() => { lastSyncRef.current = 0; syncToServer() }, 1500)
+    setTimeout(() => { lastSyncRef.current = 0; syncToServer() }, 3000)
   }, [syncToServer])
 
   // Clean up sync timeout
@@ -178,6 +187,7 @@ export function AudioEngine({
     setSynced(false)
     lastSyncRef.current = 0
     hasPlayedRef.current = false
+    signaledEndRef.current = ""
   }, [track?.id])
 
   // Track whether the player has actually started playing
