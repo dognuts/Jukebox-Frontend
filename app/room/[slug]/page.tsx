@@ -350,6 +350,20 @@ export default function RoomPage() {
   const [roomVolume, setRoomVolume] = useState(75)
   const [roomMuted, setRoomMuted] = useState(false)
 
+  // Report track duration to server for autoplay rooms
+  const lastReportedDuration = useRef("")
+  const handleDuration = useCallback((seconds: number) => {
+    setAudioDuration(seconds)
+    // Report real duration to server so it can reschedule the advance timer
+    if (room?.isAutoplay && ws.connected && currentTrack && seconds > 0) {
+      const key = `${currentTrack.id}-${seconds}`
+      if (key !== lastReportedDuration.current) {
+        lastReportedDuration.current = key
+        ws.reportDuration(currentTrack.id, Math.round(seconds))
+      }
+    }
+  }, [room?.isAutoplay, ws.connected, currentTrack])
+
   // Prepare audio engine track from current track
   const audioTrack: AudioEngineTrack | null = useMemo(() => {
     const track = currentTrack ?? room?.nowPlaying
@@ -815,7 +829,7 @@ export default function RoomPage() {
                                 visible={isYouTube}
                                 forcePaused={isDJ ? (micActive && micPausesMusic) : (ws.djMicActive && ws.djMicPauseMusic)}
                                 onTimeUpdate={setAudioCurrentTime}
-                                onDuration={setAudioDuration}
+                                onDuration={handleDuration}
                                 onTrackEnd={handleTrackEnd}
                                 onPlayStateChange={setAudioPlaying}
                               />
@@ -883,7 +897,7 @@ export default function RoomPage() {
                               visible={false}
                               forcePaused={isDJ ? (micActive && micPausesMusic) : (ws.djMicActive && ws.djMicPauseMusic)}
                               onTimeUpdate={setAudioCurrentTime}
-                              onDuration={setAudioDuration}
+                              onDuration={handleDuration}
                               onTrackEnd={handleTrackEnd}
                               onPlayStateChange={setAudioPlaying}
                             />
