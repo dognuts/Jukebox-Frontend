@@ -172,6 +172,20 @@ export default function AdminPage() {
                   Users
                 </Button>
               </Link>
+              <Link href="/admin/autoplay">
+                <Button
+                  size="sm"
+                  className="gap-2 rounded-xl font-sans"
+                  style={{
+                    background: "oklch(0.20 0.04 150 / 0.4)",
+                    border: "1px solid oklch(0.45 0.12 150 / 0.3)",
+                    color: "oklch(0.70 0.14 150)",
+                  }}
+                >
+                  <Radio className="h-4 w-4" />
+                  Autoplay
+                </Button>
+              </Link>
             </div>
           </div>
 

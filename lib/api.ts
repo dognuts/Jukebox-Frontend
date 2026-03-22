@@ -114,6 +114,7 @@ export interface APIRoom {
   lastActive?: string
   endedAt?: string
   isFeatured?: boolean
+  isAutoplay?: boolean
   expiresAt?: string
   nowPlaying?: APITrack | null
 }

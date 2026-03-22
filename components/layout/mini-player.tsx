@@ -141,9 +141,13 @@ export function MiniPlayer() {
             </p>
             <p className="truncate font-sans text-[11px] text-muted-foreground">
               {player.roomName}
-              <span className="text-muted-foreground/60">
-                {" "}hosted by {player.djName}
-              </span>
+              {player.djName ? (
+                <span className="text-muted-foreground/60">
+                  {" "}hosted by {player.djName}
+                </span>
+              ) : (
+                <span className="text-muted-foreground/60"> · 24/7 Radio</span>
+              )}
             </p>
           </div>
         </Link>

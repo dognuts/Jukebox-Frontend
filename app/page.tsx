@@ -9,6 +9,8 @@ import { Footer } from "@/components/layout/footer"
 import { FeaturedRoom } from "@/components/discover/featured-room"
 import { GenrePills } from "@/components/discover/genre-pills"
 import { RoomGrid } from "@/components/discover/room-grid"
+import { WelcomePopup } from "@/components/welcome-popup"
+import { useAuth } from "@/lib/auth-context"
 
 import { ScrollReveal } from "@/components/effects/scroll-reveal"
 import { FeaturedRoomSkeleton, RoomCardSkeleton, GenrePillsSkeleton } from "@/components/ui/skeleton"
@@ -27,6 +29,7 @@ export default function HomePage() {
   const [usingMock, setUsingMock] = useState(false)
   const { registerShortcut } = useKeyboardShortcuts()
   const scrollToTopRef = useRef<() => void>(() => {})
+  const { isLoggedIn } = useAuth()
 
   // Ensure anonymous session ID is stored before any WS connections
   useEffect(() => {
@@ -161,6 +164,7 @@ export default function HomePage() {
 
   return (
     <div className="relative min-h-screen">
+      <WelcomePopup isLoggedIn={isLoggedIn} />
       <div className="relative z-10">
         <Navbar />
 

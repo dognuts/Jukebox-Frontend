@@ -251,7 +251,7 @@ export function RoomCard({ room }: { room: Room }) {
                     )}
                   </div>
                   <p className="mt-0.5 font-sans text-[11px] text-white/70 drop-shadow-sm">
-                    {room.djName}
+                    {room.isAutoplay ? "24/7 Radio" : room.djName}
                   </p>
                   <div className="mt-1.5 flex flex-wrap items-center justify-center gap-1">
                     <span
