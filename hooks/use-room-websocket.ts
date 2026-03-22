@@ -413,6 +413,8 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
     [send]
   )
 
+  const sendAutoplayEnd = useCallback(() => send("autoplay_track_ended"), [send])
+
   return {
     ...state,
     sendChat,
@@ -428,5 +430,6 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
     djEndRoom,
     djSetMic,
     sendReaction,
+    sendAutoplayEnd,
   }
 }

@@ -369,7 +369,11 @@ export default function RoomPage() {
     if (isDJ && ws.connected) {
       ws.djSkip()
     }
-  }, [isDJ, ws])
+    // For autoplay rooms, any listener reports track ended
+    if (room?.isAutoplay && ws.connected) {
+      ws.sendAutoplayEnd()
+    }
+  }, [isDJ, ws, room?.isAutoplay])
 
   const handleSubmitTrack = useCallback(async (track: { title: string; artist: string; duration: number; source: string; sourceUrl: string }) => {
     if (ws.connected) {
