@@ -380,7 +380,7 @@ export default function RoomPage() {
     // But only if we've been playing for at least 30 seconds to prevent seek-past-end loops
     if (room?.isAutoplay && ws.connected) {
       const playedFor = Date.now() - trackStartTimeRef.current
-      if (playedFor > 30000) {
+      if (playedFor > 15000) {
         ws.sendAutoplayEnd()
       }
     }

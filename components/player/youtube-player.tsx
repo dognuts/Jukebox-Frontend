@@ -158,8 +158,13 @@ export const YouTubePlayer = forwardRef<AudioPlayerHandle, YouTubePlayerProps>(
       if (videoId !== currentVideoId.current && playerRef.current?.loadVideoById) {
         currentVideoId.current = videoId
         playerRef.current.loadVideoById(videoId)
+        // Re-fire onReady since the player is already initialized but has a new video
+        // Small delay to let the new video start loading
+        setTimeout(() => {
+          onReady?.()
+        }, 500)
       }
-    }, [videoId])
+    }, [videoId, onReady])
 
     return (
       <div ref={containerRef} className="yt-embed-container w-full aspect-video rounded-xl overflow-hidden" aria-label="YouTube player" />
