@@ -42,6 +42,17 @@ interface AutoplayRoom {
   isAutoplay: boolean
 }
 
+const GRADIENT_PRESETS = [
+  { name: "Midnight", value: "linear-gradient(135deg, oklch(0.18 0.08 280), oklch(0.12 0.04 320))" },
+  { name: "Sunset", value: "linear-gradient(135deg, oklch(0.35 0.18 30), oklch(0.20 0.12 350))" },
+  { name: "Ocean", value: "linear-gradient(135deg, oklch(0.22 0.10 230), oklch(0.15 0.08 200))" },
+  { name: "Forest", value: "linear-gradient(135deg, oklch(0.25 0.10 150), oklch(0.15 0.06 130))" },
+  { name: "Amber", value: "linear-gradient(135deg, oklch(0.35 0.15 80), oklch(0.20 0.10 60))" },
+  { name: "Neon", value: "linear-gradient(135deg, oklch(0.30 0.18 350), oklch(0.18 0.12 280))" },
+  { name: "Lavender", value: "linear-gradient(135deg, oklch(0.28 0.12 300), oklch(0.16 0.08 270))" },
+  { name: "Ember", value: "linear-gradient(135deg, oklch(0.30 0.16 25), oklch(0.18 0.10 10))" },
+]
+
 export default function AdminAutoplayPage() {
   const { user, isLoggedIn } = useAuth()
   const isAdmin = isLoggedIn && user?.isAdmin
@@ -56,6 +67,7 @@ export default function AdminAutoplayPage() {
   const [newName, setNewName] = useState("")
   const [newGenre, setNewGenre] = useState("")
   const [newDesc, setNewDesc] = useState("")
+  const [newGradient, setNewGradient] = useState("")
   const [creating, setCreating] = useState(false)
 
   // Staged playlist editor
@@ -106,9 +118,9 @@ export default function AdminAutoplayPage() {
     try {
       await authRequest("/api/admin/autoplay/rooms", {
         method: "POST",
-        body: JSON.stringify({ name: newName, genre: newGenre, description: newDesc }),
+        body: JSON.stringify({ name: newName, genre: newGenre, description: newDesc, coverGradient: newGradient }),
       })
-      setNewName(""); setNewGenre(""); setNewDesc("")
+      setNewName(""); setNewGenre(""); setNewDesc(""); setNewGradient("")
       setShowCreate(false)
       await loadRooms()
     } catch { alert("Failed to create room") }
@@ -250,6 +262,24 @@ export default function AdminAutoplayPage() {
               <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Room name" className="rounded-lg bg-muted/20" />
               <Input value={newGenre} onChange={(e) => setNewGenre(e.target.value)} placeholder="Genre (e.g. Lo-fi)" className="rounded-lg bg-muted/20" />
               <Input value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="Description" className="rounded-lg bg-muted/20" />
+            </div>
+            <div className="mt-3">
+              <p className="font-sans text-[10px] text-muted-foreground mb-1.5">Cover gradient</p>
+              <div className="flex flex-wrap gap-2">
+                {GRADIENT_PRESETS.map((g) => (
+                  <button
+                    key={g.value}
+                    onClick={() => setNewGradient(g.value)}
+                    className="h-8 w-16 rounded-lg transition-all"
+                    style={{
+                      background: g.value,
+                      border: newGradient === g.value ? "2px solid oklch(0.82 0.18 80)" : "2px solid transparent",
+                      boxShadow: newGradient === g.value ? "0 0 8px oklch(0.82 0.18 80 / 0.4)" : "none",
+                    }}
+                    title={g.name}
+                  />
+                ))}
+              </div>
             </div>
             <div className="flex justify-end gap-2 mt-3">
               <Button size="sm" variant="ghost" onClick={() => setShowCreate(false)} className="rounded-lg text-xs">Cancel</Button>
