@@ -96,6 +96,17 @@ export function AudioEngine({
     const currentPos = playerRef.current.getCurrentTime()
     const drift = Math.abs(currentPos - targetSeconds)
 
+    // Don't seek if target is unreasonably far ahead (e.g., autoplay track with no duration)
+    // The player's actual duration is more reliable than the server's elapsed time
+    const playerDuration = playerRef.current.getDuration?.() || 0
+    if (playerDuration > 0 && targetSeconds > playerDuration - 2) {
+      // We're past the end of this track — don't seek, let it play out naturally
+      playerRef.current.play()
+      if (!synced) setTimeout(() => setSynced(true), 600)
+      else onPlayStateChange?.(true)
+      return
+    }
+
     // Seek if drift > 2 seconds
     if (drift > 2) {
       playerRef.current.seekTo(targetSeconds)

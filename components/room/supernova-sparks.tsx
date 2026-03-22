@@ -107,7 +107,7 @@ export function SupernovaSparksCascade({ active, fillPct, tubeRef }: SupernovaSp
     let lastFrameTime = 0
 
     const animate = (timestamp: number) => {
-      if (timestamp - lastFrameTime < 16) {
+      if (timestamp - lastFrameTime < 33) {
         frameRef.current = requestAnimationFrame(animate)
         return
       }
@@ -119,7 +119,7 @@ export function SupernovaSparksCascade({ active, fillPct, tubeRef }: SupernovaSp
       ctx.clearRect(0, 0, w, h)
 
       spawnTimer++
-      if (spawnTimer % 3 === 0 && sparksRef.current.length < 40) {
+      if (spawnTimer % 6 === 0 && sparksRef.current.length < 25) {
         spawnSpark(w)
       }
 

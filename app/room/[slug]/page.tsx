@@ -111,19 +111,18 @@ export default function RoomPage() {
   const liveKit = useLiveKitVoice({
     roomSlug: slug || "",
     isDJ,
-    enabled: !!room && room.isLive,
+    enabled: !!room && room.isLive && !room.isAutoplay,
   })
 
-  // Hype tracking for DJ view
+  // Hype tracking for DJ view only
   const hypeTracking = useHypeTracking()
 
-  // Connect hype tracking to real WS events
+  // Connect hype tracking to real WS events — only for DJs
   const prevChatCountRef = useRef(0)
   useEffect(() => {
-    if (!ws.connected) return
+    if (!isDJ || !ws.connected) return
     const newCount = ws.chatMessages.length
     if (newCount > prevChatCountRef.current) {
-      // Check what type the new messages are
       const newMessages = ws.chatMessages.slice(prevChatCountRef.current)
       for (const msg of newMessages) {
         if ((msg.type as string) === "activity_tip") {
@@ -134,7 +133,7 @@ export default function RoomPage() {
       }
     }
     prevChatCountRef.current = newCount
-  }, [ws.chatMessages.length, ws.connected]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ws.chatMessages.length, ws.connected, isDJ]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Track reactions via the onReaction callback
   hypeReactionRef.current = hypeTracking.recordReaction
@@ -364,14 +363,26 @@ export default function RoomPage() {
     }
   }, [currentTrack, room?.nowPlaying])
 
+  // Track when the current track started playing locally (for autoplay debounce)
+  const trackStartTimeRef = useRef(0)
+  useEffect(() => {
+    if (currentTrack?.id) {
+      trackStartTimeRef.current = Date.now()
+    }
+  }, [currentTrack?.id])
+
   const handleTrackEnd = useCallback(() => {
     // DJ's client triggers auto-advance
     if (isDJ && ws.connected) {
       ws.djSkip()
     }
     // For autoplay rooms, any listener reports track ended
+    // But only if we've been playing for at least 30 seconds to prevent seek-past-end loops
     if (room?.isAutoplay && ws.connected) {
-      ws.sendAutoplayEnd()
+      const playedFor = Date.now() - trackStartTimeRef.current
+      if (playedFor > 30000) {
+        ws.sendAutoplayEnd()
+      }
     }
   }, [isDJ, ws, room?.isAutoplay])
 

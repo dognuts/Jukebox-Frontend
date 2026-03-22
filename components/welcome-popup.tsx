@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Headphones, Radio, MessageCircle, Sparkles, X } from "lucide-react"
+import { NeonJukeboxLogo } from "@/components/effects/neon-jukebox-logo"
 
 const WELCOME_DISMISSED_KEY = "jukebox_welcome_dismissed"
 
@@ -66,14 +67,8 @@ export function WelcomePopup({ isLoggedIn }: { isLoggedIn: boolean }) {
         <div className="px-7 pb-7 pt-6 text-center">
           {/* Logo / Brand */}
           <div className="welcome-stagger-1">
-            <div
-              className="mx-auto mb-1 font-serif text-4xl font-black italic tracking-tight"
-              style={{
-                color: "oklch(0.82 0.18 80)",
-                textShadow: "0 0 24px oklch(0.82 0.18 80 / 0.5), 0 0 48px oklch(0.82 0.18 80 / 0.2)",
-              }}
-            >
-              JUKEBOX
+            <div className="flex justify-center mb-1">
+              <NeonJukeboxLogo size="md" />
             </div>
             <p
               className="mb-5 font-sans text-[10px] font-semibold uppercase tracking-[0.35em]"

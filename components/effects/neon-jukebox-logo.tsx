@@ -104,43 +104,49 @@ export function NeonJukeboxLogo({ size = 'lg' }: NeonJukeboxLogoProps) {
     }
     const startTime = startTimeRef.current
 
+    // Cache SVG element selections
+    const svg = svgRef.current
+    const cachedOuter = svg ? Array.from(svg.querySelectorAll<SVGTextElement>('.outer')) : []
+    const cachedMain = svg ? Array.from(svg.querySelectorAll<SVGTextElement>('.main')) : []
+    const cachedCore = svg ? Array.from(svg.querySelectorAll<SVGTextElement>('.core')) : []
+
     function applyColor(t: number) {
-      const svg = svgRef.current
       if (!svg) return
 
-      // t = 0 → full orange, t = 1 → blue at 0.35 brightness
       const r = lerp(COLOR_A.r, COLOR_B.r, t)
       const g = lerp(COLOR_A.g, COLOR_B.g, t)
       const b = lerp(COLOR_A.b, COLOR_B.b, t)
 
-      // outer: full color, low alpha
       const outerAlpha = lerp(Math.round(0.18 * 255), Math.round(0.35 * 255), t) / 255
 
-      const outerEls = svg.querySelectorAll<SVGTextElement>('.outer')
-      outerEls.forEach((el) => {
+      for (const el of cachedOuter) {
         el.style.stroke = `rgb(${r},${g},${b})`
         el.style.opacity = outerAlpha.toFixed(3)
         el.style.filter = `drop-shadow(0 0 10px rgba(${r},${g},${b},0.22)) drop-shadow(0 0 30px rgba(${r},${g},${b},0.22))`
-      })
+      }
 
-      const mainEls = svg.querySelectorAll<SVGTextElement>('.main')
-      mainEls.forEach((el) => {
+      for (const el of cachedMain) {
         el.style.stroke = `rgb(${r},${g},${b})`
         el.style.filter = `drop-shadow(0 0 10px rgba(${r},${g},${b},0.55)) drop-shadow(0 0 22px rgba(${r},${g},${b},0.35))`
-      })
+      }
 
-      // core: bright highlight — stays light but tints toward blue-white
       const coreR = lerp(255, 210, t)
       const coreG = lerp(235, 235, t)
       const coreB = lerp(210, 255, t)
-      const coreEls = svg.querySelectorAll<SVGTextElement>('.core')
-      coreEls.forEach((el) => {
+      for (const el of cachedCore) {
         el.style.stroke = `rgba(${coreR},${coreG},${coreB},0.85)`
         el.style.filter = `drop-shadow(0 0 12px rgba(${coreR},${coreG},${coreB},0.55))`
-      })
+      }
     }
 
+    let lastTickTime = 0
     function tick(now: number) {
+      // Throttle to ~10fps — color changes over 30s so 10fps is more than enough
+      if (now - lastTickTime < 100) {
+        rafId = requestAnimationFrame(tick)
+        return
+      }
+      lastTickTime = now
       const elapsed = (now - startTime) % CYCLE_MS
       // sine wave: 0 → 1 → 0 over CYCLE_MS
       const t = (1 - Math.cos((elapsed / CYCLE_MS) * 2 * Math.PI)) / 2
@@ -150,8 +156,19 @@ export function NeonJukeboxLogo({ size = 'lg' }: NeonJukeboxLogoProps) {
 
     rafId = requestAnimationFrame(tick)
 
+    const handleVisibility = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(rafId)
+      } else {
+        lastTickTime = 0
+        rafId = requestAnimationFrame(tick)
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibility)
+
     return () => {
       cancelAnimationFrame(rafId)
+      document.removeEventListener("visibilitychange", handleVisibility)
     }
   }, [])
 
