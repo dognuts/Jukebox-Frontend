@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
+import Script from "next/script"
 import { useRouter } from "next/navigation"
 import { CheckCircle, XCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -13,6 +14,8 @@ import { API_BASE } from "@/lib/api"
 import { containsProfanity } from "@/lib/moderation"
 import { toast } from "sonner"
 
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ""
+
 export default function SignupPage() {
   const router = useRouter()
   const { signup } = useAuth()
@@ -21,6 +24,14 @@ export default function SignupPage() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+
+  // Honeypot field — must remain empty
+  const [website, setWebsite] = useState("")
+
+  // Turnstile CAPTCHA
+  const [captchaToken, setCaptchaToken] = useState("")
+  const turnstileRef = useRef<HTMLDivElement>(null)
+  const widgetIdRef = useRef<string | null>(null)
 
   // Stage name availability check
   const [nameStatus, setNameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle")
@@ -62,6 +73,33 @@ export default function SignupPage() {
     return () => { if (checkTimer.current) clearTimeout(checkTimer.current) }
   }, [stageName, checkAvailability])
 
+  // Render Turnstile widget once the script loads
+  const handleTurnstileLoad = useCallback(() => {
+    if (!turnstileRef.current || !TURNSTILE_SITE_KEY) return
+    if (widgetIdRef.current !== null) return
+    const id = (window as any).turnstile.render(turnstileRef.current, {
+      sitekey: TURNSTILE_SITE_KEY,
+      callback: (token: string) => setCaptchaToken(token),
+      "expired-callback": () => setCaptchaToken(""),
+      "error-callback": () => setCaptchaToken(""),
+      theme: "dark",
+    })
+    widgetIdRef.current = id
+  }, [])
+
+  useEffect(() => {
+    if ((window as any).turnstile && turnstileRef.current && TURNSTILE_SITE_KEY) {
+      handleTurnstileLoad()
+    }
+  }, [handleTurnstileLoad])
+
+  function resetCaptcha() {
+    if (widgetIdRef.current !== null && (window as any).turnstile) {
+      (window as any).turnstile.reset(widgetIdRef.current)
+      setCaptchaToken("")
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError("")
@@ -76,9 +114,14 @@ export default function SignupPage() {
       return
     }
 
+    if (TURNSTILE_SITE_KEY && !captchaToken) {
+      setError("Please complete the CAPTCHA verification.")
+      return
+    }
+
     setLoading(true)
     try {
-      await signup(email, password, stageName, stageName)
+      await signup(email, password, stageName, stageName, captchaToken, website)
       toast.success("Welcome to Jukebox!")
       router.push("/")
     } catch (err: any) {
@@ -88,6 +131,7 @@ export default function SignupPage() {
       }
       setError(msg)
       toast.error("Signup failed")
+      resetCaptcha()
     } finally {
       setLoading(false)
     }
@@ -95,6 +139,12 @@ export default function SignupPage() {
 
   return (
     <AuthShell title="Create your account" subtitle="Start listening, hosting, and vibing.">
+      {TURNSTILE_SITE_KEY && (
+        <Script
+          src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+          onLoad={handleTurnstileLoad}
+        />
+      )}
       {error && (
         <div className="mb-4 rounded-lg px-3 py-2 text-sm" style={{ background: "oklch(0.30 0.12 25 / 0.3)", border: "1px solid oklch(0.50 0.18 25 / 0.4)", color: "oklch(0.75 0.12 25)" }}>
           {error}
@@ -147,7 +197,26 @@ export default function SignupPage() {
             className="mt-1 rounded-xl border-border/40 bg-muted/30 font-sans" />
         </div>
 
-        <Button type="submit" disabled={loading || nameStatus === "taken"} className="w-full rounded-xl bg-primary font-sans font-semibold text-primary-foreground hover:bg-primary/90">
+        {/* Honeypot field — invisible to real users, bots will fill it in */}
+        <div aria-hidden="true" style={{ position: "absolute", left: "-9999px", top: "-9999px", opacity: 0, height: 0, overflow: "hidden" }}>
+          <label htmlFor="website">Website</label>
+          <input
+            type="text"
+            id="website"
+            name="website"
+            value={website}
+            onChange={(e) => setWebsite(e.target.value)}
+            tabIndex={-1}
+            autoComplete="off"
+          />
+        </div>
+
+        {/* Turnstile CAPTCHA widget */}
+        {TURNSTILE_SITE_KEY && (
+          <div ref={turnstileRef} className="flex justify-center" />
+        )}
+
+        <Button type="submit" disabled={loading || nameStatus === "taken" || (!!TURNSTILE_SITE_KEY && !captchaToken)} className="w-full rounded-xl bg-primary font-sans font-semibold text-primary-foreground hover:bg-primary/90">
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

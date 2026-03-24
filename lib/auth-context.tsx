@@ -29,7 +29,7 @@ interface AuthContextType {
   loading: boolean
   isLoggedIn: boolean
   accessToken: string | null
-  signup: (email: string, password: string, displayName: string, stageName?: string) => Promise<void>
+  signup: (email: string, password: string, displayName: string, stageName?: string, captchaToken?: string, website?: string) => Promise<void>
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   refreshAuth: () => Promise<void>
@@ -160,12 +160,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user)
   }, [])
 
-  const signup = useCallback(async (email: string, password: string, displayName: string, stageName?: string) => {
+  const signup = useCallback(async (email: string, password: string, displayName: string, stageName?: string, captchaToken?: string, website?: string) => {
     const res = await fetch(`${API_BASE}/api/auth/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ email, password, displayName, stageName: stageName || "" }),
+      body: JSON.stringify({ email, password, displayName, stageName: stageName || "", captchaToken: captchaToken || "", website: website || "" }),
     })
     if (!res.ok) {
       const text = await res.text()
