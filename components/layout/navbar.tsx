@@ -75,6 +75,7 @@ export function Navbar() {
         background: "oklch(0.10 0.015 280 / 0.92)",
         backdropFilter: "blur(12px)",
         WebkitBackdropFilter: "blur(12px)",
+        willChange: "transform",
       }}
     >
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 lg:px-6">

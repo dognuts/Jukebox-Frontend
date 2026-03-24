@@ -178,6 +178,7 @@ export function NeonJukeboxLogo({ size = 'lg' }: NeonJukeboxLogoProps) {
     <div
       ref={containerRef}
       className={`${sizeClass} inline-flex items-center justify-center`}
+      style={{ willChange: 'transform', transform: 'translateZ(0)' }}
     >
       <svg
         ref={svgRef}
@@ -186,6 +187,7 @@ export function NeonJukeboxLogo({ size = 'lg' }: NeonJukeboxLogoProps) {
         role="img"
         aria-label="JUKEBOX neon wordmark"
         className="h-full w-auto"
+        style={{ contain: 'layout style paint' }}
       >
         <defs>
           <style>{`
