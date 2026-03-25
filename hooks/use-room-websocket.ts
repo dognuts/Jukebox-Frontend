@@ -127,7 +127,19 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
       ws.onopen = () => {
         if (!cancelled) {
           reconnectCount = 0
-          setState((s) => ({ ...s, connected: true }))
+          // On reconnect, clear playback state so stale data doesn't flash.
+          // The server will immediately send fresh state via sendInitialState.
+          setState((s) => ({
+            ...s,
+            connected: true,
+            // Keep chatMessages and playedTracks (don't want to lose chat history),
+            // but clear everything that gets re-sent on connect
+            queue: [],
+            playbackState: null,
+            currentTrack: null,
+            pendingRequests: [],
+            listeners: [],
+          }))
         }
       }
 

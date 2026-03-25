@@ -28,14 +28,20 @@ export function setSessionId(id: string) {
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const sessionId = getSessionId()
+
+  // Merge headers properly — don't let ...options overwrite the headers object
+  const mergedHeaders: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(sessionId ? { "X-Session-ID": sessionId } : {}),
+    ...(options?.headers as Record<string, string> ?? {}),
+  }
+
+  const { headers: _dropHeaders, ...restOptions } = options ?? {}
+
   const res = await fetch(`${API_BASE}${path}`, {
     credentials: "include", // send session cookie
-    headers: {
-      "Content-Type": "application/json",
-      ...(sessionId ? { "X-Session-ID": sessionId } : {}),
-      ...options?.headers,
-    },
-    ...options,
+    ...restOptions,
+    headers: mergedHeaders,
   })
 
   if (!res.ok) {

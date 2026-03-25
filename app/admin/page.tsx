@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
   Shield, Radio, Power, Star, StarOff, Crown, Plus,
-  Users, Clock, AlertTriangle,
+  Users, Clock, AlertTriangle, BarChart3,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -184,6 +184,20 @@ export default function AdminPage() {
                 >
                   <Radio className="h-4 w-4" />
                   Autoplay
+                </Button>
+              </Link>
+              <Link href="/admin/metrics">
+                <Button
+                  size="sm"
+                  className="gap-2 rounded-xl font-sans"
+                  style={{
+                    background: "oklch(0.20 0.04 250 / 0.4)",
+                    border: "1px solid oklch(0.45 0.12 250 / 0.3)",
+                    color: "oklch(0.70 0.14 250)",
+                  }}
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  Metrics
                 </Button>
               </Link>
             </div>

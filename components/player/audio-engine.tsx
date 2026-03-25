@@ -53,8 +53,14 @@ export function AudioEngine({
   const [synced, setSynced] = useState(false)
   const [playerState, setPlayerState] = useState<"playing" | "paused" | "ended" | "buffering">("paused")
   const lastSyncRef = useRef(0)
-  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const syncTimeoutsRef = useRef<NodeJS.Timeout[]>([])
   const signaledEndRef = useRef("")  // trackID for which we've already signaled end
+
+  // Helper to clear all pending sync timeouts
+  const clearSyncTimeouts = useCallback(() => {
+    for (const t of syncTimeoutsRef.current) clearTimeout(t)
+    syncTimeoutsRef.current = []
+  }, [])
 
   // Volume control — suppress volume until synced to prevent hearing audio at position 0
   useEffect(() => {
@@ -148,19 +154,19 @@ export function AudioEngine({
   // Also sync when player becomes ready
   const handleReady = useCallback(() => {
     setReady(true)
+    clearSyncTimeouts()
     // Sync with staggered retries to ensure player is truly ready to seek
-    // Each attempt is >1s apart to pass the throttle guard in syncToServer
-    syncTimeoutRef.current = setTimeout(() => syncToServer(), 200)
-    setTimeout(() => { lastSyncRef.current = 0; syncToServer() }, 1200)
-    setTimeout(() => { lastSyncRef.current = 0; syncToServer() }, 2500)
-  }, [syncToServer])
+    syncTimeoutsRef.current.push(
+      setTimeout(() => syncToServer(), 200),
+      setTimeout(() => { lastSyncRef.current = 0; syncToServer() }, 1200),
+      setTimeout(() => { lastSyncRef.current = 0; syncToServer() }, 2500),
+    )
+  }, [syncToServer, clearSyncTimeouts])
 
-  // Clean up sync timeout
+  // Clean up sync timeouts on unmount
   useEffect(() => {
-    return () => {
-      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current)
-    }
-  }, [])
+    return () => clearSyncTimeouts()
+  }, [clearSyncTimeouts])
 
   // DJ mic pause — temporarily pause audio when forcePaused is true, resume when false
   useEffect(() => {
@@ -183,12 +189,13 @@ export function AudioEngine({
 
   // Reset ready state when track changes
   useEffect(() => {
+    clearSyncTimeouts()
     setReady(false)
     setSynced(false)
     lastSyncRef.current = 0
     hasPlayedRef.current = false
     signaledEndRef.current = ""
-  }, [track?.id])
+  }, [track?.id, clearSyncTimeouts])
 
   // Track whether the player has actually started playing
   const hasPlayedRef = useRef(false)

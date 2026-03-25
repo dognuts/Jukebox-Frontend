@@ -388,12 +388,15 @@ export default function RoomPage() {
   }, [currentTrack?.id])
 
   const handleTrackEnd = useCallback(() => {
-    // DJ's client triggers auto-advance
+    // DJ's client triggers auto-advance (debounced to prevent double-advance)
     if (isDJ && ws.connected) {
+      const now = Date.now()
+      if (now - lastSkipRef.current < 2000) return
+      lastSkipRef.current = now
       ws.djSkip()
     }
     // For autoplay rooms, any listener reports track ended
-    // But only if we've been playing for at least 30 seconds to prevent seek-past-end loops
+    // But only if we've been playing for at least 15 seconds to prevent seek-past-end loops
     if (room?.isAutoplay && ws.connected) {
       const playedFor = Date.now() - trackStartTimeRef.current
       if (playedFor > 15000) {
@@ -428,8 +431,12 @@ export default function RoomPage() {
     }
   }, [isDJ, ws, audioPlaying])
 
+  const lastSkipRef = useRef(0)
   const handleSkip = useCallback(() => {
     if (isDJ && ws.connected) {
+      const now = Date.now()
+      if (now - lastSkipRef.current < 2000) return // debounce 2s
+      lastSkipRef.current = now
       ws.djSkip()
     }
   }, [isDJ, ws])
