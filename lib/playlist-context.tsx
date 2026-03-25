@@ -6,6 +6,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useRef,
   type ReactNode,
 } from "react"
 import { type Track } from "@/lib/mock-data"
@@ -93,30 +94,50 @@ function apiPlaylistToPlaylist(p: APIPlaylist): Playlist {
 // ---------- Provider ----------
 
 export function PlaylistProvider({ children }: { children: ReactNode }) {
-  const { isLoggedIn } = useAuth()
+  const { isLoggedIn, loading: authLoading } = useAuth()
   const [playlists, setPlaylists] = useState<Playlist[]>([])
   const [loading, setLoading] = useState(false)
+  const [fetched, setFetched] = useState(false)
+  const retryCount = useRef(0)
+  const retryTimer = useRef<NodeJS.Timeout | null>(null)
 
   // Fetch playlists from API when logged in
   const refresh = useCallback(async () => {
     if (!isLoggedIn) {
       setPlaylists([])
+      setFetched(false)
       return
     }
     setLoading(true)
     try {
       const data = await authRequest<APIPlaylist[]>("/api/playlists?include=tracks")
       setPlaylists(data.map(apiPlaylistToPlaylist))
+      setFetched(true)
+      retryCount.current = 0
     } catch (err) {
       console.error("[playlists] fetch error:", err)
+      // Retry up to 3 times with backoff — handles the case where
+      // auth token refresh hasn't completed yet
+      if (retryCount.current < 3) {
+        retryCount.current++
+        const delay = retryCount.current * 2000
+        console.log(`[playlists] retrying in ${delay}ms (attempt ${retryCount.current})`)
+        retryTimer.current = setTimeout(() => refresh(), delay)
+      }
     } finally {
       setLoading(false)
     }
   }, [isLoggedIn])
 
+  // Fetch when auth state changes
   useEffect(() => {
+    // Don't try to fetch while auth is still loading
+    if (authLoading) return
     refresh()
-  }, [refresh])
+    return () => {
+      if (retryTimer.current) clearTimeout(retryTimer.current)
+    }
+  }, [refresh, authLoading])
 
   // --- Create playlist ---
   const createPlaylist = useCallback(async (name: string): Promise<Playlist | null> => {
@@ -177,6 +198,12 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
       toast.error("Log in to save tracks")
       return
     }
+    // If playlists haven't loaded yet, try refreshing first
+    if (!fetched) {
+      toast.error("Playlists are still loading — try again in a moment")
+      refresh()
+      return
+    }
     // Optimistic update
     setPlaylists((prev) =>
       prev.map((p) => {
@@ -200,7 +227,7 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
       )
       toast.error("Failed to save track")
     }
-  }, [isLoggedIn])
+  }, [isLoggedIn, fetched, refresh])
 
   // --- Remove track from playlist ---
   const removeTrack = useCallback(async (playlistId: string, trackId: string) => {
@@ -233,9 +260,19 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
 
   // --- Toggle like (adds/removes from the "Liked Tracks" playlist) ---
   const toggleLike = useCallback((track: Track) => {
+    if (!isLoggedIn) {
+      toast.error("Log in to like tracks")
+      return
+    }
     const liked = playlists.find((p) => p.isLiked)
     if (!liked) {
-      toast.error("Log in to like tracks")
+      // Playlists haven't loaded yet — trigger a refresh and let user retry
+      if (!fetched) {
+        toast.error("Still loading your playlists — try again in a moment")
+        refresh()
+      } else {
+        toast.error("Log in to like tracks")
+      }
       return
     }
     const exists = liked.tracks.some((t) => t.id === track.id)
@@ -244,7 +281,7 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
     } else {
       addTrack(liked.id, track)
     }
-  }, [playlists, addTrack, removeTrack])
+  }, [playlists, isLoggedIn, fetched, addTrack, removeTrack, refresh])
 
   // --- Check if track is liked ---
   const isLiked = useCallback(

@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import * as Sentry from "@sentry/nextjs"
 
 import { NeonJukeboxLogo } from "@/components/effects/neon-jukebox-logo"
 import { AlertTriangle, RefreshCw } from "lucide-react"
@@ -15,6 +16,7 @@ export default function Error({
   reset: () => void
 }) {
   useEffect(() => {
+    Sentry.captureException(error)
     console.error(error)
   }, [error])
 

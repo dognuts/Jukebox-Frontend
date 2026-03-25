@@ -1,3 +1,5 @@
+import { withSentryConfig } from "@sentry/nextjs"
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
@@ -57,4 +59,20 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+export default withSentryConfig(nextConfig, {
+  // Upload source maps to Sentry for readable stack traces (only if auth token is set)
+  silent: true, // suppress build output noise
+  disableLogger: true,
+
+  // Don't widen the scope of the bundle
+  widenClientFileUpload: false,
+
+  // Hide source maps from the client (security — we set productionBrowserSourceMaps: false above)
+  hideSourceMaps: true,
+
+  // Disable Sentry webpack plugin if no auth token is configured
+  // This means builds work fine without Sentry — it's purely additive
+  org: process.env.SENTRY_ORG || undefined,
+  project: process.env.SENTRY_PROJECT || undefined,
+  authToken: process.env.SENTRY_AUTH_TOKEN || undefined,
+})
