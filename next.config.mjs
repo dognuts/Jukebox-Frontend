@@ -10,6 +10,8 @@ const nextConfig = {
   },
   // Disable source maps in production to prevent easy code copying
   productionBrowserSourceMaps: false,
+  // Tell Next.js 16 we're aware of Turbopack (Sentry adds webpack config)
+  turbopack: {},
   // Security headers
   async headers() {
     return [
