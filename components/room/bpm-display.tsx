@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useTransition } from "react"
 import { Activity } from "lucide-react"
 import { BPMDetector, TapTempo } from "@/lib/bpm-detector"
+import { estimateBpm } from "@/lib/estimate-bpm"
 
 interface BPMDisplayProps {
   /** Whether audio is currently playing */
@@ -11,20 +12,25 @@ interface BPMDisplayProps {
   audioElement?: HTMLAudioElement | null
   /** Audio source type — detection only works for "mp3" / direct audio */
   source?: string
+  /** Track info for automatic estimation when audio analysis isn't available */
+  trackTitle?: string
+  trackArtist?: string
+  genre?: string
 }
 
-export function BPMDisplay({ isPlaying, audioElement, source }: BPMDisplayProps) {
+export function BPMDisplay({ isPlaying, audioElement, source, trackTitle, trackArtist, genre }: BPMDisplayProps) {
   const canAutoDetect = source === "mp3" || source === "direct"
 
   const [bpm, setBpm] = useState<number | null>(null)
-  // Default to tap mode for YouTube/SoundCloud since we can't access their audio streams
-  const [mode, setMode] = useState<"auto" | "tap">(canAutoDetect ? "auto" : "tap")
+  const [mode, setMode] = useState<"auto" | "tap" | "estimate">("auto")
   const [tapBpm, setTapBpm] = useState<number | null>(null)
   const [tapCount, setTapCount] = useState(0)
+  const [confidence, setConfidence] = useState<"low" | "medium" | "high" | null>(null)
   const detectorRef = useRef<BPMDetector | null>(null)
   const tapTempoRef = useRef(new TapTempo())
+  const lastEstimateKey = useRef("")
 
-  // Auto-detection for HTML5 audio elements
+  // Auto-detection for HTML5 audio elements (MP3s)
   useEffect(() => {
     if (!canAutoDetect || !audioElement || !isPlaying || mode !== "auto") {
       return
@@ -35,6 +41,7 @@ export function BPMDisplay({ isPlaying, audioElement, source }: BPMDisplayProps)
 
     detector.attach(audioElement, (detectedBpm) => {
       setBpm(detectedBpm)
+      setConfidence("high")
     })
 
     return () => {
@@ -43,37 +50,92 @@ export function BPMDisplay({ isPlaying, audioElement, source }: BPMDisplayProps)
     }
   }, [audioElement, isPlaying, canAutoDetect, mode])
 
+  // Automatic BPM estimation for YouTube/SoundCloud tracks
+  // Uses the local heuristic estimator based on title, artist, and genre
+  useEffect(() => {
+    if (canAutoDetect) return // MP3s use audio analysis, not estimation
+    if (!isPlaying || !trackTitle) return
+    if (mode === "tap" && tapBpm) return // don't override active tap tempo
+
+    const key = `${trackTitle}::${trackArtist}::${genre}`
+    if (key === lastEstimateKey.current) return // already estimated this track
+    lastEstimateKey.current = key
+
+    // Run local estimate immediately
+    const result = estimateBpm(trackTitle || "", trackArtist || "", genre || "")
+    setBpm(result.bpm)
+    setConfidence(result.confidence)
+    setMode("estimate")
+
+    // Try AI estimator for better accuracy (non-blocking)
+    // This uses a server action that may or may not have an API key configured
+    import("@/app/actions/estimate-bpm").then(({ estimateBpmAI }) => {
+      estimateBpmAI(trackTitle || "", trackArtist || "", genre || "")
+        .then((aiResult) => {
+          // Only update if we're still on the same track and not in tap mode
+          if (lastEstimateKey.current === key) {
+            setBpm(aiResult.bpm)
+            setConfidence(aiResult.confidence as "low" | "medium" | "high")
+          }
+        })
+        .catch(() => {
+          // AI estimator failed (no API key, network error, etc.) — keep local estimate
+        })
+    }).catch(() => {
+      // Module import failed — keep local estimate
+    })
+  }, [isPlaying, trackTitle, trackArtist, genre, canAutoDetect, mode, tapBpm])
+
+  // Reset when track changes
+  useEffect(() => {
+    lastEstimateKey.current = ""
+    setBpm(null)
+    setConfidence(null)
+    setTapBpm(null)
+    setTapCount(0)
+    tapTempoRef.current.reset()
+    if (canAutoDetect) {
+      setMode("auto")
+    }
+    // Don't reset mode to "auto" for non-MP3 — the estimate effect will set it
+  }, [trackTitle, trackArtist, canAutoDetect])
+
   // Reset BPM when playback stops
   useEffect(() => {
     if (!isPlaying) {
       setBpm(null)
+      setConfidence(null)
     }
   }, [isPlaying])
 
   // Tap tempo handler
   const handleTap = useCallback(() => {
+    setMode("tap")
     const result = tapTempoRef.current.tap()
     setTapCount((c) => c + 1)
     if (result) {
       setTapBpm(result)
       setBpm(result)
+      setConfidence("high")
     }
   }, [])
 
-  // Switch to tap mode
+  // Switch modes
   const toggleMode = useCallback(() => {
     setMode((m) => {
-      const next = m === "auto" ? "tap" : "auto"
-      if (next === "tap") {
+      if (m === "tap") {
+        // Switch back to auto/estimate
         tapTempoRef.current.reset()
         setTapBpm(null)
         setTapCount(0)
+        lastEstimateKey.current = "" // force re-estimate
+        return canAutoDetect ? "auto" : "estimate"
       } else {
-        setBpm(null)
+        // Switch to tap
+        return "tap"
       }
-      return next
     })
-  }, [])
+  }, [canAutoDetect])
 
   // Reset tap on double-click
   const handleReset = useCallback(() => {
@@ -81,6 +143,8 @@ export function BPMDisplay({ isPlaying, audioElement, source }: BPMDisplayProps)
     setTapBpm(null)
     setTapCount(0)
     setBpm(null)
+    setConfidence(null)
+    lastEstimateKey.current = "" // force re-estimate on next render
   }, [])
 
   const displayBpm = bpm
@@ -118,6 +182,9 @@ export function BPMDisplay({ isPlaying, audioElement, source }: BPMDisplayProps)
   const c = tempo ? colors[tempo] : null
   const pulseDuration = displayBpm ? 60 / displayBpm : 1
 
+  // Mode label for the badge
+  const modeLabel = mode === "auto" ? "Live" : mode === "estimate" ? (confidence === "high" ? "Match" : "Est") : "Tap"
+
   return (
     <div className="flex items-center justify-center gap-2">
       {/* BPM pill */}
@@ -130,6 +197,8 @@ export function BPMDisplay({ isPlaying, audioElement, source }: BPMDisplayProps)
             ? canAutoDetect
               ? "Auto-detecting BPM from audio · Click to switch to tap tempo"
               : "Click to tap along with the beat"
+            : mode === "estimate"
+            ? `Estimated from track info (${confidence} confidence) · Click to switch to tap tempo`
             : "Tap along with the beat · Double-click to reset"
         }
         style={
@@ -187,6 +256,10 @@ export function BPMDisplay({ isPlaying, audioElement, source }: BPMDisplayProps)
           <span className="font-mono text-xs text-muted-foreground animate-pulse">
             Detecting...
           </span>
+        ) : isPlaying ? (
+          <span className="font-mono text-xs text-muted-foreground animate-pulse">
+            Estimating...
+          </span>
         ) : (
           <span className="font-sans text-xs text-muted-foreground">
             Tap to detect
@@ -204,7 +277,7 @@ export function BPMDisplay({ isPlaying, audioElement, source }: BPMDisplayProps)
             border: "1px solid oklch(0.25 0.02 280 / 0.3)",
           }}
         >
-          {mode === "auto" ? "Auto" : "Tap"}
+          {modeLabel}
         </button>
       )}
     </div>

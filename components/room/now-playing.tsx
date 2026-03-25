@@ -249,10 +249,13 @@ export function NowPlaying({
         </div>
       </div>
 
-      {/* BPM detector — tap tempo for all sources */}
+      {/* BPM detector — auto-estimates for YouTube/SoundCloud, live-detects for MP3 */}
       <BPMDisplay
         isPlaying={effectivePlaying}
         source={track.source}
+        trackTitle={track.title}
+        trackArtist={track.artist}
+        genre={genre}
       />
 
       {/* Progress bar */}

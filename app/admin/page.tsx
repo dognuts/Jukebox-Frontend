@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
   Shield, Radio, Power, Star, StarOff, Crown, Plus,
-  Users, Clock, AlertTriangle, BarChart3,
+  Users, Clock, AlertTriangle, BarChart3, Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -69,6 +69,16 @@ export default function AdminPage() {
     setActionLoading(null)
   }, [fetchRooms])
 
+  const deleteRoom = useCallback(async (id: string) => {
+    if (!confirm("Permanently delete this room? This cannot be undone.")) return
+    setActionLoading(id)
+    try {
+      await authRequest(`/api/admin/rooms/${id}`, { method: "DELETE" })
+      await fetchRooms()
+    } catch { /* ignore */ }
+    setActionLoading(null)
+  }, [fetchRooms])
+
   const toggleFeatured = useCallback(async (id: string, current: boolean) => {
     setActionLoading(id)
     try {
@@ -117,6 +127,7 @@ export default function AdminPage() {
   const liveRooms = rooms.filter((r) => r.isLive)
   const endedRooms = rooms.filter((r) => !r.isLive && r.endedAt)
   const scheduledRooms = rooms.filter((r) => !r.isLive && !r.endedAt && r.scheduledStart)
+  const waitingRooms = rooms.filter((r) => !r.isLive && !r.endedAt && !r.scheduledStart)
 
   return (
     <div className="relative min-h-screen">
@@ -257,6 +268,7 @@ export default function AdminPage() {
                       room={room}
                       loading={actionLoading === room.id}
                       onShutdown={() => shutdownRoom(room.id)}
+                      onDelete={() => deleteRoom(room.id)}
                       onToggleFeatured={() => toggleFeatured(room.id, room.isFeatured)}
                       onToggleOfficial={() => toggleOfficial(room.id, room.isOfficial)}
                     />
@@ -273,6 +285,7 @@ export default function AdminPage() {
                       room={room}
                       loading={actionLoading === room.id}
                       onShutdown={() => shutdownRoom(room.id)}
+                      onDelete={() => deleteRoom(room.id)}
                       onToggleFeatured={() => toggleFeatured(room.id, room.isFeatured)}
                       onToggleOfficial={() => toggleOfficial(room.id, room.isOfficial)}
                     />
@@ -289,6 +302,24 @@ export default function AdminPage() {
                       room={room}
                       loading={actionLoading === room.id}
                       onShutdown={() => shutdownRoom(room.id)}
+                      onDelete={() => deleteRoom(room.id)}
+                      onToggleFeatured={() => toggleFeatured(room.id, room.isFeatured)}
+                      onToggleOfficial={() => toggleOfficial(room.id, room.isOfficial)}
+                    />
+                  ))}
+                </Section>
+              )}
+
+              {/* Waiting (created but never went live) */}
+              {waitingRooms.length > 0 && (
+                <Section title="Waiting (Never Went Live)" count={waitingRooms.length} color="oklch(0.60 0.15 40)">
+                  {waitingRooms.map((room) => (
+                    <RoomRow
+                      key={room.id}
+                      room={room}
+                      loading={actionLoading === room.id}
+                      onShutdown={() => shutdownRoom(room.id)}
+                      onDelete={() => deleteRoom(room.id)}
                       onToggleFeatured={() => toggleFeatured(room.id, room.isFeatured)}
                       onToggleOfficial={() => toggleOfficial(room.id, room.isOfficial)}
                     />
@@ -330,12 +361,14 @@ function RoomRow({
   room,
   loading,
   onShutdown,
+  onDelete,
   onToggleFeatured,
   onToggleOfficial,
 }: {
   room: AdminRoom
   loading: boolean
   onShutdown: () => void
+  onDelete: () => void
   onToggleFeatured: () => void
   onToggleOfficial: () => void
 }) {
@@ -427,6 +460,18 @@ function RoomRow({
             title="Shut down room"
           >
             <Power className="h-3.5 w-3.5" style={{ color: "oklch(0.65 0.18 25)" }} />
+          </button>
+        )}
+
+        {/* Delete */}
+        {!room.isLive && (
+          <button
+            onClick={onDelete}
+            disabled={loading}
+            className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-destructive/20"
+            title="Delete room permanently"
+          >
+            <Trash2 className="h-3.5 w-3.5" style={{ color: "oklch(0.60 0.18 15)" }} />
           </button>
         )}
       </div>

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Navbar } from "@/components/layout/navbar"
 import { BubbleBackground } from "@/components/effects/bubble-background"
 import { NowPlaying } from "@/components/room/now-playing"
+import { BPMDisplay } from "@/components/room/bpm-display"
 import { SaveTrackMenu } from "@/components/room/save-track-menu"
 import { TrackQueue } from "@/components/room/track-queue"
 import { PendingRequests } from "@/components/room/pending-requests"
@@ -857,6 +858,15 @@ export default function RoomPage() {
                                   <p className="mt-0.5 font-sans text-xs text-accent">
                                     Queued by {trackWithDuration.submittedBy}
                                   </p>
+                                  <div className="mt-2">
+                                    <BPMDisplay
+                                      isPlaying={audioPlaying}
+                                      source="youtube"
+                                      trackTitle={trackWithDuration.title}
+                                      trackArtist={trackWithDuration.artist}
+                                      genre={room?.genre}
+                                    />
+                                  </div>
                                   {isDJ && (
                                     <button
                                       onClick={handleSkip}
