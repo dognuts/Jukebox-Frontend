@@ -45,19 +45,19 @@ export function SaveTrackMenu({
   const liked = isLiked(track.id)
   const trackPlaylists = getPlaylistsForTrack(track.id)
 
-  const handleTogglePlaylist = (playlistId: string) => {
+  const handleTogglePlaylist = async (playlistId: string) => {
     if (trackPlaylists.includes(playlistId)) {
-      removeTrack(playlistId, track.id)
+      await removeTrack(playlistId, track.id)
     } else {
-      addTrack(playlistId, track)
+      await addTrack(playlistId, track)
     }
   }
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     const trimmed = newName.trim()
     if (!trimmed) return
-    const pl = createPlaylist(trimmed)
-    addTrack(pl.id, track)
+    const pl = await createPlaylist(trimmed)
+    if (pl) await addTrack(pl.id, track)
     setNewName("")
     setCreating(false)
   }
@@ -137,7 +137,7 @@ export function SaveTrackMenu({
               style={{ color: "oklch(0.75 0.02 280)" }}
             >
               <span className="flex items-center gap-2 truncate">
-                {pl.id === "liked-tracks" && (
+                {pl.isLiked && (
                   <Heart className="h-3.5 w-3.5 shrink-0" style={{ color: "oklch(0.65 0.25 15)" }} />
                 )}
                 <span className="truncate">{pl.name}</span>

@@ -18,6 +18,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { AmbientBackground } from "@/components/effects/ambient-background"
 import { BubbleBackground } from "@/components/effects/bubble-background"
 import { ProgressBar } from "@/components/effects/progress-bar"
+import { SourceProtection } from "@/components/effects/source-protection"
 import "./globals.css"
 
 const _geist = Geist({ subsets: ["latin"] })
@@ -27,7 +28,6 @@ export const metadata: Metadata = {
   title: "Jukebox - Listen Together",
   description:
     "Built by music heads for music heads to find, discuss, and listen to music together.",
-  generator: "v0.app",
   icons: {
     icon: [
       {
@@ -62,6 +62,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className="font-sans antialiased">
         <ProgressBar />
+        <SourceProtection />
         <AmbientBackground />
         <RoomStatusProvider>
         <AuthProvider>

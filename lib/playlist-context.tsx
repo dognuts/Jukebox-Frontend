@@ -9,180 +9,270 @@ import {
   type ReactNode,
 } from "react"
 import { type Track } from "@/lib/mock-data"
+import { authRequest } from "@/lib/api"
+import { useAuth } from "@/lib/auth-context"
+import { toast } from "sonner"
+
+// ---------- Types ----------
+
+/** Shape returned by GET /api/playlists?include=tracks */
+interface APIPlaylist {
+  id: string
+  userId: string
+  name: string
+  isLiked: boolean
+  trackCount: number
+  tracks: APIPlaylistTrack[] | null
+  createdAt: string
+  updatedAt: string
+}
+
+interface APIPlaylistTrack {
+  id: string
+  trackId: string
+  position: number
+  addedAt: string
+  title: string
+  artist: string
+  duration: number
+  source: string
+  sourceUrl: string
+  albumGradient: string
+}
 
 export interface Playlist {
   id: string
   name: string
+  isLiked: boolean
   tracks: Track[]
   createdAt: number
 }
 
 interface PlaylistContextType {
   playlists: Playlist[]
-  createPlaylist: (name: string) => Playlist
-  renamePlaylist: (id: string, name: string) => void
-  deletePlaylist: (id: string) => void
-  addTrack: (playlistId: string, track: Track) => void
-  removeTrack: (playlistId: string, trackId: string) => void
+  loading: boolean
+  createPlaylist: (name: string) => Promise<Playlist | null>
+  renamePlaylist: (id: string, name: string) => Promise<void>
+  deletePlaylist: (id: string) => Promise<void>
+  addTrack: (playlistId: string, track: Track) => Promise<void>
+  removeTrack: (playlistId: string, trackId: string) => Promise<void>
   isTrackSaved: (trackId: string) => boolean
   getPlaylistsForTrack: (trackId: string) => string[]
   toggleLike: (track: Track) => void
   isLiked: (trackId: string) => boolean
-}
-
-const STORAGE_KEY = "jukebox-playlists"
-const LIKED_ID = "liked-tracks"
-
-function generateId() {
-  return `pl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-}
-
-function createDefaultPlaylists(): Playlist[] {
-  return [
-    {
-      id: LIKED_ID,
-      name: "Liked Tracks",
-      tracks: [],
-      createdAt: Date.now(),
-    },
-  ]
-}
-
-function loadFromStorage(): Playlist[] | null {
-  if (typeof window === "undefined") return null
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    return JSON.parse(raw) as Playlist[]
-  } catch {
-    return null
-  }
-}
-
-function saveToStorage(playlists: Playlist[]) {
-  if (typeof window === "undefined") return
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(playlists))
-  } catch {
-    // ignore storage errors
-  }
+  refresh: () => Promise<void>
 }
 
 const PlaylistContext = createContext<PlaylistContextType | null>(null)
 
+// ---------- Helpers ----------
+
+function apiTrackToTrack(t: APIPlaylistTrack): Track {
+  return {
+    id: t.trackId,
+    title: t.title || "Unknown",
+    artist: t.artist || "Unknown",
+    duration: t.duration || 0,
+    source: (t.source as Track["source"]) || "mp3",
+    sourceUrl: t.sourceUrl || "",
+    submittedBy: "",
+    albumGradient: t.albumGradient || "linear-gradient(135deg, oklch(0.3 0.05 280), oklch(0.2 0.05 280))",
+  }
+}
+
+function apiPlaylistToPlaylist(p: APIPlaylist): Playlist {
+  return {
+    id: p.id,
+    name: p.name,
+    isLiked: p.isLiked,
+    tracks: (p.tracks || []).map(apiTrackToTrack),
+    createdAt: new Date(p.createdAt).getTime(),
+  }
+}
+
+// ---------- Provider ----------
+
 export function PlaylistProvider({ children }: { children: ReactNode }) {
-  const [playlists, setPlaylists] = useState<Playlist[]>(createDefaultPlaylists)
-  const [hydrated, setHydrated] = useState(false)
+  const { isLoggedIn } = useAuth()
+  const [playlists, setPlaylists] = useState<Playlist[]>([])
+  const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    const stored = loadFromStorage()
-    if (stored && stored.length > 0) {
-      // Ensure "Liked Tracks" always exists
-      const hasLiked = stored.some((p) => p.id === LIKED_ID)
-      if (!hasLiked) {
-        stored.unshift({
-          id: LIKED_ID,
-          name: "Liked Tracks",
-          tracks: [],
-          createdAt: 0,
-        })
-      }
-      setPlaylists(stored)
+  // Fetch playlists from API when logged in
+  const refresh = useCallback(async () => {
+    if (!isLoggedIn) {
+      setPlaylists([])
+      return
     }
-    setHydrated(true)
-  }, [])
+    setLoading(true)
+    try {
+      const data = await authRequest<APIPlaylist[]>("/api/playlists?include=tracks")
+      setPlaylists(data.map(apiPlaylistToPlaylist))
+    } catch (err) {
+      console.error("[playlists] fetch error:", err)
+    } finally {
+      setLoading(false)
+    }
+  }, [isLoggedIn])
 
   useEffect(() => {
-    if (hydrated) saveToStorage(playlists)
-  }, [playlists, hydrated])
+    refresh()
+  }, [refresh])
 
-  const createPlaylist = useCallback((name: string): Playlist => {
-    const pl: Playlist = { id: generateId(), name, tracks: [], createdAt: Date.now() }
-    setPlaylists((prev) => {
-      const next = [...prev, pl]
-      saveToStorage(next)
-      return next
-    })
-    return pl
+  // --- Create playlist ---
+  const createPlaylist = useCallback(async (name: string): Promise<Playlist | null> => {
+    if (!isLoggedIn) return null
+    try {
+      const created = await authRequest<APIPlaylist>("/api/playlists", {
+        method: "POST",
+        body: JSON.stringify({ name }),
+      })
+      const pl: Playlist = {
+        id: created.id,
+        name: created.name,
+        isLiked: created.isLiked,
+        tracks: [],
+        createdAt: new Date(created.createdAt).getTime(),
+      }
+      setPlaylists((prev) => [...prev, pl])
+      toast.success(`Created "${name}"`)
+      return pl
+    } catch (err) {
+      toast.error("Failed to create playlist")
+      return null
+    }
+  }, [isLoggedIn])
+
+  // --- Rename playlist ---
+  const renamePlaylist = useCallback(async (id: string, name: string) => {
+    try {
+      await authRequest(`/api/playlists/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name }),
+      })
+      setPlaylists((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, name } : p))
+      )
+    } catch (err) {
+      toast.error("Failed to rename playlist")
+    }
   }, [])
 
-  const renamePlaylist = useCallback((id: string, name: string) => {
-    setPlaylists((prev) => {
-      const next = prev.map((p) => (p.id === id ? { ...p, name } : p))
-      saveToStorage(next)
-      return next
-    })
-  }, [])
+  // --- Delete playlist ---
+  const deletePlaylist = useCallback(async (id: string) => {
+    // Don't allow deleting liked playlist
+    const pl = playlists.find((p) => p.id === id)
+    if (pl?.isLiked) return
+    try {
+      await authRequest(`/api/playlists/${id}`, { method: "DELETE" })
+      setPlaylists((prev) => prev.filter((p) => p.id !== id))
+      toast.success("Playlist deleted")
+    } catch (err) {
+      toast.error("Failed to delete playlist")
+    }
+  }, [playlists])
 
-  const deletePlaylist = useCallback((id: string) => {
-    if (id === LIKED_ID) return // Cannot delete Liked Tracks
-    setPlaylists((prev) => {
-      const next = prev.filter((p) => p.id !== id)
-      saveToStorage(next)
-      return next
-    })
-  }, [])
-
-  const addTrack = useCallback((playlistId: string, track: Track) => {
-    setPlaylists((prev) => {
-      const next = prev.map((p) => {
+  // --- Add track to playlist ---
+  const addTrack = useCallback(async (playlistId: string, track: Track) => {
+    if (!isLoggedIn) {
+      toast.error("Log in to save tracks")
+      return
+    }
+    // Optimistic update
+    setPlaylists((prev) =>
+      prev.map((p) => {
         if (p.id !== playlistId) return p
-        if (p.tracks.some((t) => t.id === track.id)) return p // already exists
+        if (p.tracks.some((t) => t.id === track.id)) return p
         return { ...p, tracks: [...p.tracks, track] }
       })
-      saveToStorage(next)
-      return next
-    })
-  }, [])
+    )
+    try {
+      await authRequest(`/api/playlists/${playlistId}/tracks`, {
+        method: "POST",
+        body: JSON.stringify({ trackId: track.id }),
+      })
+    } catch (err) {
+      // Revert on failure
+      setPlaylists((prev) =>
+        prev.map((p) => {
+          if (p.id !== playlistId) return p
+          return { ...p, tracks: p.tracks.filter((t) => t.id !== track.id) }
+        })
+      )
+      toast.error("Failed to save track")
+    }
+  }, [isLoggedIn])
 
-  const removeTrack = useCallback((playlistId: string, trackId: string) => {
-    setPlaylists((prev) => {
-      const next = prev.map((p) => {
+  // --- Remove track from playlist ---
+  const removeTrack = useCallback(async (playlistId: string, trackId: string) => {
+    // Optimistic update
+    let removed: Track | undefined
+    setPlaylists((prev) =>
+      prev.map((p) => {
         if (p.id !== playlistId) return p
+        removed = p.tracks.find((t) => t.id === trackId)
         return { ...p, tracks: p.tracks.filter((t) => t.id !== trackId) }
       })
-      saveToStorage(next)
-      return next
-    })
+    )
+    try {
+      await authRequest(`/api/playlists/${playlistId}/tracks/${trackId}`, {
+        method: "DELETE",
+      })
+    } catch (err) {
+      // Revert on failure
+      if (removed) {
+        setPlaylists((prev) =>
+          prev.map((p) => {
+            if (p.id !== playlistId) return p
+            return { ...p, tracks: [...p.tracks, removed!] }
+          })
+        )
+      }
+      toast.error("Failed to remove track")
+    }
   }, [])
 
+  // --- Toggle like (adds/removes from the "Liked Tracks" playlist) ---
+  const toggleLike = useCallback((track: Track) => {
+    const liked = playlists.find((p) => p.isLiked)
+    if (!liked) {
+      toast.error("Log in to like tracks")
+      return
+    }
+    const exists = liked.tracks.some((t) => t.id === track.id)
+    if (exists) {
+      removeTrack(liked.id, track.id)
+    } else {
+      addTrack(liked.id, track)
+    }
+  }, [playlists, addTrack, removeTrack])
+
+  // --- Check if track is liked ---
+  const isLiked = useCallback(
+    (trackId: string) => {
+      const liked = playlists.find((p) => p.isLiked)
+      return liked ? liked.tracks.some((t) => t.id === trackId) : false
+    },
+    [playlists]
+  )
+
+  // --- Check if track is in any playlist ---
   const isTrackSaved = useCallback(
     (trackId: string) => playlists.some((p) => p.tracks.some((t) => t.id === trackId)),
     [playlists]
   )
 
+  // --- Get which playlists contain a track ---
   const getPlaylistsForTrack = useCallback(
     (trackId: string) =>
       playlists.filter((p) => p.tracks.some((t) => t.id === trackId)).map((p) => p.id),
     [playlists]
   )
 
-  const toggleLike = useCallback((track: Track) => {
-    setPlaylists((prev) => {
-      const next = prev.map((p) => {
-        if (p.id !== LIKED_ID) return p
-        const exists = p.tracks.some((t) => t.id === track.id)
-        return exists
-          ? { ...p, tracks: p.tracks.filter((t) => t.id !== track.id) }
-          : { ...p, tracks: [...p.tracks, track] }
-      })
-      saveToStorage(next)
-      return next
-    })
-  }, [])
-
-  const isLiked = useCallback(
-    (trackId: string) => {
-      const liked = playlists.find((p) => p.id === LIKED_ID)
-      return liked ? liked.tracks.some((t) => t.id === trackId) : false
-    },
-    [playlists]
-  )
-
   return (
     <PlaylistContext.Provider
       value={{
-        playlists: hydrated ? playlists : createDefaultPlaylists(),
+        playlists,
+        loading,
         createPlaylist,
         renamePlaylist,
         deletePlaylist,
@@ -192,6 +282,7 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
         getPlaylistsForTrack,
         toggleLike,
         isLiked,
+        refresh,
       }}
     >
       {children}

@@ -134,7 +134,7 @@ export function AudioEngine({
     if (!synced) {
       setTimeout(() => {
         setSynced(true)
-      }, 600)
+      }, 300)
     } else {
       onPlayStateChange?.(true)
     }
@@ -148,11 +148,11 @@ export function AudioEngine({
   // Also sync when player becomes ready
   const handleReady = useCallback(() => {
     setReady(true)
-    // Sync with staggered retries to ensure YouTube is truly ready to seek
+    // Sync with staggered retries to ensure player is truly ready to seek
     // Each attempt is >1s apart to pass the throttle guard in syncToServer
-    syncTimeoutRef.current = setTimeout(() => syncToServer(), 300)
-    setTimeout(() => { lastSyncRef.current = 0; syncToServer() }, 1500)
-    setTimeout(() => { lastSyncRef.current = 0; syncToServer() }, 3000)
+    syncTimeoutRef.current = setTimeout(() => syncToServer(), 200)
+    setTimeout(() => { lastSyncRef.current = 0; syncToServer() }, 1200)
+    setTimeout(() => { lastSyncRef.current = 0; syncToServer() }, 2500)
   }, [syncToServer])
 
   // Clean up sync timeout

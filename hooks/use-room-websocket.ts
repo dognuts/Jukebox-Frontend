@@ -173,7 +173,10 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
               ...s,
               currentTrack: newTrack,
               playedTracks: newPlayed.slice(0, 100), // cap at 100
-              playbackState: newTrack ? s.playbackState : null,
+              // Clear playback state so the audio engine doesn't seek using the
+              // PREVIOUS track's startedAt. The server sends a new playback_state
+              // immediately after track_changed with the correct timestamp.
+              playbackState: null,
             }
           })
           break

@@ -81,14 +81,21 @@ export default function PricingPage() {
           {/* Hero */}
           <div className="text-center mb-16">
             <h1 className="font-sans text-4xl font-bold text-foreground tracking-tight">
-              Level Up Your <span style={{ color: "oklch(0.82 0.18 80)" }}>Jukebox</span> Experience
+              {(user as any)?.isPlus
+                ? <>Get <span style={{ color: "oklch(0.72 0.18 195)" }}>Neon</span></>
+                : <>Level Up Your <span style={{ color: "oklch(0.82 0.18 80)" }}>Jukebox</span> Experience</>
+              }
             </h1>
             <p className="mt-3 font-sans text-lg text-muted-foreground max-w-2xl mx-auto">
-              Subscribe to Plus for an enhanced experience, or grab Neon to light up live rooms.
+              {(user as any)?.isPlus
+                ? "Grab Neon to light up live rooms, trigger power-ups, and support your favorite DJs."
+                : "Subscribe to Plus for an enhanced experience, or grab Neon to light up live rooms."
+              }
             </p>
           </div>
 
-          {/* Plus Card */}
+          {/* Plus Card — hidden for existing Plus members */}
+          {!(user as any)?.isPlus && (
           <div className="mb-16">
             <div
               className="relative overflow-hidden rounded-3xl p-8 lg:p-10"
@@ -130,16 +137,14 @@ export default function PricingPage() {
                   </div>
                   <Button
                     onClick={handleSubscribePlus}
-                    disabled={subscribing || (user as any)?.isPlus}
+                    disabled={subscribing || !isLoggedIn}
                     className="rounded-full px-8 py-3 font-sans font-semibold text-white"
                     style={{
-                      background: (user as any)?.isPlus
-                        ? "oklch(0.40 0.10 270)"
-                        : "linear-gradient(135deg, oklch(0.55 0.22 270), oklch(0.48 0.24 300))",
-                      boxShadow: (user as any)?.isPlus ? "none" : "0 0 20px oklch(0.55 0.22 270 / 0.3)",
+                      background: "linear-gradient(135deg, oklch(0.55 0.22 270), oklch(0.48 0.24 300))",
+                      boxShadow: "0 0 20px oklch(0.55 0.22 270 / 0.3)",
                     }}
                   >
-                    {(user as any)?.isPlus ? "You're a Plus Member" : subscribing ? "Processing..." : "Get Plus"}
+                    {subscribing ? "Processing..." : "Get Plus"}
                   </Button>
                   {!isLoggedIn && (
                     <p className="font-sans text-xs text-muted-foreground">
@@ -150,6 +155,7 @@ export default function PricingPage() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Neon Packs */}
           <div className="mb-16">

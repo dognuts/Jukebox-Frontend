@@ -122,14 +122,21 @@ function PricingModal({ onClose }: { onClose: () => void }) {
           {/* Header */}
           <div className="text-center mb-8">
             <h2 className="font-sans text-2xl font-bold text-foreground tracking-tight">
-              Level Up Your <span style={{ color: "oklch(0.82 0.18 80)" }}>Jukebox</span>
+              {(user as any)?.isPlus
+                ? <>Get <span style={{ color: "oklch(0.72 0.18 195)" }}>Neon</span></>
+                : <>Level Up Your <span style={{ color: "oklch(0.82 0.18 80)" }}>Jukebox</span></>
+              }
             </h2>
             <p className="mt-1.5 font-sans text-sm text-muted-foreground">
-              Subscribe to Plus or grab Neon to light up live rooms.
+              {(user as any)?.isPlus
+                ? "Grab Neon to light up live rooms and support your favorite DJs."
+                : "Subscribe to Plus or grab Neon to light up live rooms."
+              }
             </p>
           </div>
 
-          {/* Plus Card */}
+          {/* Plus Card — hidden for existing Plus members */}
+          {!(user as any)?.isPlus && (
           <div
             className="relative overflow-hidden rounded-2xl p-5 sm:p-6 mb-8"
             style={{
@@ -168,16 +175,14 @@ function PricingModal({ onClose }: { onClose: () => void }) {
                 </div>
                 <button
                   onClick={handleSubscribePlus}
-                  disabled={subscribing || (user as any)?.isPlus || !isLoggedIn}
+                  disabled={subscribing || !isLoggedIn}
                   className="rounded-full px-6 py-2 font-sans text-sm font-semibold text-white transition-all hover:scale-105 active:scale-95 disabled:opacity-60 disabled:hover:scale-100"
                   style={{
-                    background: (user as any)?.isPlus
-                      ? "oklch(0.40 0.10 270)"
-                      : "linear-gradient(135deg, oklch(0.55 0.22 270), oklch(0.48 0.24 300))",
-                    boxShadow: (user as any)?.isPlus ? "none" : "0 0 20px oklch(0.55 0.22 270 / 0.3)",
+                    background: "linear-gradient(135deg, oklch(0.55 0.22 270), oklch(0.48 0.24 300))",
+                    boxShadow: "0 0 20px oklch(0.55 0.22 270 / 0.3)",
                   }}
                 >
-                  {(user as any)?.isPlus ? "Active" : subscribing ? "Processing..." : "Get Plus"}
+                  {subscribing ? "Processing..." : "Get Plus"}
                 </button>
                 {!isLoggedIn && (
                   <p className="font-sans text-[10px] text-muted-foreground">
@@ -187,6 +192,7 @@ function PricingModal({ onClose }: { onClose: () => void }) {
               </div>
             </div>
           </div>
+          )}
 
           {/* Neon Packs */}
           <div>

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Radio, Sparkles, Upload, ImageIcon, X, CalendarDays, Clock } from "lucide-react"
+import { ArrowLeft, Radio, Sparkles, Upload, ImageIcon, X, CalendarDays, Clock, ListMusic, Check, Heart } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Navbar } from "@/components/layout/navbar"
 import { Footer } from "@/components/layout/footer"
+import { usePlaylist } from "@/lib/playlist-context"
 
 import { genres, vibeOptions, rooms, coverGradients, avatarColors, createTrack, currentUser } from "@/lib/mock-data"
 import type { Room } from "@/lib/mock-data"
@@ -46,6 +47,11 @@ export default function CreateRoomPage() {
   const [coverArt, setCoverArt] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null)
+  const { playlists } = usePlaylist()
+
+  // Filter to only playlists that have tracks
+  const availablePlaylists = playlists.filter((pl) => pl.tracks.length > 0)
 
   const nameBlocked = containsProhibitedContent(name)
   const descBlocked = containsProhibitedContent(description)
@@ -112,6 +118,7 @@ export default function CreateRoomPage() {
         scheduledStart,
         coverArt: coverArt || undefined,
         coverGradient: coverGradients[gradientSeed],
+        playlistId: selectedPlaylistId || undefined,
       })
 
       // Store the DJ key so we can use it when entering the room
@@ -177,7 +184,7 @@ export default function CreateRoomPage() {
     } finally {
       setCreating(false)
     }
-  }, [name, description, coverArt, selectedGenres, selectedVibes, requestPolicy, isScheduled, scheduleDate, scheduleTime, router, creating])
+  }, [name, description, coverArt, selectedGenres, selectedVibes, requestPolicy, isScheduled, scheduleDate, scheduleTime, selectedPlaylistId, router, creating])
 
   // Preview gradient based on name length as seed
   const previewGradient = `linear-gradient(160deg, oklch(0.25 0.08 ${(name.length * 37) % 360}), oklch(0.15 0.12 ${(name.length * 73) % 360}))`
@@ -497,6 +504,88 @@ export default function CreateRoomPage() {
                   </div>
                 </div>
 
+                {/* Pre-load Tracklist */}
+                {availablePlaylists.length > 0 && (
+                  <div className="flex flex-col gap-3">
+                    <label className="font-sans text-sm font-medium text-foreground">
+                      Pre-load a Tracklist <span className="font-normal text-muted-foreground">(optional)</span>
+                    </label>
+                    <p className="font-sans text-xs text-muted-foreground -mt-1">
+                      Queue up tracks from one of your saved tracklists so they're ready when you go live.
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      {/* None option */}
+                      <button
+                        onClick={() => setSelectedPlaylistId(null)}
+                        className="flex items-center gap-3 rounded-xl p-3 text-left transition-all border"
+                        style={{
+                          background: selectedPlaylistId === null
+                            ? "oklch(0.20 0.03 80 / 0.5)"
+                            : "var(--glass-bg)",
+                          borderColor: selectedPlaylistId === null
+                            ? "oklch(0.65 0.15 80 / 0.5)"
+                            : "var(--glass-border)",
+                        }}
+                        aria-pressed={selectedPlaylistId === null}
+                      >
+                        <div
+                          className="h-4 w-4 shrink-0 rounded-full border-2 transition-all"
+                          style={{
+                            borderColor: selectedPlaylistId === null ? "var(--neon-amber)" : "oklch(0.35 0.02 280)",
+                            background: selectedPlaylistId === null ? "var(--neon-amber)" : "transparent",
+                          }}
+                        />
+                        <span className="font-sans text-sm font-medium text-foreground">
+                          No tracklist — start with an empty queue
+                        </span>
+                      </button>
+
+                      {availablePlaylists.map((pl) => (
+                        <button
+                          key={pl.id}
+                          onClick={() => setSelectedPlaylistId(pl.id)}
+                          className="flex items-center gap-3 rounded-xl p-3 text-left transition-all border"
+                          style={{
+                            background: selectedPlaylistId === pl.id
+                              ? "oklch(0.20 0.03 80 / 0.5)"
+                              : "var(--glass-bg)",
+                            borderColor: selectedPlaylistId === pl.id
+                              ? "oklch(0.65 0.15 80 / 0.5)"
+                              : "var(--glass-border)",
+                          }}
+                          aria-pressed={selectedPlaylistId === pl.id}
+                        >
+                          <div
+                            className="h-4 w-4 shrink-0 rounded-full border-2 transition-all"
+                            style={{
+                              borderColor: selectedPlaylistId === pl.id ? "var(--neon-amber)" : "oklch(0.35 0.02 280)",
+                              background: selectedPlaylistId === pl.id ? "var(--neon-amber)" : "transparent",
+                            }}
+                          />
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            {pl.isLiked ? (
+                              <Heart className="h-4 w-4 shrink-0" style={{ color: "oklch(0.65 0.25 15)" }} fill="oklch(0.65 0.25 15)" />
+                            ) : (
+                              <ListMusic className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            )}
+                            <div className="flex flex-col min-w-0">
+                              <span className="truncate font-sans text-sm font-medium text-foreground">
+                                {pl.name}
+                              </span>
+                              <span className="font-sans text-xs text-muted-foreground">
+                                {pl.tracks.length} track{pl.tracks.length !== 1 ? "s" : ""}
+                              </span>
+                            </div>
+                          </div>
+                          {selectedPlaylistId === pl.id && (
+                            <Check className="h-4 w-4 shrink-0" style={{ color: "var(--neon-amber)" }} />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Schedule */}
                 <div className="flex flex-col gap-3">
                   <label className="font-sans text-sm font-medium text-foreground">
@@ -740,6 +829,19 @@ export default function CreateRoomPage() {
                         </>
                       )}
                     </div>
+                    {/* Tracklist preview */}
+                    {selectedPlaylistId && (() => {
+                      const pl = availablePlaylists.find((p) => p.id === selectedPlaylistId)
+                      if (!pl) return null
+                      return (
+                        <div className="mt-3 flex items-center gap-1.5">
+                          <ListMusic className="h-3 w-3" style={{ color: "oklch(0.65 0.15 85)" }} />
+                          <span className="font-sans text-[10px] truncate" style={{ color: "oklch(0.65 0.15 85)" }}>
+                            {pl.tracks.length} track{pl.tracks.length !== 1 ? "s" : ""} from &ldquo;{pl.name}&rdquo;
+                          </span>
+                        </div>
+                      )
+                    })()}
                   </div>
                 </div>
               </div>

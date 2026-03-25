@@ -221,7 +221,9 @@ export default function RoomPage() {
       }
       return upcoming
     }
-    if (ws.connected && ws.queue.length > 0) {
+    // When WebSocket is connected, always use its queue data (even if empty).
+    // Falling back to room?.queue would show stale data from the initial REST fetch.
+    if (ws.connected) {
       return ws.queue.map((e) => ({
         id: e.track.id,
         title: e.track.title,

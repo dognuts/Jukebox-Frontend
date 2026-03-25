@@ -181,6 +181,7 @@ export async function createRoom(data: {
   scheduledStart?: string
   coverArt?: string
   coverGradient?: string
+  playlistId?: string
 }): Promise<CreateRoomResponse> {
   return authRequest<CreateRoomResponse>("/api/rooms", {
     method: "POST",
