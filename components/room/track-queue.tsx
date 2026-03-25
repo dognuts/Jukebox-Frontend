@@ -159,7 +159,7 @@ export function TrackQueue({ tracks, playedTracks = [], isDJ, roomSlug, roomName
       {/* Up Next tab */}
       {tab === "upcoming" && (
         <>
-          <ScrollArea className="flex-1 max-h-64 pr-2">
+          <ScrollArea className="flex-1 max-h-[50vh] pr-2">
             <AnimatePresence mode="popLayout">
               {tracks.map((track, index) => {
                 const SourceIcon = sourceIcons[track.source] || FileAudio
@@ -283,7 +283,7 @@ export function TrackQueue({ tracks, playedTracks = [], isDJ, roomSlug, roomName
             </button>
           )}
 
-          <ScrollArea className="flex-1 max-h-64 pr-2">
+          <ScrollArea className="flex-1 max-h-[50vh] pr-2">
             {playedTracks.map((track, index) => {
               const SourceIcon = sourceIcons[track.source] || FileAudio
               return (

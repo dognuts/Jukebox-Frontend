@@ -16,7 +16,6 @@ import { toast } from "sonner"
 
 // ---------- Types ----------
 
-/** Shape returned by GET /api/playlists?include=tracks */
 interface APIPlaylist {
   id: string
   userId: string
@@ -97,31 +96,29 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
   const { isLoggedIn, loading: authLoading } = useAuth()
   const [playlists, setPlaylists] = useState<Playlist[]>([])
   const [loading, setLoading] = useState(false)
-  const [fetched, setFetched] = useState(false)
   const retryCount = useRef(0)
   const retryTimer = useRef<NodeJS.Timeout | null>(null)
+  // Track whether we've successfully fetched at least once
+  const hasFetched = useRef(false)
 
   // Fetch playlists from API when logged in
   const refresh = useCallback(async () => {
     if (!isLoggedIn) {
       setPlaylists([])
-      setFetched(false)
+      hasFetched.current = false
       return
     }
     setLoading(true)
     try {
       const data = await authRequest<APIPlaylist[]>("/api/playlists?include=tracks")
       setPlaylists(data.map(apiPlaylistToPlaylist))
-      setFetched(true)
+      hasFetched.current = true
       retryCount.current = 0
     } catch (err) {
       console.error("[playlists] fetch error:", err)
-      // Retry up to 3 times with backoff — handles the case where
-      // auth token refresh hasn't completed yet
       if (retryCount.current < 3) {
         retryCount.current++
         const delay = retryCount.current * 2000
-        console.log(`[playlists] retrying in ${delay}ms (attempt ${retryCount.current})`)
         retryTimer.current = setTimeout(() => refresh(), delay)
       }
     } finally {
@@ -129,15 +126,47 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
     }
   }, [isLoggedIn])
 
-  // Fetch when auth state changes
   useEffect(() => {
-    // Don't try to fetch while auth is still loading
     if (authLoading) return
     refresh()
     return () => {
       if (retryTimer.current) clearTimeout(retryTimer.current)
     }
   }, [refresh, authLoading])
+
+  // --- Ensure liked playlist exists (fetches or creates) ---
+  const ensureLikedPlaylist = useCallback(async (): Promise<Playlist | null> => {
+    // Check local state first
+    const existing = playlists.find((p) => p.isLiked)
+    if (existing) return existing
+
+    // If we haven't fetched yet, try fetching
+    if (!hasFetched.current) {
+      try {
+        const data = await authRequest<APIPlaylist[]>("/api/playlists?include=tracks")
+        const mapped = data.map(apiPlaylistToPlaylist)
+        setPlaylists(mapped)
+        hasFetched.current = true
+        const liked = mapped.find((p) => p.isLiked)
+        if (liked) return liked
+      } catch (err) {
+        console.error("[playlists] fetch for liked playlist failed:", err)
+        return null
+      }
+    }
+
+    // Still no liked playlist — the backend's GET /api/playlists calls EnsureLikedPlaylist,
+    // so if we got here it should exist after a refetch. Try one more time.
+    try {
+      const data = await authRequest<APIPlaylist[]>("/api/playlists?include=tracks")
+      const mapped = data.map(apiPlaylistToPlaylist)
+      setPlaylists(mapped)
+      hasFetched.current = true
+      return mapped.find((p) => p.isLiked) || null
+    } catch {
+      return null
+    }
+  }, [playlists])
 
   // --- Create playlist ---
   const createPlaylist = useCallback(async (name: string): Promise<Playlist | null> => {
@@ -180,7 +209,6 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
 
   // --- Delete playlist ---
   const deletePlaylist = useCallback(async (id: string) => {
-    // Don't allow deleting liked playlist
     const pl = playlists.find((p) => p.id === id)
     if (pl?.isLiked) return
     try {
@@ -198,12 +226,6 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
       toast.error("Log in to save tracks")
       return
     }
-    // If playlists haven't loaded yet, try refreshing first
-    if (!fetched) {
-      toast.error("Playlists are still loading — try again in a moment")
-      refresh()
-      return
-    }
     // Optimistic update
     setPlaylists((prev) =>
       prev.map((p) => {
@@ -218,7 +240,6 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ trackId: track.id }),
       })
     } catch (err) {
-      // Revert on failure
       setPlaylists((prev) =>
         prev.map((p) => {
           if (p.id !== playlistId) return p
@@ -227,11 +248,10 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
       )
       toast.error("Failed to save track")
     }
-  }, [isLoggedIn, fetched, refresh])
+  }, [isLoggedIn])
 
   // --- Remove track from playlist ---
   const removeTrack = useCallback(async (playlistId: string, trackId: string) => {
-    // Optimistic update
     let removed: Track | undefined
     setPlaylists((prev) =>
       prev.map((p) => {
@@ -245,7 +265,6 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
         method: "DELETE",
       })
     } catch (err) {
-      // Revert on failure
       if (removed) {
         setPlaylists((prev) =>
           prev.map((p) => {
@@ -258,30 +277,32 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // --- Toggle like (adds/removes from the "Liked Tracks" playlist) ---
-  const toggleLike = useCallback((track: Track) => {
+  // --- Toggle like ---
+  // This is the heart button. It ALWAYS works for logged-in users.
+  // If the liked playlist doesn't exist locally, we fetch/create it first.
+  const toggleLike = useCallback(async (track: Track) => {
     if (!isLoggedIn) {
       toast.error("Log in to like tracks")
       return
     }
-    const liked = playlists.find((p) => p.isLiked)
+
+    // Try to find the liked playlist — if missing, fetch/ensure it
+    let liked = playlists.find((p) => p.isLiked)
     if (!liked) {
-      // Playlists haven't loaded yet — trigger a refresh and let user retry
-      if (!fetched) {
-        toast.error("Still loading your playlists — try again in a moment")
-        refresh()
-      } else {
-        toast.error("Log in to like tracks")
+      liked = await ensureLikedPlaylist()
+      if (!liked) {
+        toast.error("Something went wrong — please try again")
+        return
       }
-      return
     }
+
     const exists = liked.tracks.some((t) => t.id === track.id)
     if (exists) {
       removeTrack(liked.id, track.id)
     } else {
       addTrack(liked.id, track)
     }
-  }, [playlists, isLoggedIn, fetched, addTrack, removeTrack, refresh])
+  }, [playlists, isLoggedIn, ensureLikedPlaylist, addTrack, removeTrack])
 
   // --- Check if track is liked ---
   const isLiked = useCallback(

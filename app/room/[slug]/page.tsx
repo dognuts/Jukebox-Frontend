@@ -225,7 +225,7 @@ export default function RoomPage() {
     // When WebSocket is connected, always use its queue data (even if empty).
     // Falling back to room?.queue would show stale data from the initial REST fetch.
     if (ws.connected) {
-      return ws.queue.map((e) => ({
+      const mapped = ws.queue.map((e) => ({
         id: e.track.id,
         title: e.track.title,
         artist: e.track.artist,
@@ -235,9 +235,15 @@ export default function RoomPage() {
         submittedBy: e.submittedBy,
         albumGradient: e.track.albumGradient || "linear-gradient(135deg, oklch(0.45 0.15 30), oklch(0.35 0.20 350))",
       }))
+      // Filter out the currently playing track — it shouldn't appear in "Up Next"
+      const nowPlayingId = ws.currentTrack?.id || currentTrack?.id
+      if (nowPlayingId) {
+        return mapped.filter((t) => t.id !== nowPlayingId)
+      }
+      return mapped
     }
     return room?.queue ?? []
-  }, [ws.connected, ws.queue, room?.queue, room?.isAutoplay, autoplayTracks, autoplayIndex])
+  }, [ws.connected, ws.queue, ws.currentTrack?.id, currentTrack?.id, room?.queue, room?.isAutoplay, autoplayTracks, autoplayIndex])
 
   // Played tracks — accumulated from WS + initial fetch from API
   const [fetchedHistory, setFetchedHistory] = useState<Track[]>([])
