@@ -553,19 +553,70 @@ export default function RoomPage() {
       <div className="relative z-10 flex min-h-screen flex-col">
         <Navbar />
 
-        {/* Back link + DJ mode toggle */}
-        <div className="mx-auto w-full max-w-7xl px-4 pt-4 lg:px-6">
-          <div className="flex items-center justify-between">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 font-sans text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back to Discover
-            </Link>
+        {/* Immersive header bar */}
+        <div 
+          className="sticky top-0 z-50 border-b backdrop-blur-xl"
+          style={{
+            background: "oklch(0.10 0.01 280 / 0.85)",
+            borderColor: "oklch(0.25 0.02 280 / 0.5)",
+          }}
+        >
+          <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 lg:px-6">
+            {/* Left: Back + Room name */}
+            <div className="flex items-center gap-4">
+              <Link
+                href="/"
+                className="flex items-center justify-center w-8 h-8 rounded-full transition-all hover:scale-105 active:scale-95"
+                style={{
+                  background: "oklch(0.18 0.01 280)",
+                  border: "1px solid oklch(0.28 0.02 280 / 0.5)",
+                }}
+                aria-label="Back to Discover"
+              >
+                <ArrowLeft className="h-4 w-4 text-muted-foreground" />
+              </Link>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <h1 className="font-sans text-sm font-bold text-foreground truncate max-w-[200px] sm:max-w-none">
+                    {room.name}
+                  </h1>
+                  {room.isLive && (
+                    <div
+                      className="flex items-center gap-1 rounded px-1.5 py-0.5"
+                      style={{
+                        background: "oklch(0.12 0.02 30 / 0.8)",
+                        border: "1px solid oklch(0.50 0.24 30)",
+                        boxShadow: "0 0 8px oklch(0.50 0.24 30 / 0.4)",
+                      }}
+                    >
+                      <div 
+                        className="w-1.5 h-1.5 rounded-full animate-live-pulse"
+                        style={{ background: "oklch(0.58 0.26 30)" }}
+                      />
+                      <span
+                        className="font-sans text-[9px] font-bold tracking-wider uppercase"
+                        style={{ color: "oklch(0.58 0.26 30)" }}
+                      >
+                        Live
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <span className="font-sans text-xs text-muted-foreground">
+                  {room.djName}
+                </span>
+              </div>
+            </div>
+
+            {/* Right: Connection status + Listener count */}
             <div className="flex items-center gap-3">
               {ws.connected && (
-                <span className="font-sans text-[10px] text-green-400/70">● Connected</span>
+                <div className="hidden sm:flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: "oklch(0.65 0.20 155)" }} />
+                  <span className="font-sans text-[10px] font-medium" style={{ color: "oklch(0.65 0.20 155)" }}>
+                    Connected
+                  </span>
+                </div>
               )}
               <ListenerBar
                 initialCount={listenerCount}
@@ -579,17 +630,25 @@ export default function RoomPage() {
         </div>
 
         {/* Main content */}
-        <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-4 py-4 lg:flex-row lg:gap-6 lg:px-6">
+        <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-4 py-6 lg:flex-row lg:gap-6 lg:px-6">
           {/* Left: Now playing + queue + controls */}
-          <div className="flex flex-col gap-4 lg:flex-1">
+          <div className="flex flex-col gap-5 lg:flex-1">
             {/* Jukebox main body with Wurlitzer neon arches */}
-            <div className="relative">
+            <div className="relative group">
+              {/* Ambient glow behind the player */}
+              <div 
+                className="absolute -inset-6 rounded-[4rem] blur-3xl transition-opacity duration-700 -z-10 opacity-60 group-hover:opacity-80"
+                style={{
+                  background: `radial-gradient(ellipse at center, oklch(0.82 0.18 80 / 0.12) 0%, oklch(0.70 0.22 350 / 0.08) 40%, transparent 70%)`,
+                }}
+              />
+
               <div className="absolute inset-0 z-20 pointer-events-none">
                 <NeonArches />
               </div>
 
               <div
-                className="relative overflow-hidden rounded-t-[2.5rem] rounded-b-2xl"
+                className="relative overflow-hidden rounded-t-[2.5rem] rounded-b-2xl transition-transform duration-500 group-hover:scale-[1.002]"
                 style={{
                   background: "linear-gradient(180deg, oklch(0.38 0.03 60) 0%, oklch(0.22 0.015 280) 12%, oklch(0.14 0.01 280) 100%)",
                   padding: "2px",
@@ -642,72 +701,38 @@ export default function RoomPage() {
                   ))}
                 </div>
 
-                {/* Room info header */}
-                <div className="relative z-30 px-8 pt-6 pb-4 text-center">
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    <h1 className="font-sans text-xl font-bold text-foreground neon-text-amber">
-                      {room.name}
-                    </h1>
-                    {room.isLive && (
-                      <div
-                        className="flex items-center gap-1 rounded px-1.5 py-0.5"
-                        style={{
-                          background: "oklch(0.08 0.01 280 / 0.9)",
-                          border: "1.5px solid oklch(0.50 0.24 30)",
-                          boxShadow: "0 0 6px oklch(0.50 0.24 30 / 0.6), 0 0 12px oklch(0.50 0.24 30 / 0.3)",
-                        }}
-                      >
-                        <span
-                          className="font-sans text-[10px] font-bold tracking-wider"
-                          style={{ color: "oklch(0.58 0.26 30)", textShadow: "0 0 4px oklch(0.58 0.26 30 / 0.8)" }}
-                        >
-                          ON AIR
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  {room.isLive && (
-                    <span className="mt-1 block font-mono text-xs font-medium text-muted-foreground">
-                      {listenerCount.toLocaleString()} listening
-                    </span>
-                  )}
-                  <p className="mt-2 font-sans text-sm font-medium text-primary">
-                    {room.djName}
-                  </p>
-                  <p className="mt-1.5 font-sans text-xs text-muted-foreground leading-relaxed">
+                {/* Room description + Request status - simplified header */}
+                <div className="relative z-30 px-8 pt-5 pb-3">
+                  <p className="font-sans text-sm text-center text-muted-foreground leading-relaxed max-w-md mx-auto text-pretty">
                     {room.description}
                   </p>
-                  {/* Request status */}
-                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1"
-                    style={
-                      requestStatus === "open"
-                        ? { background: "oklch(0.82 0.18 80 / 0.1)", border: "1px solid oklch(0.82 0.18 80 / 0.3)" }
-                        : requestStatus === "paused"
-                        ? { background: "oklch(0.78 0.14 60 / 0.1)", border: "1px solid oklch(0.70 0.15 60 / 0.3)" }
-                        : { background: "oklch(0.50 0.01 280 / 0.1)", border: "1px solid oklch(0.35 0.02 280 / 0.3)" }
-                    }
-                  >
-                    {requestStatus === "open" && <Inbox className="h-3 w-3" style={{ color: "oklch(0.82 0.18 80)" }} />}
-                    {requestStatus === "paused" && <PauseCircle className="h-3 w-3" style={{ color: "oklch(0.78 0.14 60)" }} />}
-                    {requestStatus === "closed" && <XCircle className="h-3 w-3 text-muted-foreground" />}
-                    <span className="font-sans text-xs font-semibold"
-                      style={{
-                        color: requestStatus === "open"
-                          ? "oklch(0.82 0.18 80)"
+                  {/* Request status pill */}
+                  <div className="mt-3 flex justify-center">
+                    <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5"
+                      style={
+                        requestStatus === "open"
+                          ? { background: "oklch(0.82 0.18 80 / 0.1)", border: "1px solid oklch(0.82 0.18 80 / 0.3)" }
                           : requestStatus === "paused"
-                          ? "oklch(0.78 0.14 60)"
-                          : "oklch(0.55 0.02 280)",
-                      }}
+                          ? { background: "oklch(0.78 0.14 60 / 0.1)", border: "1px solid oklch(0.70 0.15 60 / 0.3)" }
+                          : { background: "oklch(0.50 0.01 280 / 0.1)", border: "1px solid oklch(0.35 0.02 280 / 0.3)" }
+                      }
                     >
-                      {requestStatus === "open" ? "Requests Open" : requestStatus === "paused" ? "Requests Paused" : "Requests Closed"}
-                    </span>
+                      {requestStatus === "open" && <Inbox className="h-3 w-3" style={{ color: "oklch(0.82 0.18 80)" }} />}
+                      {requestStatus === "paused" && <PauseCircle className="h-3 w-3" style={{ color: "oklch(0.78 0.14 60)" }} />}
+                      {requestStatus === "closed" && <XCircle className="h-3 w-3 text-muted-foreground" />}
+                      <span className="font-sans text-xs font-semibold"
+                        style={{
+                          color: requestStatus === "open"
+                            ? "oklch(0.82 0.18 80)"
+                            : requestStatus === "paused"
+                            ? "oklch(0.78 0.14 60)"
+                            : "oklch(0.55 0.02 280)",
+                        }}
+                      >
+                        {requestStatus === "open" ? "Requests Open" : requestStatus === "paused" ? "Requests Paused" : "Requests Closed"}
+                      </span>
+                    </div>
                   </div>
-
-                  {/* Subtle divider */}
-                  <div
-                    className="mt-4 mx-auto h-px w-24"
-                    style={{ background: "linear-gradient(90deg, transparent, oklch(0.40 0.02 280 / 0.5), transparent)" }}
-                  />
                 </div>
 
                 {/* DJ Subscription card — listeners only */}
@@ -987,26 +1012,38 @@ export default function RoomPage() {
               }}
             />
 
-            {/* Mobile panel toggle */}
-            <div className="flex gap-2 lg:hidden">
-              <Button
-                variant={mobilePanel === "chat" ? "default" : "ghost"}
-                size="sm"
+            {/* Mobile panel toggle - enhanced design */}
+            <div 
+              className="flex gap-1 p-1 rounded-xl lg:hidden"
+              style={{
+                background: "oklch(0.14 0.01 280)",
+                border: "1px solid oklch(0.25 0.02 280 / 0.5)",
+              }}
+            >
+              <button
                 onClick={() => setMobilePanel("chat")}
-                className="flex-1 gap-1.5 rounded-xl"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-sans text-sm font-medium transition-all"
+                style={{
+                  background: mobilePanel === "chat" ? "oklch(0.20 0.02 280)" : "transparent",
+                  color: mobilePanel === "chat" ? "oklch(0.82 0.18 80)" : "oklch(0.55 0.02 280)",
+                  boxShadow: mobilePanel === "chat" ? "0 0 12px oklch(0.82 0.18 80 / 0.15)" : "none",
+                }}
               >
                 <MessageCircle className="h-4 w-4" />
                 Chat
-              </Button>
-              <Button
-                variant={mobilePanel === "queue" ? "default" : "ghost"}
-                size="sm"
+              </button>
+              <button
                 onClick={() => setMobilePanel("queue")}
-                className="flex-1 gap-1.5 rounded-xl"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-sans text-sm font-medium transition-all"
+                style={{
+                  background: mobilePanel === "queue" ? "oklch(0.20 0.02 280)" : "transparent",
+                  color: mobilePanel === "queue" ? "oklch(0.72 0.18 250)" : "oklch(0.55 0.02 280)",
+                  boxShadow: mobilePanel === "queue" ? "0 0 12px oklch(0.72 0.18 250 / 0.15)" : "none",
+                }}
               >
                 <ListMusic className="h-4 w-4" />
                 Queue
-              </Button>
+              </button>
             </div>
 
             {/* ── Spark zone: wraps buttons + queue so sparks can fall from tube through everything ── */}
@@ -1018,20 +1055,30 @@ export default function RoomPage() {
               />
 
             {!isDJ && (
-              <div className="relative z-10 flex flex-wrap items-center justify-center gap-3 py-2">
+              <div className="relative z-10 flex flex-wrap items-center justify-center gap-3 py-3">
                 <button
                   onClick={() => setSendNeonOpen(true)}
-                  className="send-neon-btn group relative flex items-center gap-1.5 rounded-full px-4 py-2 font-sans text-xs font-semibold transition-all"
+                  className="group relative flex items-center gap-2 rounded-xl px-5 py-2.5 font-sans text-sm font-semibold transition-all hover:scale-105 active:scale-95"
+                  style={{
+                    background: "linear-gradient(135deg, oklch(0.72 0.18 195), oklch(0.60 0.20 200))",
+                    color: "oklch(0.12 0.02 195)",
+                    boxShadow: "0 0 20px oklch(0.72 0.18 195 / 0.3), 0 4px 12px oklch(0.10 0.01 280 / 0.4)",
+                  }}
                 >
-                  <Zap className="icon-zap h-3.5 w-3.5" />
+                  <Zap className="h-4 w-4 transition-transform group-hover:scale-110" />
                   Send Neon
                 </button>
                 {serverPolicy !== "closed" && (
                   <button
                     onClick={() => setRequestModalOpen(true)}
-                    className="request-track-btn group relative flex items-center gap-1.5 rounded-full px-4 py-2 font-sans text-xs font-semibold transition-all"
+                    className="group relative flex items-center gap-2 rounded-xl px-5 py-2.5 font-sans text-sm font-semibold transition-all hover:scale-105 active:scale-95"
+                    style={{
+                      background: "oklch(0.16 0.02 280)",
+                      border: "1px solid oklch(0.35 0.03 280 / 0.5)",
+                      color: "oklch(0.80 0.02 280)",
+                    }}
                   >
-                    <ListMusic className="icon-music h-3.5 w-3.5" />
+                    <ListMusic className="h-4 w-4 transition-transform group-hover:scale-110" style={{ color: "oklch(0.72 0.18 250)" }} />
                     Request a Track
                   </button>
                 )}
@@ -1104,9 +1151,9 @@ export default function RoomPage() {
 
           {/* Right: Chat */}
           <div
-            className={`flex flex-col lg:w-96 ${mobilePanel !== "chat" ? "hidden lg:flex" : ""}`}
+            className={`flex flex-col lg:w-[380px] ${mobilePanel !== "chat" ? "hidden lg:flex" : ""}`}
           >
-            <div className="h-[520px] lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)]">
+            <div className="h-[520px] lg:sticky lg:top-[72px] lg:h-[calc(100vh-6rem)]">
               <ChatPanel
                 initialMessages={chatMessages}
                 roomName={room.name}

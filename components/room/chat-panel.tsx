@@ -202,36 +202,51 @@ export function ChatPanel({
   )
 
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-border/30 glass-panel">
-      {/* Header with tabs */}
-      <div className="flex items-center border-b border-border/30">
+    <div 
+      className="flex h-full flex-col rounded-2xl overflow-hidden"
+      style={{
+        background: "oklch(0.11 0.01 280)",
+        border: "1px solid oklch(0.22 0.02 280 / 0.5)",
+        boxShadow: "0 8px 32px oklch(0.05 0.01 280 / 0.5)",
+      }}
+    >
+      {/* Header with tabs - enhanced design */}
+      <div 
+        className="flex items-center p-1"
+        style={{
+          background: "oklch(0.14 0.01 280)",
+          borderBottom: "1px solid oklch(0.20 0.02 280 / 0.5)",
+        }}
+      >
         <button
           onClick={() => setActiveTab("chat")}
-          className={`flex flex-1 items-center justify-center gap-1.5 px-4 py-3 font-sans text-sm font-semibold transition-colors ${
-            activeTab === "chat"
-              ? "text-foreground border-b-2 border-primary"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
+          className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-sans text-sm font-semibold transition-all"
+          style={{
+            background: activeTab === "chat" ? "oklch(0.18 0.02 280)" : "transparent",
+            color: activeTab === "chat" ? "oklch(0.82 0.18 80)" : "oklch(0.50 0.02 280)",
+            boxShadow: activeTab === "chat" ? "0 0 12px oklch(0.82 0.18 80 / 0.1)" : "none",
+          }}
         >
-          <MessageSquare className="h-3.5 w-3.5" />
+          <MessageSquare className="h-4 w-4" />
           Chat
         </button>
         <button
           onClick={() => setActiveTab("lobby")}
-          className={`flex flex-1 items-center justify-center gap-1.5 px-4 py-3 font-sans text-sm font-semibold transition-colors ${
-            activeTab === "lobby"
-              ? "text-foreground border-b-2 border-primary"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
+          className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-sans text-sm font-semibold transition-all"
+          style={{
+            background: activeTab === "lobby" ? "oklch(0.18 0.02 280)" : "transparent",
+            color: activeTab === "lobby" ? "oklch(0.72 0.18 250)" : "oklch(0.50 0.02 280)",
+            boxShadow: activeTab === "lobby" ? "0 0 12px oklch(0.72 0.18 250 / 0.1)" : "none",
+          }}
         >
-          <Users className="h-3.5 w-3.5" />
+          <Users className="h-4 w-4" />
           Lobby
           {listenerCount > 0 && (
             <span
-              className="ml-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-mono text-[9px] font-bold"
+              className="ml-0.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 font-mono text-[10px] font-bold"
               style={{
-                background: "oklch(0.55 0.20 270 / 0.3)",
-                color: "oklch(0.75 0.15 270)",
+                background: activeTab === "lobby" ? "oklch(0.72 0.18 250 / 0.2)" : "oklch(0.55 0.20 270 / 0.2)",
+                color: activeTab === "lobby" ? "oklch(0.72 0.18 250)" : "oklch(0.65 0.15 270)",
               }}
             >
               {listenerCount}
@@ -338,13 +353,28 @@ export function ChatPanel({
             </div>
           </div>
 
-          {/* Reaction buttons */}
-          <div className="flex items-center justify-around border-t border-border/20 px-3 pt-2.5 pb-1">
+          {/* Reaction buttons - enhanced */}
+          <div 
+            className="flex items-center justify-around px-3 py-2"
+            style={{
+              background: "oklch(0.13 0.01 280)",
+              borderTop: "1px solid oklch(0.20 0.02 280 / 0.4)",
+            }}
+          >
             {reactions.map((reaction) => (
               <button
                 key={reaction.key}
                 onClick={() => handleReaction(reaction.emoji)}
-                className="flex items-center justify-center rounded-full p-2 transition-all hover:bg-muted/30 active:scale-90"
+                className="flex items-center justify-center h-10 w-10 rounded-xl transition-all hover:scale-110 active:scale-90"
+                style={{
+                  background: "transparent",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "oklch(0.20 0.02 280)"
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent"
+                }}
                 aria-label={`React with ${reaction.label}`}
               >
                 <span className="text-xl leading-none">{reaction.emoji}</span>
@@ -352,43 +382,65 @@ export function ChatPanel({
             ))}
           </div>
 
-          {/* Chat input */}
-          <div className="px-3 pb-3 pt-1">
-            <div className="flex gap-2">
+          {/* Chat input - enhanced */}
+          <div 
+            className="px-3 pb-3 pt-2"
+            style={{
+              background: "oklch(0.11 0.01 280)",
+            }}
+          >
+            <div 
+              className="flex gap-2 p-1.5 rounded-xl"
+              style={{
+                background: "oklch(0.16 0.01 280)",
+                border: "1px solid oklch(0.24 0.02 280 / 0.5)",
+              }}
+            >
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Say something..."
-                className="flex-1 rounded-full border-border/30 bg-muted/30 font-sans text-sm text-foreground placeholder:text-muted-foreground"
+                className="flex-1 border-0 bg-transparent font-sans text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
               />
-              <Button
-                size="icon"
+              <button
                 onClick={handleSend}
                 disabled={!input.trim()}
-                className="h-9 w-9 shrink-0 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30"
+                className="flex items-center justify-center h-9 w-9 shrink-0 rounded-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-30 disabled:hover:scale-100"
+                style={{
+                  background: "linear-gradient(135deg, oklch(0.82 0.18 80), oklch(0.72 0.20 80))",
+                  boxShadow: input.trim() ? "0 0 12px oklch(0.82 0.18 80 / 0.3)" : "none",
+                }}
                 aria-label="Send message"
               >
-                <Send className="h-4 w-4" />
-              </Button>
+                <Send className="h-4 w-4" style={{ color: "oklch(0.12 0.02 80)" }} />
+              </button>
             </div>
-            <p className="mt-1.5 text-center font-sans text-[10px] text-muted-foreground/60">
+            <p className="mt-2 text-center font-sans text-[10px] text-muted-foreground/50">
               {"Try typing \"drop the beat\" or \"lights out\""}
             </p>
           </div>
         </>
       )}
 
-      {/* Lobby tab */}
+      {/* Lobby tab - enhanced */}
       {activeTab === "lobby" && (
         <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 scrollbar-thin">
           {listeners.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-12">
-              <Users className="h-8 w-8 text-muted-foreground/40" />
+            <div className="flex flex-col items-center justify-center gap-3 py-12">
+              <div 
+                className="flex items-center justify-center h-14 w-14 rounded-2xl"
+                style={{
+                  background: "oklch(0.16 0.02 280)",
+                  border: "1px solid oklch(0.25 0.02 280 / 0.5)",
+                }}
+              >
+                <Users className="h-6 w-6 text-muted-foreground/60" />
+              </div>
               <p className="font-sans text-sm text-muted-foreground">No one&apos;s here yet</p>
             </div>
           ) : (
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               {listeners.map((listener) => (
                 <UserPopover
                   key={listener.username}
@@ -398,10 +450,19 @@ export function ChatPanel({
                 >
                   <button
                     type="button"
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted/20"
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3 transition-all"
+                    style={{
+                      background: "transparent",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "oklch(0.16 0.02 280)"
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "transparent"
+                    }}
                   >
                     <div
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold shadow-md"
                       style={{
                         background: listener.avatarColor,
                         color: "oklch(0.10 0.01 280)",
@@ -415,11 +476,12 @@ export function ChatPanel({
                       </span>
                       {listener.isDJ && (
                         <span
-                          className="shrink-0 rounded-full px-1.5 py-0.5 font-sans text-[9px] font-bold uppercase"
+                          className="shrink-0 rounded-lg px-2 py-0.5 font-sans text-[9px] font-bold uppercase tracking-wide"
                           style={{
-                            background: "oklch(0.82 0.18 80 / 0.15)",
+                            background: "linear-gradient(135deg, oklch(0.82 0.18 80 / 0.2), oklch(0.72 0.20 80 / 0.15))",
                             color: "oklch(0.82 0.18 80)",
                             border: "1px solid oklch(0.82 0.18 80 / 0.3)",
+                            boxShadow: "0 0 8px oklch(0.82 0.18 80 / 0.15)",
                           }}
                         >
                           DJ

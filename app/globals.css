@@ -42,6 +42,7 @@
   --neon-amber: oklch(0.82 0.18 80);
   --neon-magenta: oklch(0.70 0.22 350);
   --neon-blue: oklch(0.72 0.18 250);
+  --neon-cyan: oklch(0.72 0.18 195);
   --glass-bg: oklch(0.16 0.015 280 / 0.6);
   --glass-border: oklch(0.35 0.02 280 / 0.3);
   --surface-elevated: oklch(0.19 0.01 280);
@@ -1267,4 +1268,19 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: oklch(0.40 0.03 280);
+}
+
+/* Scrollbar thin utility */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: oklch(0.12 0.01 280);
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: oklch(0.25 0.02 280);
+  border-radius: 2px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.35 0.03 280);
 }
