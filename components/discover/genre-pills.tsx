@@ -53,7 +53,7 @@ export function GenrePills({ selected, onSelect }: GenrePillsProps) {
   return (
     <div
       ref={containerRef}
-      className="flex flex-wrap gap-2 justify-center"
+      className="flex flex-wrap gap-2 sm:gap-3 justify-start sm:justify-center"
       role="group"
       aria-label="Filter by genre"
     >
@@ -64,19 +64,22 @@ export function GenrePills({ selected, onSelect }: GenrePillsProps) {
           <button
             key={genre}
             onClick={(e) => handleClick(genre, e)}
-            className={`relative overflow-hidden rounded-full px-4 py-1.5 font-sans text-sm font-medium transition-all duration-300 border ${isSelected ? 'genre-pill-glow' : ''}`}
+            className={`relative overflow-hidden rounded-full px-4 py-2 font-sans text-sm font-medium transition-all duration-300 border hover:scale-105 active:scale-95 ${isSelected ? 'genre-pill-glow' : 'hover:border-primary/30'}`}
             style={{
               background: isSelected
                 ? `oklch(0.30 0.08 ${hue})`
-                : "oklch(0.16 0.015 280 / 0.6)",
+                : "oklch(0.14 0.015 280 / 0.8)",
               borderColor: isSelected
                 ? `oklch(0.65 0.15 ${hue})`
-                : "oklch(0.25 0.02 280 / 0.5)",
+                : "oklch(0.28 0.02 280 / 0.6)",
               color: isSelected
-                ? `oklch(0.85 0.12 ${hue})`
-                : "oklch(0.55 0.02 280)",
+                ? `oklch(0.88 0.12 ${hue})`
+                : "oklch(0.65 0.02 280)",
               boxShadow: isSelected
-                ? `0 0 12px oklch(0.65 0.15 ${hue} / 0.3)`
+                ? `0 0 16px oklch(0.65 0.15 ${hue} / 0.4), inset 0 0 12px oklch(0.65 0.15 ${hue} / 0.1)`
+                : "none",
+              textShadow: isSelected
+                ? `0 0 8px oklch(0.65 0.15 ${hue} / 0.5)`
                 : "none",
             }}
             aria-pressed={isSelected}

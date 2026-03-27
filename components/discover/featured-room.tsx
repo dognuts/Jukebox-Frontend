@@ -1,20 +1,36 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
-import { Headphones, Music, Play } from "lucide-react"
+import { Headphones, Music, Play, Volume2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { type Room, formatListenerCount } from "@/lib/mock-data"
 
 export function FeaturedRoom({ room }: { room: Room }) {
+  const [isHovered, setIsHovered] = useState(false)
+
   return (
-    <section className="relative">
+    <section 
+      className="relative group"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* Ambient glow behind the card */}
+      <div 
+        className="absolute -inset-4 rounded-[4rem] blur-2xl transition-opacity duration-700 -z-10"
+        style={{
+          background: `radial-gradient(ellipse at center, oklch(0.82 0.18 80 / ${isHovered ? 0.15 : 0.08}) 0%, transparent 70%)`,
+        }}
+      />
+
       {/* Jukebox outer chrome arch */}
       <div
-        className="relative overflow-hidden rounded-t-[3rem] rounded-b-2xl"
+        className="relative overflow-hidden rounded-t-[3rem] rounded-b-2xl transition-transform duration-500"
         style={{
           background: "linear-gradient(180deg, oklch(0.40 0.04 60) 0%, oklch(0.28 0.02 50) 8%, oklch(0.18 0.01 280) 25%, oklch(0.13 0.01 280) 100%)",
           padding: "3px",
+          transform: isHovered ? "scale(1.005)" : "scale(1)",
         }}
       >
         <div className="relative overflow-hidden rounded-t-[calc(3rem-3px)] rounded-b-[calc(1rem-3px)]" style={{ background: "oklch(0.11 0.01 280)" }}>
@@ -173,13 +189,15 @@ export function FeaturedRoom({ room }: { room: Room }) {
                 <Link href={`/room/${room.slug}`}>
                   <Button
                     size="lg"
-                    className="gap-2 rounded-full font-sans text-primary-foreground"
+                    className="gap-2 rounded-full font-sans text-primary-foreground group/btn transition-all duration-300 hover:scale-105"
                     style={{
                       background: "linear-gradient(135deg, oklch(0.82 0.18 80), oklch(0.75 0.20 70))",
-                      boxShadow: "0 0 15px oklch(0.82 0.18 80 / 0.3), 0 4px 12px oklch(0.10 0.01 280 / 0.4)",
+                      boxShadow: isHovered 
+                        ? "0 0 25px oklch(0.82 0.18 80 / 0.5), 0 4px 20px oklch(0.10 0.01 280 / 0.5)"
+                        : "0 0 15px oklch(0.82 0.18 80 / 0.3), 0 4px 12px oklch(0.10 0.01 280 / 0.4)",
                     }}
                   >
-                    <Play className="h-4 w-4" />
+                    <Play className="h-4 w-4 transition-transform group-hover/btn:scale-110" />
                     Tune In
                   </Button>
                 </Link>

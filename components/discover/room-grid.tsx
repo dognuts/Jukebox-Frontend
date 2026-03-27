@@ -86,30 +86,33 @@ export function RoomGrid({
   return (
     <section>
       {/* Header with arrows */}
-      <div className="mb-4 flex items-end justify-between">
+      <div className="mb-5 flex items-end justify-between">
         <div>
-          <h2 className="font-sans text-lg font-bold text-foreground">
+          <h2 className="font-sans text-xl font-bold text-foreground tracking-tight">
             {title}
           </h2>
           {subtitle && (
-            <p className="mt-0.5 font-sans text-sm text-muted-foreground">
+            <p className="mt-1 font-sans text-sm text-muted-foreground">
               {subtitle}
             </p>
           )}
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => scroll("left")}
             disabled={!canScrollLeft}
             aria-label="Scroll left"
-            className="flex h-8 w-8 items-center justify-center rounded-full transition-colors disabled:opacity-20"
+            className="flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200 disabled:opacity-20 hover:scale-105 active:scale-95"
             style={{
               background: canScrollLeft
-                ? "oklch(0.18 0.01 280)"
+                ? "oklch(0.16 0.01 280)"
                 : "transparent",
               border: canScrollLeft
-                ? "1px solid oklch(0.30 0.02 60 / 0.3)"
+                ? "1px solid oklch(0.30 0.02 280 / 0.5)"
                 : "1px solid transparent",
+              boxShadow: canScrollLeft
+                ? "0 0 8px oklch(0.82 0.18 80 / 0.1)"
+                : "none",
             }}
           >
             <ChevronLeft className="h-4 w-4 text-foreground" />
@@ -118,14 +121,17 @@ export function RoomGrid({
             onClick={() => scroll("right")}
             disabled={!canScrollRight}
             aria-label="Scroll right"
-            className="flex h-8 w-8 items-center justify-center rounded-full transition-colors disabled:opacity-20"
+            className="flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200 disabled:opacity-20 hover:scale-105 active:scale-95"
             style={{
               background: canScrollRight
-                ? "oklch(0.18 0.01 280)"
+                ? "oklch(0.16 0.01 280)"
                 : "transparent",
               border: canScrollRight
-                ? "1px solid oklch(0.30 0.02 60 / 0.3)"
+                ? "1px solid oklch(0.30 0.02 280 / 0.5)"
                 : "1px solid transparent",
+              boxShadow: canScrollRight
+                ? "0 0 8px oklch(0.82 0.18 80 / 0.1)"
+                : "none",
             }}
           >
             <ChevronRight className="h-4 w-4 text-foreground" />

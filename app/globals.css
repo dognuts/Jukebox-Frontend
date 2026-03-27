@@ -1112,6 +1112,122 @@
   filter: brightness(1.15);
 }
 
+/* ===== HERO SECTION ANIMATIONS ===== */
+
+/* Hero text reveal animation */
+@keyframes hero-text-reveal {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+    filter: blur(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.animate-hero-reveal {
+  animation: hero-text-reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Neon text flicker effect for hero */
+@keyframes neon-text-flicker {
+  0%, 100% {
+    text-shadow: 
+      0 0 10px oklch(0.82 0.18 80 / 0.8),
+      0 0 20px oklch(0.82 0.18 80 / 0.6),
+      0 0 40px oklch(0.82 0.18 80 / 0.4);
+  }
+  92% {
+    text-shadow: 
+      0 0 10px oklch(0.82 0.18 80 / 0.8),
+      0 0 20px oklch(0.82 0.18 80 / 0.6),
+      0 0 40px oklch(0.82 0.18 80 / 0.4);
+  }
+  93% {
+    text-shadow: 
+      0 0 5px oklch(0.82 0.18 80 / 0.4),
+      0 0 10px oklch(0.82 0.18 80 / 0.3);
+  }
+  94% {
+    text-shadow: 
+      0 0 10px oklch(0.82 0.18 80 / 0.8),
+      0 0 20px oklch(0.82 0.18 80 / 0.6),
+      0 0 40px oklch(0.82 0.18 80 / 0.4);
+  }
+}
+
+/* Subtle floating animation for decorative elements */
+@keyframes gentle-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-gentle-float {
+  animation: gentle-float 6s ease-in-out infinite;
+}
+
+/* Pulsing glow for live indicators */
+@keyframes live-glow {
+  0%, 100% {
+    box-shadow: 0 0 4px oklch(0.58 0.26 30 / 0.6);
+  }
+  50% {
+    box-shadow: 0 0 12px oklch(0.58 0.26 30 / 0.9), 0 0 20px oklch(0.58 0.26 30 / 0.4);
+  }
+}
+
+.animate-live-glow {
+  animation: live-glow 2s ease-in-out infinite;
+}
+
+/* Sound wave bar animations - varied timings */
+@keyframes wave-bar-1 {
+  0%, 100% { height: 30%; }
+  50% { height: 90%; }
+}
+@keyframes wave-bar-2 {
+  0%, 100% { height: 50%; }
+  50% { height: 70%; }
+}
+@keyframes wave-bar-3 {
+  0%, 100% { height: 70%; }
+  50% { height: 40%; }
+}
+@keyframes wave-bar-4 {
+  0%, 100% { height: 40%; }
+  50% { height: 100%; }
+}
+@keyframes wave-bar-5 {
+  0%, 100% { height: 60%; }
+  50% { height: 30%; }
+}
+
+/* Hero CTA button glow animation */
+@keyframes cta-glow {
+  0%, 100% {
+    box-shadow: 
+      0 0 20px oklch(0.82 0.18 80 / 0.3),
+      0 4px 20px oklch(0.10 0.01 280 / 0.5);
+  }
+  50% {
+    box-shadow: 
+      0 0 30px oklch(0.82 0.18 80 / 0.5),
+      0 0 50px oklch(0.82 0.18 80 / 0.2),
+      0 4px 20px oklch(0.10 0.01 280 / 0.5);
+  }
+}
+
+.animate-cta-glow {
+  animation: cta-glow 3s ease-in-out infinite;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;

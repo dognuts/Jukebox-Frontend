@@ -25,9 +25,9 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Jukebox - Listen Together",
+  title: "Jukebox - Music Sounds Better Together",
   description:
-    "Built by music heads for music heads to find, discuss, and listen to music together.",
+    "Tune into live DJ sessions, discover new music with friends, and vibe with listeners around the world. Built by music heads for music heads.",
   icons: {
     icon: [
       {
