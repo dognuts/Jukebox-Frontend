@@ -2,7 +2,7 @@
 // Cache clear v4 - Reimagined homepage
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Play, Radio, Users, Sparkles, ChevronRight, Headphones } from "lucide-react"
+import { ArrowLeft, Play, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import { Navbar } from "@/components/layout/navbar"
@@ -13,7 +13,7 @@ import { RoomGrid } from "@/components/discover/room-grid"
 import { WelcomePopup } from "@/components/welcome-popup"
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
-import { NeonJukeboxLogo } from "@/components/effects/neon-jukebox-logo"
+
 
 import { ScrollReveal } from "@/components/effects/scroll-reveal"
 import { FeaturedRoomSkeleton, RoomCardSkeleton, GenrePillsSkeleton } from "@/components/ui/skeleton"
@@ -25,49 +25,70 @@ import { listRooms, toFrontendRoom, getSession, getSessionId } from "@/lib/api"
 // Fallback to mock data if backend is unreachable
 import { getLiveRooms as getMockLive, getUpcomingRooms as getMockUpcoming, getRecentlyActiveRooms as getMockRecent } from "@/lib/mock-data"
 
-// Hero stats component
-function LiveStats({ liveCount, listenerCount }: { liveCount: number; listenerCount: number }) {
-  return (
-    <div className="flex items-center gap-6">
-      <div className="flex items-center gap-2">
-        <div className="relative">
-          <div className="h-2.5 w-2.5 rounded-full animate-live-pulse" style={{ background: "oklch(0.58 0.26 30)" }} />
-          <div className="absolute inset-0 h-2.5 w-2.5 rounded-full animate-ping" style={{ background: "oklch(0.58 0.26 30 / 0.4)" }} />
-        </div>
-        <span className="font-mono text-sm font-semibold" style={{ color: "oklch(0.82 0.18 80)" }}>
-          {liveCount} Live
-        </span>
-      </div>
-      <div className="flex items-center gap-2">
-        <Headphones className="h-4 w-4" style={{ color: "oklch(0.70 0.22 350)" }} />
-        <span className="font-mono text-sm" style={{ color: "oklch(0.70 0.02 280)" }}>
-          {formatListenerCount(listenerCount)} listening
-        </span>
-      </div>
-    </div>
-  )
-}
+// DJ Avatar colors for Live DJs section
+const djAvatarColors = [
+  "oklch(0.70 0.18 70)",   // amber/orange
+  "oklch(0.70 0.15 290)",  // purple/lavender  
+  "oklch(0.75 0.12 170)",  // teal/mint
+]
 
-// Animated sound bars for hero
-function HeroSoundBars() {
+// Live DJs component for hero
+function LiveDJs({ rooms }: { rooms: Room[] }) {
+  // Get top 3 live rooms sorted by listeners
+  const topDJs = [...rooms]
+    .filter(r => r.isLive)
+    .sort((a, b) => b.listenerCount - a.listenerCount)
+    .slice(0, 3)
+
+  if (topDJs.length === 0) return null
+
   return (
-    <div className="flex items-end gap-1 h-8">
-      {[0.4, 0.7, 0.5, 0.9, 0.6, 0.8, 0.3, 0.7, 0.5].map((h, i) => (
-        <div
-          key={i}
-          className="w-1 rounded-full"
-          style={{
-            height: `${h * 100}%`,
-            background: i % 3 === 0 
-              ? "oklch(0.82 0.18 80)" 
-              : i % 3 === 1 
-              ? "oklch(0.70 0.22 350)" 
-              : "oklch(0.72 0.18 250)",
-            animation: `visualizer-bar ${0.4 + i * 0.1}s ease-in-out infinite alternate`,
-            animationDelay: `${i * 0.05}s`,
-          }}
-        />
-      ))}
+    <div className="flex flex-col items-center lg:items-start gap-3">
+      <span 
+        className="font-sans text-xs font-semibold tracking-widest uppercase"
+        style={{ color: "oklch(0.55 0.02 280)" }}
+      >
+        Live DJs
+      </span>
+      <div className="flex items-center gap-4">
+        {topDJs.map((room, i) => (
+          <Link key={room.id} href={`/room/${room.slug}`} className="group flex flex-col items-center gap-2">
+            {/* Avatar with ring */}
+            <div 
+              className="relative flex items-center justify-center w-14 h-14 rounded-full transition-transform group-hover:scale-110"
+              style={{
+                background: "oklch(0.12 0.01 280)",
+                boxShadow: `0 0 0 3px oklch(0.18 0.01 280), 0 0 0 4px ${djAvatarColors[i % djAvatarColors.length]}`
+              }}
+            >
+              <div 
+                className="flex items-center justify-center w-11 h-11 rounded-full font-sans text-lg font-bold"
+                style={{ 
+                  background: djAvatarColors[i % djAvatarColors.length],
+                  color: "oklch(0.12 0.02 280)"
+                }}
+              >
+                {room.dj.displayName.charAt(0).toUpperCase()}
+              </div>
+            </div>
+            {/* Name and listeners */}
+            <div className="flex flex-col items-center">
+              <span 
+                className="font-sans text-xs font-medium truncate max-w-[80px]"
+                style={{ color: "oklch(0.85 0.02 280)" }}
+              >
+                {room.dj.displayName}
+              </span>
+              <span 
+                className="font-sans text-[10px]"
+                style={{ color: "oklch(0.55 0.02 280)" }}
+              >
+                {formatListenerCount(room.listenerCount)} listening
+              </span>
+            </div>
+          </Link>
+        ))}
+      </div>
     </div>
   )
 }
@@ -246,112 +267,80 @@ export default function HomePage() {
             </div>
 
             <div className="relative z-10 mx-auto max-w-7xl px-4 pt-12 pb-16 sm:pt-16 sm:pb-20 lg:px-6">
-              {/* Main hero content */}
-              <div className="flex flex-col items-center text-center">
-                {/* Animated logo showcase */}
-                <div className="mb-6 animate-fade-in-scale">
-                  <NeonJukeboxLogo size="lg" />
-                </div>
+              {/* Main hero content - two column layout */}
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-10 lg:gap-16">
+                {/* Left column - text and CTA */}
+                <div className="flex flex-col items-center lg:items-start text-center lg:text-left max-w-2xl">
+                  {/* Subtitle */}
+                  <span 
+                    className="font-sans text-xs sm:text-sm font-semibold tracking-widest uppercase mb-4 animate-fade-in-up"
+                    style={{ color: "oklch(0.65 0.12 175)" }}
+                  >
+                    Listen together, live
+                  </span>
 
-                {/* Tagline with neon glow effect */}
-                <h1 
-                  className="font-sans text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight mb-4 text-balance animate-fade-in-up"
-                  style={{ 
-                    color: "oklch(0.95 0.01 80)",
-                    textShadow: "0 0 40px oklch(0.82 0.18 80 / 0.15)"
-                  }}
-                >
-                  Music sounds better
-                  <br />
-                  <span className="neon-text-amber">together</span>
-                </h1>
+                  {/* Main headline with sheen effect on "frequency" */}
+                  <h1 
+                    className="font-sans text-4xl sm:text-5xl md:text-6xl font-black tracking-tight mb-5 animate-fade-in-up"
+                    style={{ 
+                      color: "oklch(0.95 0.01 280)",
+                      animationDelay: "50ms"
+                    }}
+                  >
+                    Find your{" "}
+                    <span className="text-sheen inline-block" style={{ color: "oklch(0.82 0.18 75)" }}>
+                      frequency
+                    </span>
+                    .
+                  </h1>
 
-                <p 
-                  className="max-w-xl font-sans text-base sm:text-lg text-pretty mb-8 animate-fade-in-up"
-                  style={{ 
-                    color: "oklch(0.70 0.02 280)",
-                    animationDelay: "100ms"
-                  }}
-                >
-                  Tune into live DJ sessions, discover new music with friends, 
-                  and vibe with listeners around the world.
-                </p>
+                  <p 
+                    className="font-sans text-base sm:text-lg text-pretty mb-8 max-w-lg animate-fade-in-up"
+                    style={{ 
+                      color: "oklch(0.60 0.02 280)",
+                      animationDelay: "100ms"
+                    }}
+                  >
+                    Join live rooms, discover music with other heads, and vibe together in real time.
+                  </p>
 
-                {/* Live stats */}
-                <div className="mb-8 animate-fade-in-up" style={{ animationDelay: "150ms" }}>
-                  <LiveStats liveCount={liveRooms.length} listenerCount={totalListeners} />
-                </div>
-
-                {/* CTA buttons */}
-                <div className="flex flex-col sm:flex-row items-center gap-4 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
-                  {featuredRoom ? (
-                    <Link href={`/room/${featuredRoom.slug}`}>
+                  {/* CTA button */}
+                  <div className="animate-fade-in-up" style={{ animationDelay: "150ms" }}>
+                    {featuredRoom ? (
+                      <Link href={`/room/${featuredRoom.slug}`}>
+                        <Button
+                          size="lg"
+                          className="gap-3 rounded-xl font-sans text-base font-semibold px-8 py-6 group transition-all hover:scale-[1.02] active:scale-[0.98]"
+                          style={{
+                            background: "oklch(0.75 0.16 75)",
+                            color: "oklch(0.12 0.02 80)",
+                            boxShadow: "0 4px 20px oklch(0.75 0.16 75 / 0.3)",
+                          }}
+                        >
+                          <Play className="h-5 w-5 fill-current" />
+                          Jump into the most active room
+                        </Button>
+                      </Link>
+                    ) : (
                       <Button
                         size="lg"
-                        className="gap-2 rounded-full font-sans text-base font-semibold px-8 py-6 group"
+                        className="gap-3 rounded-xl font-sans text-base font-semibold px-8 py-6"
                         style={{
-                          background: "linear-gradient(135deg, oklch(0.82 0.18 80), oklch(0.75 0.20 70))",
+                          background: "oklch(0.75 0.16 75)",
                           color: "oklch(0.12 0.02 80)",
-                          boxShadow: "0 0 30px oklch(0.82 0.18 80 / 0.4), 0 4px 20px oklch(0.10 0.01 280 / 0.5)",
+                          boxShadow: "0 4px 20px oklch(0.75 0.16 75 / 0.3)",
                         }}
                       >
-                        <Play className="h-5 w-5 transition-transform group-hover:scale-110" />
-                        Jump In Now
+                        <Play className="h-5 w-5 fill-current" />
+                        Explore rooms
                       </Button>
-                    </Link>
-                  ) : (
-                    <Button
-                      size="lg"
-                      className="gap-2 rounded-full font-sans text-base font-semibold px-8 py-6"
-                      style={{
-                        background: "linear-gradient(135deg, oklch(0.82 0.18 80), oklch(0.75 0.20 70))",
-                        color: "oklch(0.12 0.02 80)",
-                        boxShadow: "0 0 30px oklch(0.82 0.18 80 / 0.4), 0 4px 20px oklch(0.10 0.01 280 / 0.5)",
-                      }}
-                    >
-                      <Radio className="h-5 w-5" />
-                      Explore Rooms
-                    </Button>
-                  )}
-                  
-                  {isLoggedIn ? (
-                    <Link href="/create">
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        className="gap-2 rounded-full font-sans text-base font-semibold px-8 py-6"
-                        style={{
-                          background: "oklch(0.14 0.01 280 / 0.8)",
-                          borderColor: "oklch(0.35 0.02 280)",
-                          color: "oklch(0.85 0.02 280)",
-                        }}
-                      >
-                        <Sparkles className="h-5 w-5" style={{ color: "oklch(0.72 0.18 250)" }} />
-                        Start Your Show
-                      </Button>
-                    </Link>
-                  ) : (
-                    <Link href="/signup">
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        className="gap-2 rounded-full font-sans text-base font-semibold px-8 py-6"
-                        style={{
-                          background: "oklch(0.14 0.01 280 / 0.8)",
-                          borderColor: "oklch(0.35 0.02 280)",
-                          color: "oklch(0.85 0.02 280)",
-                        }}
-                      >
-                        <Users className="h-5 w-5" style={{ color: "oklch(0.70 0.22 350)" }} />
-                        Join Free
-                      </Button>
-                    </Link>
-                  )}
+                    )}
+                  </div>
                 </div>
 
-                {/* Sound wave decoration */}
-                <div className="mt-10 flex justify-center animate-fade-in-up" style={{ animationDelay: "300ms" }}>
-                  <HeroSoundBars />
+                {/* Right column - Live DJs */}
+                <div className="animate-fade-in-up lg:flex-shrink-0" style={{ animationDelay: "200ms" }}>
+                  <LiveDJs rooms={liveRooms} />
                 </div>
               </div>
             </div>
