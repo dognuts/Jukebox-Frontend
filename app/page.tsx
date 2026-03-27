@@ -2,7 +2,7 @@
 // Cache clear v4 - Reimagined homepage
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Play } from "lucide-react"
+import { ArrowLeft, ChevronRight, Play, Radio } from "lucide-react"
 import { toast } from "sonner"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import { Navbar } from "@/components/layout/navbar"
