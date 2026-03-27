@@ -7,7 +7,6 @@ import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import { Navbar } from "@/components/layout/navbar"
 import { Footer } from "@/components/layout/footer"
 import { FeaturedRoom } from "@/components/discover/featured-room"
-import { HeroSection } from "@/components/discover/hero-section"
 import { GenrePills } from "@/components/discover/genre-pills"
 import { RoomGrid } from "@/components/discover/room-grid"
 import { WelcomePopup } from "@/components/welcome-popup"
@@ -184,19 +183,14 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* Hero section with jump-in CTA + live DJs */}
-          {loaded && !selectedGenre && (
-            <ScrollReveal>
-              <HeroSection
-                liveRooms={liveRooms}
-                totalListeners={liveRooms.reduce((a, r) => a + r.listenerCount, 0)}
-              />
-            </ScrollReveal>
+          {/* Hero featured room (hidden when filtering) */}
+          {!loaded && !selectedGenre && (
+            <div className="mb-8 sm:mb-10">
+              <FeaturedRoomSkeleton />
+            </div>
           )}
-
-          {/* Featured room card with ON AIR sign */}
           {loaded && !selectedGenre && featuredRoom && (
-            <ScrollReveal className="mb-8 sm:mb-10" delay={100}>
+            <ScrollReveal className="mb-8 sm:mb-10">
               <FeaturedRoom room={featuredRoom} />
             </ScrollReveal>
           )}
