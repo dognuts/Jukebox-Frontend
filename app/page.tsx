@@ -1,8 +1,8 @@
 "use client"
 // Cache clear v4 - Reimagined homepage
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Play, ChevronRight } from "lucide-react"
+import { ArrowLeft, Play } from "lucide-react"
 import { toast } from "sonner"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import { Navbar } from "@/components/layout/navbar"
@@ -99,7 +99,6 @@ export default function HomePage() {
   const [loaded, setLoaded] = useState(false)
   const [usingMock, setUsingMock] = useState(false)
   const { registerShortcut } = useKeyboardShortcuts()
-  const scrollToTopRef = useRef<() => void>(() => {})
   const { isLoggedIn } = useAuth()
 
   // Ensure anonymous session ID is stored before any WS connections
@@ -232,11 +231,6 @@ export default function HomePage() {
     if (!selectedGenre) return liveRooms
     return liveRooms.filter((r) => r.genre === selectedGenre)
   }, [selectedGenre, liveRooms])
-
-  const totalListeners = useMemo(() => 
-    liveRooms.reduce((sum, r) => sum + r.listenerCount, 0),
-    [liveRooms]
-  )
 
   return (
     <div className="relative min-h-screen">

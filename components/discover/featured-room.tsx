@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Headphones, Music, Play, Volume2 } from "lucide-react"
+import { Headphones, Music, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { type Room, formatListenerCount } from "@/lib/mock-data"
