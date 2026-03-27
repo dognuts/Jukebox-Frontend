@@ -68,7 +68,7 @@ function LiveDJs({ rooms }: { rooms: Room[] }) {
                   color: "oklch(0.12 0.02 280)"
                 }}
               >
-                {room.dj.displayName.charAt(0).toUpperCase()}
+                {room.djName.charAt(0).toUpperCase()}
               </div>
             </div>
             {/* Name and listeners */}
@@ -77,7 +77,7 @@ function LiveDJs({ rooms }: { rooms: Room[] }) {
                 className="font-sans text-xs font-medium truncate max-w-[80px]"
                 style={{ color: "oklch(0.85 0.02 280)" }}
               >
-                {room.dj.displayName}
+                {room.djName}
               </span>
               <span 
                 className="font-sans text-[10px]"
