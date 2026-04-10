@@ -7,12 +7,14 @@ interface VinylSpinnerProps {
   albumGradient: string
   isPlaying: boolean
   size?: number
+  albumArtUrl?: string
 }
 
 export function VinylSpinner({
   albumGradient,
   isPlaying,
   size = 220,
+  albumArtUrl,
 }: VinylSpinnerProps) {
   const [scratching, setScratching] = useState(false)
   const [scratchAngle, setScratchAngle] = useState(0)
@@ -126,7 +128,7 @@ export function VinylSpinner({
 
         {/* Album art label in center */}
         <div
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full"
           style={{
             width: "38%",
             height: "38%",
@@ -134,6 +136,16 @@ export function VinylSpinner({
             boxShadow: "0 0 12px oklch(0.30 0.05 280 / 0.5), inset 0 0 8px oklch(0 0 0 / 0.3)",
           }}
         >
+          {albumArtUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={albumArtUrl}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 h-full w-full object-cover"
+              draggable={false}
+            />
+          )}
           {/* Center spindle hole */}
           <div
             className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"

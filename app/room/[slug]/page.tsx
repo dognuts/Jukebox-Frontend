@@ -357,6 +357,7 @@ export default function RoomPage() {
   const [audioCurrentTime, setAudioCurrentTime] = useState(0)
   const [audioPlaying, setAudioPlaying] = useState(false)
   const [audioDuration, setAudioDuration] = useState(0)
+  const [audioArtwork, setAudioArtwork] = useState<string | null>(null)
   const [roomVolume, setRoomVolume] = useState(75)
   const [roomMuted, setRoomMuted] = useState(false)
 
@@ -849,6 +850,7 @@ export default function RoomPage() {
                                 onDuration={handleDuration}
                                 onTrackEnd={handleTrackEnd}
                                 onPlayStateChange={setAudioPlaying}
+                                onArtwork={setAudioArtwork}
                               />
                               {/* YouTube: just show track info below the embed, no Jukebox controls */}
                               {isYouTube ? (
@@ -902,6 +904,7 @@ export default function RoomPage() {
                                   currentTime={ws.connected ? audioCurrentTime : undefined}
                                   externalPlaying={ws.connected ? audioPlaying : undefined}
                                   soundCloudUrl={isSoundCloud ? audioTrack?.sourceUrl : undefined}
+                                  albumArtUrl={isSoundCloud ? audioArtwork : undefined}
                                   volume={roomVolume}
                                   muted={roomMuted}
                                   onVolumeChange={setRoomVolume}
@@ -926,6 +929,7 @@ export default function RoomPage() {
                               onDuration={handleDuration}
                               onTrackEnd={handleTrackEnd}
                               onPlayStateChange={setAudioPlaying}
+                              onArtwork={setAudioArtwork}
                             />
                             <p className="font-sans text-sm text-muted-foreground">No track playing</p>
                           </div>

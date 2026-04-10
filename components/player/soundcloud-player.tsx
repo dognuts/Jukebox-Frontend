@@ -15,6 +15,14 @@ interface SoundCloudPlayerProps {
   onStateChange?: (state: "playing" | "paused" | "ended" | "buffering") => void
   onDuration?: (seconds: number) => void
   onTimeUpdate?: (seconds: number) => void
+  onArtwork?: (url: string | null) => void
+}
+
+// SoundCloud artwork URLs are returned at -large size (~100x100). Swap to
+// t500x500 for a sharper image suitable for the vinyl label.
+function upscaleArtwork(url: string | null | undefined): string | null {
+  if (!url) return null
+  return url.replace(/-large(\.\w+)$/, "-t500x500$1")
 }
 
 // Robust SC Widget API loader with retry
@@ -67,7 +75,7 @@ function loadSCApi(): Promise<void> {
 }
 
 export const SoundCloudPlayer = forwardRef<AudioPlayerHandle, SoundCloudPlayerProps>(
-  function SoundCloudPlayer({ trackUrl, onReady, onStateChange, onDuration, onTimeUpdate }, ref) {
+  function SoundCloudPlayer({ trackUrl, onReady, onStateChange, onDuration, onTimeUpdate, onArtwork }, ref) {
     const iframeRef = useRef<HTMLIFrameElement>(null)
     const widgetRef = useRef<any>(null)
     const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -117,6 +125,10 @@ export const SoundCloudPlayer = forwardRef<AudioPlayerHandle, SoundCloudPlayerPr
               durationRef.current = dur / 1000
               onDuration?.(dur / 1000)
             })
+            widget.getCurrentSound?.((sound: any) => {
+              if (destroyed) return
+              onArtwork?.(upscaleArtwork(sound?.artwork_url))
+            })
             onReady?.()
           })
 
@@ -158,6 +170,8 @@ export const SoundCloudPlayer = forwardRef<AudioPlayerHandle, SoundCloudPlayerPr
         currentUrlRef.current = trackUrl
         durationRef.current = 0
         positionRef.current = 0
+        // Reset artwork while the new track loads so stale art doesn't linger
+        onArtwork?.(null)
         widgetRef.current.load(trackUrl, {
           auto_play: true,
           show_artwork: false,
@@ -167,6 +181,9 @@ export const SoundCloudPlayer = forwardRef<AudioPlayerHandle, SoundCloudPlayerPr
               durationRef.current = dur / 1000
               onDuration?.(dur / 1000)
             })
+            widgetRef.current?.getCurrentSound?.((sound: any) => {
+              onArtwork?.(upscaleArtwork(sound?.artwork_url))
+            })
             onReady?.()
             // Ensure playback starts
             setTimeout(() => {
@@ -175,7 +192,7 @@ export const SoundCloudPlayer = forwardRef<AudioPlayerHandle, SoundCloudPlayerPr
           },
         })
       }
-    }, [trackUrl, onReady, onDuration])
+    }, [trackUrl, onReady, onDuration, onArtwork])
 
     // Hidden iframe — audio only, no visible widget
     const embedUrl = `https://w.soundcloud.com/player/?url=${encodeURIComponent(trackUrl)}&auto_play=false&show_artwork=false&visual=false&hide_related=true&show_comments=false&show_user=false&show_reposts=false`

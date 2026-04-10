@@ -25,6 +25,7 @@ interface AudioEngineProps {
   onDuration?: (seconds: number) => void
   onTrackEnd?: () => void
   onPlayStateChange?: (playing: boolean) => void
+  onArtwork?: (url: string | null) => void // SoundCloud only
 }
 
 /**
@@ -47,6 +48,7 @@ export function AudioEngine({
   onDuration,
   onTrackEnd,
   onPlayStateChange,
+  onArtwork,
 }: AudioEngineProps) {
   const playerRef = useRef<AudioPlayerHandle>(null)
   const [ready, setReady] = useState(false)
@@ -265,6 +267,7 @@ export function AudioEngine({
           onStateChange={handleStateChange}
           onDuration={onDuration}
           onTimeUpdate={onTimeUpdate}
+          onArtwork={onArtwork}
         />
       )
 

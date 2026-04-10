@@ -22,6 +22,7 @@ interface NowPlayingProps {
   currentTime?: number
   externalPlaying?: boolean
   soundCloudUrl?: string
+  albumArtUrl?: string | null
   volume?: number
   muted?: boolean
   onVolumeChange?: (v: number) => void
@@ -39,6 +40,7 @@ export function NowPlaying({
   currentTime,
   externalPlaying,
   soundCloudUrl,
+  albumArtUrl,
   volume: volumeProp,
   muted: mutedProp,
   onVolumeChange,
@@ -162,6 +164,7 @@ export function NowPlaying({
         <div className="flex shrink-0 justify-center">
           <VinylSpinner
             albumGradient={track.albumGradient}
+            albumArtUrl={albumArtUrl ?? undefined}
             isPlaying={effectivePlaying}
             size={180}
           />
