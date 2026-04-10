@@ -20,6 +20,24 @@ const YT_PATTERNS = [
 // SoundCloud URL pattern
 const SC_PATTERN = /^https?:\/\/(www\.)?soundcloud\.com\/[\w-]+\/[\w-]+/
 
+/**
+ * Derive a SoundCloud user's profile URL from a track URL.
+ * Track URLs follow the form `https://soundcloud.com/{username}/{slug}`,
+ * so the profile URL is everything up to and including the username.
+ * Returns null if the URL isn't a recognizable SoundCloud track URL.
+ */
+export function soundcloudProfileUrl(trackUrl: string): string | null {
+  try {
+    const u = new URL(trackUrl)
+    if (!/(?:^|\.)soundcloud\.com$/.test(u.hostname)) return null
+    const parts = u.pathname.split("/").filter(Boolean)
+    if (parts.length < 1) return null
+    return `https://soundcloud.com/${parts[0]}`
+  } catch {
+    return null
+  }
+}
+
 // Direct audio file extensions
 const AUDIO_EXTENSIONS = /\.(mp3|wav|ogg|flac|m4a|aac|webm)(\?.*)?$/i
 

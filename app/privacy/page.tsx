@@ -4,7 +4,7 @@ export default function PrivacyPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 lg:px-6">
       <h1 className="font-sans text-3xl font-bold text-foreground mb-2">Privacy Policy</h1>
-      <p className="font-sans text-sm text-muted-foreground mb-10">Last updated: March 19, 2026</p>
+      <p className="font-sans text-sm text-muted-foreground mb-10">Last updated: April 10, 2026</p>
 
       <div className="space-y-8 font-sans text-sm text-muted-foreground leading-relaxed">
         <section>
@@ -60,7 +60,75 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-foreground mb-3">5. Public Information</h2>
+          <h2 className="text-lg font-semibold text-foreground mb-3">5. Third-Party Music Services (YouTube and SoundCloud)</h2>
+          <p className="font-semibold text-foreground mb-2">YouTube:</p>
+          <p className="mb-3">
+            Jukebox uses YouTube embedded players to play YouTube-hosted tracks. By using
+            Jukebox, you acknowledge and agree to be bound by the{" "}
+            <a
+              href="https://www.youtube.com/t/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground underline hover:text-primary transition-colors"
+            >
+              YouTube Terms of Service
+            </a>
+            . Information collected by the embedded YouTube player is governed by the{" "}
+            <a
+              href="https://policies.google.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground underline hover:text-primary transition-colors"
+            >
+              Google Privacy Policy
+            </a>
+            . YouTube and Google may collect information such as your IP address, device
+            identifiers, browser characteristics, viewing activity, and cookies in order to
+            deliver and measure the embedded player. This data is collected directly by Google
+            and is not under Jukebox's control. You can manage data Google has associated with
+            your account at{" "}
+            <a
+              href="https://myaccount.google.com/permissions"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground underline hover:text-primary transition-colors"
+            >
+              myaccount.google.com/permissions
+            </a>
+            .
+          </p>
+          <p className="font-semibold text-foreground mb-2">SoundCloud:</p>
+          <p>
+            Jukebox uses the SoundCloud Widget API to play SoundCloud-hosted tracks. When a
+            SoundCloud track is loaded, your browser communicates directly with SoundCloud and
+            SoundCloud may collect information such as your IP address, device characteristics,
+            and playback events under their own policies. This data is collected directly by
+            SoundCloud and is not under Jukebox's control. SoundCloud's data practices are
+            described in the{" "}
+            <a
+              href="https://soundcloud.com/pages/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground underline hover:text-primary transition-colors"
+            >
+              SoundCloud Privacy Policy
+            </a>
+            , and use of SoundCloud's services is governed by the{" "}
+            <a
+              href="https://soundcloud.com/terms-of-use"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground underline hover:text-primary transition-colors"
+            >
+              SoundCloud Terms of Use
+            </a>
+            . Jukebox does not store SoundCloud audio on our servers; we only store the track
+            URL, title, and artist metadata necessary to embed the player.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-lg font-semibold text-foreground mb-3">6. Public Information</h2>
           <p>
             Certain information is visible to other users by design, including your display name,
             stage name, and profile avatar; your activity in rooms such as chat messages, reactions,
@@ -71,7 +139,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-foreground mb-3">6. Data Retention</h2>
+          <h2 className="text-lg font-semibold text-foreground mb-3">7. Data Retention</h2>
           <p>
             We retain your account information for as long as your account is active. Chat messages
             are retained for the duration of a room session and may be stored for a limited period
@@ -81,7 +149,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-foreground mb-3">7. Data Security</h2>
+          <h2 className="text-lg font-semibold text-foreground mb-3">8. Data Security</h2>
           <p>
             We implement appropriate technical and organizational measures to protect your
             information, including encryption in transit via HTTPS/TLS, secure password hashing
@@ -92,16 +160,19 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-foreground mb-3">8. Cookies</h2>
+          <h2 className="text-lg font-semibold text-foreground mb-3">9. Cookies</h2>
           <p>
             We use essential cookies for authentication and session management. These are strictly
             necessary for the Service to function and cannot be disabled. We do not use advertising
-            or tracking cookies. We do not serve ads on Jukebox.
+            or tracking cookies, and we do not serve ads on Jukebox. Note that the embedded YouTube
+            and SoundCloud players may set their own cookies and similar storage when you play a
+            track from those platforms; those cookies are controlled by Google and SoundCloud
+            respectively under their own privacy policies (see Section 5).
           </p>
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-foreground mb-3">9. Your Rights</h2>
+          <h2 className="text-lg font-semibold text-foreground mb-3">10. Your Rights</h2>
           <p>
             Depending on your location, you may have the right to access the personal information
             we hold about you; request correction of inaccurate information; request deletion of
@@ -112,7 +183,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-foreground mb-3">10. Children's Privacy</h2>
+          <h2 className="text-lg font-semibold text-foreground mb-3">11. Children's Privacy</h2>
           <p>
             The Service is not intended for children under 13 years of age. We do not knowingly
             collect personal information from children under 13. If we become aware that a child
@@ -121,7 +192,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-foreground mb-3">11. Changes to This Policy</h2>
+          <h2 className="text-lg font-semibold text-foreground mb-3">12. Changes to This Policy</h2>
           <p>
             We may update this Privacy Policy from time to time. When we do, we will revise the
             "Last updated" date at the top of this page. We encourage you to review this page
@@ -130,7 +201,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-foreground mb-3">12. Contact</h2>
+          <h2 className="text-lg font-semibold text-foreground mb-3">13. Contact</h2>
           <p>
             If you have questions about this Privacy Policy or wish to exercise your data rights,
             please visit our{" "}

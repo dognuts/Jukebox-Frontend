@@ -223,7 +223,10 @@ export function AudioEngine({
   switch (track.source) {
     case "youtube":
       if (!track.videoId) return null
-      // YouTube: show the official embed when visible=true
+      // YouTube: show the official embed inline when visible=true.
+      // When visible=false (mini-player / background playback), still render
+      // the iframe at a small but visible size in a fixed corner — YouTube ToS
+      // requires the embed to be visible, never hidden via display:none.
       return visible ? (
         <div className="w-full">
           <YouTubePlayer
@@ -236,7 +239,11 @@ export function AudioEngine({
           />
         </div>
       ) : (
-        <div className="hidden">
+        <div
+          className="fixed bottom-20 right-3 z-40 w-[200px] overflow-hidden rounded-lg shadow-lg sm:bottom-24 sm:right-4 sm:w-[240px]"
+          style={{ border: "1px solid oklch(0.30 0.04 280 / 0.5)" }}
+          aria-label="YouTube background player"
+        >
           <YouTubePlayer
             ref={playerRef}
             videoId={track.videoId}

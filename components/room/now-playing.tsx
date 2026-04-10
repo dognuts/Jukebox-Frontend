@@ -5,6 +5,7 @@ import { Volume2, VolumeX, SkipForward, Pause, Play, Mic } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { type Track, formatDuration } from "@/lib/mock-data"
+import { soundcloudProfileUrl } from "@/lib/track-utils"
 import { VinylSpinner } from "@/components/effects/vinyl-spinner"
 import { AudioVisualizer } from "./audio-visualizer"
 import { SaveTrackMenu } from "./save-track-menu"
@@ -146,6 +147,13 @@ export function NowPlaying({
 
   const progressPercent = track.duration > 0 ? (progress / track.duration) * 100 : 0
 
+  // SoundCloud attribution: link the artist name to their profile and the
+  // title to the track URL when the track is hosted on SoundCloud, per the
+  // SoundCloud API Terms of Use.
+  const isSoundCloud = track.source === "soundcloud"
+  const scProfileUrl = isSoundCloud ? soundcloudProfileUrl(soundCloudUrl ?? track.sourceUrl) : null
+  const scTrackUrl = isSoundCloud ? (soundCloudUrl ?? track.sourceUrl) : null
+
   return (
     <div className="flex flex-col gap-6">
       {/* Vinyl + track info */}
@@ -164,7 +172,18 @@ export function NowPlaying({
           <div className="text-center lg:text-left">
             <div className="flex items-start justify-center gap-1.5 lg:justify-start">
               <h2 className="font-sans text-2xl font-bold tracking-tight text-foreground sm:text-3xl text-balance leading-tight">
-                {track.title}
+                {scTrackUrl ? (
+                  <a
+                    href={scTrackUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-primary transition-colors"
+                  >
+                    {track.title}
+                  </a>
+                ) : (
+                  track.title
+                )}
               </h2>
               <SaveTrackMenu track={track} size={18} />
             </div>
@@ -172,7 +191,18 @@ export function NowPlaying({
               className="mt-2 font-sans text-base font-medium"
               style={{ color: "oklch(0.82 0.16 80)" }}
             >
-              {track.artist}
+              {scProfileUrl ? (
+                <a
+                  href={scProfileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:underline"
+                >
+                  {track.artist}
+                </a>
+              ) : (
+                track.artist
+              )}
             </p>
             <p className="mt-1 font-sans text-xs text-muted-foreground">
               Queued by{" "}
