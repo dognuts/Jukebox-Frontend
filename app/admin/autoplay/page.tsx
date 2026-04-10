@@ -5,7 +5,7 @@ import Link from "next/link"
 import {
   Shield, ArrowLeft, ChevronRight, Radio, Plus, Trash2, Play, Pause,
   GripVertical, Loader2, Check, RotateCcw, Zap, Music, ArrowUp, ArrowDown,
-  Upload, X, Pencil,
+  Upload, X, Pencil, Link as LinkIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -81,9 +81,15 @@ export default function AdminAutoplayPage() {
   const [savingCover, setSavingCover] = useState(false)
   const [coverDragOver, setCoverDragOver] = useState(false)
 
-  // Live playlist info-snippet editor (in-place; does not touch tracks/order)
+  // Live playlist editor — in-place edit of the LIVE tracklist (add, remove,
+  // replace URL, reorder, snippet). Saved via the live/tracks endpoint.
   const [liveTracks, setLiveTracks] = useState<AutoplayTrack[]>([])
-  const [savingLiveSnippets, setSavingLiveSnippets] = useState(false)
+  const [savingLiveTracks, setSavingLiveTracks] = useState(false)
+  const [liveTrackUrl, setLiveTrackUrl] = useState("")
+  const [addingLiveTrack, setAddingLiveTrack] = useState(false)
+  const [replacingLiveIdx, setReplacingLiveIdx] = useState<number | null>(null)
+  const [replaceLiveUrl, setReplaceLiveUrl] = useState("")
+  const [resolvingReplace, setResolvingReplace] = useState(false)
 
   // Staged playlist editor
   const [stagedName, setStagedName] = useState("")
@@ -200,41 +206,47 @@ export default function AdminAutoplayPage() {
     setCreating(false)
   }
 
-  // Add track by URL
+  // Resolve a pasted URL into an AutoplayTrack via noembed (best-effort).
+  // Used by both staged and live add/replace flows.
+  const resolveTrack = async (rawUrl: string): Promise<AutoplayTrack> => {
+    let title = "Unknown Track"
+    let artist = "Unknown Artist"
+    let source = "youtube"
+    const url = rawUrl.trim()
+
+    if (url.includes("soundcloud.com")) source = "soundcloud"
+    else if (!url.includes("youtube") && !url.includes("youtu.be")) source = "mp3"
+
+    try {
+      const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data.title) {
+          const parts = data.title.split(" - ")
+          if (parts.length >= 2) {
+            artist = parts[0].trim()
+            title = parts.slice(1).join(" - ").trim()
+          } else {
+            title = data.title
+            artist = data.author_name || "Unknown Artist"
+          }
+        }
+      }
+    } catch {}
+
+    return {
+      title, artist, duration: 0, source, sourceUrl: url,
+      albumGradient: `linear-gradient(135deg, oklch(${0.3 + Math.random() * 0.2} ${0.1 + Math.random() * 0.1} ${Math.floor(Math.random() * 360)}), oklch(${0.2 + Math.random() * 0.15} ${0.1 + Math.random() * 0.1} ${Math.floor(Math.random() * 360)}))`,
+    }
+  }
+
+  // Add track to STAGED playlist by URL
   const handleAddTrack = async () => {
     if (!trackUrl.trim()) return
     setAddingTrack(true)
     try {
-      // Try to resolve metadata via noembed
-      let title = "Unknown Track"
-      let artist = "Unknown Artist"
-      let source = "youtube"
-      const url = trackUrl.trim()
-
-      if (url.includes("soundcloud.com")) source = "soundcloud"
-      else if (!url.includes("youtube") && !url.includes("youtu.be")) source = "mp3"
-
-      try {
-        const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`)
-        if (res.ok) {
-          const data = await res.json()
-          if (data.title) {
-            const parts = data.title.split(" - ")
-            if (parts.length >= 2) {
-              artist = parts[0].trim()
-              title = parts.slice(1).join(" - ").trim()
-            } else {
-              title = data.title
-              artist = data.author_name || "Unknown Artist"
-            }
-          }
-        }
-      } catch {}
-
-      setStagedTracks((prev) => [...prev, {
-        title, artist, duration: 0, source, sourceUrl: url,
-        albumGradient: `linear-gradient(135deg, oklch(${0.3 + Math.random() * 0.2} ${0.1 + Math.random() * 0.1} ${Math.floor(Math.random() * 360)}), oklch(${0.2 + Math.random() * 0.15} ${0.1 + Math.random() * 0.1} ${Math.floor(Math.random() * 360)}))`,
-      }])
+      const track = await resolveTrack(trackUrl)
+      setStagedTracks((prev) => [...prev, track])
       setTrackUrl("")
     } catch {}
     setAddingTrack(false)
@@ -254,23 +266,82 @@ export default function AdminAutoplayPage() {
     })
   }
 
-  // Save info snippets on the LIVE playlist (in-place edit, no track reorder)
-  const handleSaveLiveSnippets = async () => {
-    if (!selectedRoom) return
-    setSavingLiveSnippets(true)
+  // ─── LIVE playlist in-place editing ───────────────────────────────────────
+
+  // Add a track to the LIVE playlist (queued in local state until Save)
+  const handleAddLiveTrack = async () => {
+    if (!liveTrackUrl.trim()) return
+    setAddingLiveTrack(true)
     try {
-      const snippets = liveTracks.map((t) => t.infoSnippet || "")
-      await authRequest(`/api/admin/autoplay/rooms/${selectedRoom.id}/live/snippets`, {
-        method: "PATCH",
-        body: JSON.stringify({ snippets }),
+      const track = await resolveTrack(liveTrackUrl)
+      setLiveTracks((prev) => [...prev, track])
+      setLiveTrackUrl("")
+    } catch {}
+    setAddingLiveTrack(false)
+  }
+
+  const removeLiveTrack = (index: number) => {
+    setLiveTracks((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const moveLiveTrack = (index: number, direction: -1 | 1) => {
+    setLiveTracks((prev) => {
+      const next = [...prev]
+      const newIdx = index + direction
+      if (newIdx < 0 || newIdx >= next.length) return prev;
+      [next[index], next[newIdx]] = [next[newIdx], next[index]]
+      return next
+    })
+  }
+
+  // Begin replacing a track's URL — opens the inline input pre-filled
+  const beginReplaceLiveUrl = (index: number) => {
+    setReplacingLiveIdx(index)
+    setReplaceLiveUrl(liveTracks[index]?.sourceUrl || "")
+  }
+
+  const cancelReplaceLiveUrl = () => {
+    setReplacingLiveIdx(null)
+    setReplaceLiveUrl("")
+  }
+
+  // Confirm URL replacement — re-resolves metadata for the new URL while
+  // preserving the existing snippet so admin notes don't get clobbered.
+  const confirmReplaceLiveUrl = async () => {
+    if (replacingLiveIdx === null || !replaceLiveUrl.trim()) return
+    setResolvingReplace(true)
+    try {
+      const fresh = await resolveTrack(replaceLiveUrl)
+      setLiveTracks((prev) => prev.map((t, i) => i === replacingLiveIdx ? {
+        ...fresh,
+        infoSnippet: t.infoSnippet || fresh.infoSnippet,
+      } : t))
+      cancelReplaceLiveUrl()
+    } catch {}
+    setResolvingReplace(false)
+  }
+
+  // Save the LIVE tracklist in place. Preserves currently-playing audio:
+  // the backend reconciles current_index against the now-playing source URL
+  // so the next auto-advance picks the right next track.
+  const handleSaveLiveTracks = async () => {
+    if (!selectedRoom) return
+    if (liveTracks.length === 0) {
+      alert("Live playlist cannot be empty. Use Stop to take the room offline.")
+      return
+    }
+    setSavingLiveTracks(true)
+    try {
+      await authRequest(`/api/admin/autoplay/rooms/${selectedRoom.id}/live/tracks`, {
+        method: "PUT",
+        body: JSON.stringify({ tracks: liveTracks }),
       })
-      // Reload to confirm persisted state
       await loadPlaylists(selectedRoom.id)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      alert(`Failed to save snippets: ${msg}`)
+      alert(`Failed to save live tracks: ${msg}`)
     }
-    setSavingLiveSnippets(false)
+    setSavingLiveTracks(false)
   }
 
   // Save staged playlist
@@ -593,64 +664,147 @@ export default function AdminAutoplayPage() {
                 </div>
               )}
 
-              {/* Live info-snippet editor — edit blurbs on the LIVE playlist
-                  in place. Track titles/order are read-only here; use the
-                  staged editor below if you need to change anything else. */}
-              {livePlaylist && liveTracks.length > 0 && (
+              {/* Live tracks editor — edit the LIVE tracklist in place. Add,
+                  remove, replace a track's URL, reorder, edit metadata, or
+                  edit info snippets. The currently-playing track keeps
+                  playing the audio it already loaded; the backend reconciles
+                  current_index against its source URL so the next auto-
+                  advance picks the right next track. */}
+              {livePlaylist && (
                 <div className="mb-4 rounded-xl p-4" style={{ background: "oklch(0.13 0.015 280 / 0.6)", border: "1px solid oklch(0.25 0.02 280 / 0.4)" }}>
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-sans text-sm font-semibold text-foreground">Live Track Info Snippets</h3>
+                    <h3 className="font-sans text-sm font-semibold text-foreground">Edit Live Tracks</h3>
                     <span className="font-mono text-[10px] text-muted-foreground">{liveTracks.length} tracks</span>
                   </div>
                   <p className="font-sans text-[10px] text-muted-foreground mb-3">
-                    Edit the blurb shown to listeners while each track plays. The track currently on air updates instantly when you save.
+                    Add, remove, or swap a song's URL on the live playlist. The currently-playing track keeps playing — your changes take effect on the next track advance.
                   </p>
 
-                  <div className="space-y-2 mb-3 max-h-[28rem] overflow-y-auto pr-1">
-                    {liveTracks.map((track, i) => {
-                      const isCurrent = i === (livePlaylist.currentIndex % liveTracks.length)
-                      return (
-                        <div
-                          key={i}
-                          className="rounded-lg px-2 py-1.5"
-                          style={{
-                            background: isCurrent ? "oklch(0.16 0.04 150 / 0.25)" : "transparent",
-                            border: isCurrent ? "1px solid oklch(0.55 0.15 150 / 0.4)" : "1px solid transparent",
-                          }}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-[10px] text-muted-foreground/50 w-5 text-right">{i + 1}</span>
-                            <div
-                              className="h-7 w-7 shrink-0 rounded-md"
-                              style={{ background: track.albumGradient || "oklch(0.25 0.05 280)" }}
-                            />
-                            <div className="flex-1 min-w-0">
-                              <p className="truncate font-sans text-xs font-medium text-foreground">{track.title}</p>
-                              <p className="truncate font-sans text-[10px] text-muted-foreground">{track.artist}</p>
+                  {/* Add a track to live */}
+                  <div className="flex gap-2 mb-3">
+                    <Input
+                      value={liveTrackUrl}
+                      onChange={(e) => setLiveTrackUrl(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAddLiveTrack()}
+                      placeholder="Paste YouTube, SoundCloud, or audio URL..."
+                      className="flex-1 rounded-lg bg-muted/20 text-sm"
+                      disabled={addingLiveTrack}
+                    />
+                    <Button size="sm" onClick={handleAddLiveTrack} disabled={addingLiveTrack || !liveTrackUrl.trim()} className="rounded-lg gap-1.5">
+                      {addingLiveTrack ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                      Add
+                    </Button>
+                  </div>
+
+                  {/* Live track list */}
+                  <div className="space-y-1 mb-3 max-h-[28rem] overflow-y-auto pr-1">
+                    {liveTracks.length === 0 ? (
+                      <p className="py-6 text-center font-sans text-xs text-muted-foreground">
+                        No tracks — paste a URL above to add one
+                      </p>
+                    ) : (
+                      liveTracks.map((track, i) => {
+                        const isCurrent = i === (livePlaylist.currentIndex % Math.max(liveTracks.length, 1))
+                        const isReplacing = replacingLiveIdx === i
+                        return (
+                          <div
+                            key={i}
+                            className="rounded-lg px-2 py-1.5 group hover:bg-muted/10"
+                            style={{
+                              background: isCurrent ? "oklch(0.16 0.04 150 / 0.25)" : undefined,
+                              border: isCurrent ? "1px solid oklch(0.55 0.15 150 / 0.4)" : "1px solid transparent",
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-[10px] text-muted-foreground/50 w-5 text-right">{i + 1}</span>
+                              <div
+                                className="h-7 w-7 shrink-0 rounded-md"
+                                style={{ background: track.albumGradient || "oklch(0.25 0.05 280)" }}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <input
+                                  className="truncate font-sans text-xs font-medium text-foreground bg-transparent w-full outline-none focus:bg-muted/20 rounded px-1 -ml-1"
+                                  value={track.title}
+                                  onChange={(e) => setLiveTracks((prev) => prev.map((t, j) => j === i ? { ...t, title: e.target.value } : t))}
+                                />
+                                <input
+                                  className="truncate font-sans text-[10px] text-muted-foreground bg-transparent w-full outline-none focus:bg-muted/20 rounded px-1 -ml-1"
+                                  value={track.artist}
+                                  onChange={(e) => setLiveTracks((prev) => prev.map((t, j) => j === i ? { ...t, artist: e.target.value } : t))}
+                                />
+                              </div>
+                              <input
+                                type="number"
+                                className="w-12 font-mono text-[10px] text-muted-foreground bg-transparent outline-none focus:bg-muted/20 rounded px-1 text-right"
+                                value={track.duration || ""}
+                                onChange={(e) => setLiveTracks((prev) => prev.map((t, j) => j === i ? { ...t, duration: parseInt(e.target.value) || 0 } : t))}
+                                placeholder="sec"
+                                title="Duration in seconds"
+                              />
+                              {isCurrent && (
+                                <span className="font-sans text-[9px] font-semibold uppercase tracking-wide rounded px-1.5 py-0.5 shrink-0" style={{ color: "oklch(0.65 0.18 150)", background: "oklch(0.16 0.04 150 / 0.4)" }}>
+                                  On Air
+                                </span>
+                              )}
+                              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onClick={() => beginReplaceLiveUrl(i)} className="p-1 rounded hover:bg-muted/20" title="Replace URL">
+                                  <LinkIcon className="h-3 w-3 text-muted-foreground" />
+                                </button>
+                                <button onClick={() => moveLiveTrack(i, -1)} disabled={i === 0} className="p-1 rounded hover:bg-muted/20 disabled:opacity-20" title="Move up">
+                                  <ArrowUp className="h-3 w-3 text-muted-foreground" />
+                                </button>
+                                <button onClick={() => moveLiveTrack(i, 1)} disabled={i === liveTracks.length - 1} className="p-1 rounded hover:bg-muted/20 disabled:opacity-20" title="Move down">
+                                  <ArrowDown className="h-3 w-3 text-muted-foreground" />
+                                </button>
+                                <button onClick={() => removeLiveTrack(i)} className="p-1 rounded hover:bg-red-500/20" title="Remove">
+                                  <Trash2 className="h-3 w-3" style={{ color: "oklch(0.60 0.20 25)" }} />
+                                </button>
+                              </div>
                             </div>
-                            {isCurrent && (
-                              <span className="font-sans text-[9px] font-semibold uppercase tracking-wide rounded px-1.5 py-0.5" style={{ color: "oklch(0.65 0.18 150)", background: "oklch(0.16 0.04 150 / 0.4)" }}>
-                                On Air
-                              </span>
+
+                            {/* Inline URL replacer */}
+                            {isReplacing && (
+                              <div className="mt-1.5 ml-7 flex gap-1.5">
+                                <Input
+                                  value={replaceLiveUrl}
+                                  onChange={(e) => setReplaceLiveUrl(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") confirmReplaceLiveUrl()
+                                    if (e.key === "Escape") cancelReplaceLiveUrl()
+                                  }}
+                                  placeholder="New track URL"
+                                  className="flex-1 h-7 rounded-md bg-muted/20 text-[11px]"
+                                  autoFocus
+                                />
+                                <Button size="sm" onClick={confirmReplaceLiveUrl} disabled={resolvingReplace || !replaceLiveUrl.trim()} className="h-7 rounded-md text-[10px] gap-1">
+                                  {resolvingReplace ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                                  Replace
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={cancelReplaceLiveUrl} className="h-7 rounded-md text-[10px]">
+                                  Cancel
+                                </Button>
+                              </div>
                             )}
+
+                            {/* Snippet textarea */}
+                            <textarea
+                              value={track.infoSnippet || ""}
+                              onChange={(e) => setLiveTracks((prev) => prev.map((t, j) => j === i ? { ...t, infoSnippet: e.target.value } : t))}
+                              placeholder="Optional info blurb shown to listeners while this track plays…"
+                              rows={2}
+                              maxLength={500}
+                              className="mt-1.5 ml-7 w-[calc(100%-1.75rem)] resize-y rounded-md bg-muted/15 px-2 py-1.5 font-sans text-[11px] text-muted-foreground outline-none focus:bg-muted/25 focus:text-foreground border border-transparent focus:border-border/40"
+                            />
                           </div>
-                          <textarea
-                            value={track.infoSnippet || ""}
-                            onChange={(e) => setLiveTracks((prev) => prev.map((t, j) => j === i ? { ...t, infoSnippet: e.target.value } : t))}
-                            placeholder="Optional info blurb shown to listeners while this track plays…"
-                            rows={2}
-                            maxLength={500}
-                            className="mt-1.5 ml-7 w-[calc(100%-1.75rem)] resize-y rounded-md bg-muted/15 px-2 py-1.5 font-sans text-[11px] text-muted-foreground outline-none focus:bg-muted/25 focus:text-foreground border border-transparent focus:border-border/40"
-                          />
-                        </div>
-                      )
-                    })}
+                        )
+                      })
+                    )}
                   </div>
 
                   <div className="flex justify-end">
-                    <Button size="sm" onClick={handleSaveLiveSnippets} disabled={savingLiveSnippets} className="gap-1.5 rounded-lg text-xs">
-                      {savingLiveSnippets ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                      Save Live Snippets
+                    <Button size="sm" onClick={handleSaveLiveTracks} disabled={savingLiveTracks || liveTracks.length === 0} className="gap-1.5 rounded-lg text-xs">
+                      {savingLiveTracks ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                      Save Live Tracks
                     </Button>
                   </div>
                 </div>
