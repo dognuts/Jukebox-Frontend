@@ -476,6 +476,15 @@
   box-shadow: 0 12px 40px oklch(0.82 0.18 80 / 0.2), 0 0 60px oklch(0.82 0.18 80 / 0.08);
 }
 
+.room-card-tilt {
+  transform: translateZ(0);
+  transition: transform 0.4s ease-out;
+}
+
+.room-card-tilt:hover {
+  transition: transform 0.1s ease-out;
+}
+
 /* Scroll-triggered fade-in animations */
 @keyframes fade-in-up {
   from {

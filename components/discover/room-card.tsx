@@ -44,7 +44,6 @@ export function RoomCard({ room }: { room: Room }) {
   const rafRef = useRef<number | null>(null)
   const rectRef = useRef<DOMRect | null>(null)
   const pendingPos = useRef<{ x: number; y: number } | null>(null)
-  const [hovering, setHovering] = useState(false)
   const { requestStatus } = useRoomStatus(room.id)
   const { isFavorite, toggleFavorite } = useFavorites()
   const [reminderSet, setReminderSet] = useState(false)
@@ -53,21 +52,16 @@ export function RoomCard({ room }: { room: Room }) {
 
   const isUpcoming = !!room.scheduledStart && !room.isLive
 
-  const handleMouseEnter = useCallback(() => {
-    setHovering(true)
-    // Cache rect once per hover session instead of reading on every mousemove
-    rectRef.current = cardRef.current?.getBoundingClientRect() ?? null
-  }, [])
-
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     pendingPos.current = { x: e.clientX, y: e.clientY }
     if (rafRef.current !== null) return
     rafRef.current = requestAnimationFrame(() => {
       rafRef.current = null
       const card = cardRef.current
-      const rect = rectRef.current
       const pos = pendingPos.current
-      if (!card || !rect || !pos) return
+      if (!card || !pos) return
+      if (!rectRef.current) rectRef.current = card.getBoundingClientRect()
+      const rect = rectRef.current
       const nx = (pos.x - rect.left) / rect.width - 0.5
       const ny = (pos.y - rect.top) / rect.height - 0.5
       const tiltX = ny * -8
@@ -86,7 +80,6 @@ export function RoomCard({ room }: { room: Room }) {
     rectRef.current = null
     const card = cardRef.current
     if (card) card.style.transform = ""
-    setHovering(false)
   }, [])
 
   useEffect(() => {
@@ -99,17 +92,10 @@ export function RoomCard({ room }: { room: Room }) {
     <Link href={`/room/${room.slug}`}>
       <div
         ref={cardRef}
-        className="group relative cursor-pointer card-hover-effect card-shine"
+        className="group relative cursor-pointer card-shine room-card-tilt"
         onMouseMove={handleMouseMove}
-        onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        style={{
-          perspective: "800px",
-          willChange: hovering ? "transform" : undefined,
-          transition: hovering
-            ? "transform 0.1s ease-out"
-            : "transform 0.4s ease-out",
-        }}
+        style={{ perspective: "800px" }}
       >
         {/* Jukebox outer chrome frame */}
         <div
@@ -132,7 +118,7 @@ export function RoomCard({ room }: { room: Room }) {
             />
 
             {/* Bubble tubes on left and right */}
-            <div className="absolute left-1.5 top-8 bottom-0 z-20 w-3 flex flex-col items-center overflow-hidden" style={{ opacity: hovering ? 1 : 0.4, transition: "opacity 0.5s ease" }}>
+            <div className="absolute left-1.5 top-8 bottom-0 z-20 w-3 flex flex-col items-center overflow-hidden opacity-40 group-hover:opacity-100 transition-opacity duration-500">
               {[0, 1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
@@ -151,7 +137,7 @@ export function RoomCard({ room }: { room: Room }) {
                 />
               ))}
             </div>
-            <div className="absolute right-1.5 top-8 bottom-0 z-20 w-3 flex flex-col items-center overflow-hidden" style={{ opacity: hovering ? 1 : 0.4, transition: "opacity 0.5s ease" }}>
+            <div className="absolute right-1.5 top-8 bottom-0 z-20 w-3 flex flex-col items-center overflow-hidden opacity-40 group-hover:opacity-100 transition-opacity duration-500">
               {[0, 1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
@@ -437,12 +423,11 @@ export function RoomCard({ room }: { room: Room }) {
 
         {/* Shadow / glow under jukebox */}
         <div
-          className="absolute -bottom-2 left-4 right-4 h-4 rounded-full transition-opacity duration-500"
+          className="absolute -bottom-2 left-4 right-4 h-4 rounded-full opacity-50 group-hover:opacity-100 transition-opacity duration-500"
           style={{
             background: room.isLive
               ? "radial-gradient(ellipse, oklch(0.82 0.18 80 / 0.15), transparent 70%)"
               : "radial-gradient(ellipse, oklch(0.20 0.01 280 / 0.3), transparent 70%)",
-            opacity: hovering ? 1 : 0.5,
             filter: "blur(4px)",
           }}
         />
