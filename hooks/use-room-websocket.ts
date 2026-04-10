@@ -193,6 +193,18 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
           })
           break
 
+        case "track_info_updated": {
+          // In-place patch of the currently playing track's info snippet —
+          // does NOT advance history or reset playback state.
+          const patch = msg.payload as { id: string; infoSnippet: string } | null
+          if (!patch) break
+          setState((s) => {
+            if (!s.currentTrack || s.currentTrack.id !== patch.id) return s
+            return { ...s, currentTrack: { ...s.currentTrack, infoSnippet: patch.infoSnippet } }
+          })
+          break
+        }
+
         case "queue_update":
           setState((s) => ({ ...s, queue: (msg.payload as APIQueueEntry[]) || [] }))
           break

@@ -81,6 +81,10 @@ export default function AdminAutoplayPage() {
   const [savingCover, setSavingCover] = useState(false)
   const [coverDragOver, setCoverDragOver] = useState(false)
 
+  // Live playlist info-snippet editor (in-place; does not touch tracks/order)
+  const [liveTracks, setLiveTracks] = useState<AutoplayTrack[]>([])
+  const [savingLiveSnippets, setSavingLiveSnippets] = useState(false)
+
   // Staged playlist editor
   const [stagedName, setStagedName] = useState("")
   const [stagedTracks, setStagedTracks] = useState<AutoplayTrack[]>([])
@@ -114,7 +118,9 @@ export default function AdminAutoplayPage() {
         setStagedName("")
         setStagedTracks([])
       }
-    } catch { setPlaylists([]) }
+      const live = (data || []).find((p) => p.status === "live")
+      setLiveTracks(live?.tracks || [])
+    } catch { setPlaylists([]); setLiveTracks([]) }
   }, [])
 
   const selectRoom = (room: AutoplayRoom) => {
@@ -246,6 +252,25 @@ export default function AdminAutoplayPage() {
       [next[index], next[newIdx]] = [next[newIdx], next[index]]
       return next
     })
+  }
+
+  // Save info snippets on the LIVE playlist (in-place edit, no track reorder)
+  const handleSaveLiveSnippets = async () => {
+    if (!selectedRoom) return
+    setSavingLiveSnippets(true)
+    try {
+      const snippets = liveTracks.map((t) => t.infoSnippet || "")
+      await authRequest(`/api/admin/autoplay/rooms/${selectedRoom.id}/live/snippets`, {
+        method: "PATCH",
+        body: JSON.stringify({ snippets }),
+      })
+      // Reload to confirm persisted state
+      await loadPlaylists(selectedRoom.id)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      alert(`Failed to save snippets: ${msg}`)
+    }
+    setSavingLiveSnippets(false)
   }
 
   // Save staged playlist
@@ -536,6 +561,69 @@ export default function AdminAutoplayPage() {
                     <span className="font-mono text-[10px] text-muted-foreground">
                       {livePlaylist.tracks.length} tracks · Position {livePlaylist.currentIndex + 1}/{livePlaylist.tracks.length}
                     </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Live info-snippet editor — edit blurbs on the LIVE playlist
+                  in place. Track titles/order are read-only here; use the
+                  staged editor below if you need to change anything else. */}
+              {livePlaylist && liveTracks.length > 0 && (
+                <div className="mb-4 rounded-xl p-4" style={{ background: "oklch(0.13 0.015 280 / 0.6)", border: "1px solid oklch(0.25 0.02 280 / 0.4)" }}>
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-sans text-sm font-semibold text-foreground">Live Track Info Snippets</h3>
+                    <span className="font-mono text-[10px] text-muted-foreground">{liveTracks.length} tracks</span>
+                  </div>
+                  <p className="font-sans text-[10px] text-muted-foreground mb-3">
+                    Edit the blurb shown to listeners while each track plays. The track currently on air updates instantly when you save.
+                  </p>
+
+                  <div className="space-y-2 mb-3 max-h-[28rem] overflow-y-auto pr-1">
+                    {liveTracks.map((track, i) => {
+                      const isCurrent = i === (livePlaylist.currentIndex % liveTracks.length)
+                      return (
+                        <div
+                          key={i}
+                          className="rounded-lg px-2 py-1.5"
+                          style={{
+                            background: isCurrent ? "oklch(0.16 0.04 150 / 0.25)" : "transparent",
+                            border: isCurrent ? "1px solid oklch(0.55 0.15 150 / 0.4)" : "1px solid transparent",
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-[10px] text-muted-foreground/50 w-5 text-right">{i + 1}</span>
+                            <div
+                              className="h-7 w-7 shrink-0 rounded-md"
+                              style={{ background: track.albumGradient || "oklch(0.25 0.05 280)" }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="truncate font-sans text-xs font-medium text-foreground">{track.title}</p>
+                              <p className="truncate font-sans text-[10px] text-muted-foreground">{track.artist}</p>
+                            </div>
+                            {isCurrent && (
+                              <span className="font-sans text-[9px] font-semibold uppercase tracking-wide rounded px-1.5 py-0.5" style={{ color: "oklch(0.65 0.18 150)", background: "oklch(0.16 0.04 150 / 0.4)" }}>
+                                On Air
+                              </span>
+                            )}
+                          </div>
+                          <textarea
+                            value={track.infoSnippet || ""}
+                            onChange={(e) => setLiveTracks((prev) => prev.map((t, j) => j === i ? { ...t, infoSnippet: e.target.value } : t))}
+                            placeholder="Optional info blurb shown to listeners while this track plays…"
+                            rows={2}
+                            maxLength={500}
+                            className="mt-1.5 ml-7 w-[calc(100%-1.75rem)] resize-y rounded-md bg-muted/15 px-2 py-1.5 font-sans text-[11px] text-muted-foreground outline-none focus:bg-muted/25 focus:text-foreground border border-transparent focus:border-border/40"
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button size="sm" onClick={handleSaveLiveSnippets} disabled={savingLiveSnippets} className="gap-1.5 rounded-lg text-xs">
+                      {savingLiveSnippets ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                      Save Live Snippets
+                    </Button>
                   </div>
                 </div>
               )}
