@@ -21,6 +21,7 @@ interface AutoplayTrack {
   source: string
   sourceUrl: string
   albumGradient?: string
+  infoSnippet?: string
 }
 
 interface AutoplayPlaylist {
@@ -580,43 +581,54 @@ export default function AdminAutoplayPage() {
                     </p>
                   ) : (
                     stagedTracks.map((track, i) => (
-                      <div key={i} className="flex items-center gap-2 rounded-lg px-2 py-1.5 group hover:bg-muted/10">
-                        <span className="font-mono text-[10px] text-muted-foreground/50 w-5 text-right">{i + 1}</span>
-                        <div
-                          className="h-7 w-7 shrink-0 rounded-md"
-                          style={{ background: track.albumGradient || "oklch(0.25 0.05 280)" }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <input
-                            className="truncate font-sans text-xs font-medium text-foreground bg-transparent w-full outline-none focus:bg-muted/20 rounded px-1 -ml-1"
-                            value={track.title}
-                            onChange={(e) => setStagedTracks((prev) => prev.map((t, j) => j === i ? { ...t, title: e.target.value } : t))}
+                      <div key={i} className="rounded-lg px-2 py-1.5 group hover:bg-muted/10">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-[10px] text-muted-foreground/50 w-5 text-right">{i + 1}</span>
+                          <div
+                            className="h-7 w-7 shrink-0 rounded-md"
+                            style={{ background: track.albumGradient || "oklch(0.25 0.05 280)" }}
                           />
+                          <div className="flex-1 min-w-0">
+                            <input
+                              className="truncate font-sans text-xs font-medium text-foreground bg-transparent w-full outline-none focus:bg-muted/20 rounded px-1 -ml-1"
+                              value={track.title}
+                              onChange={(e) => setStagedTracks((prev) => prev.map((t, j) => j === i ? { ...t, title: e.target.value } : t))}
+                            />
+                            <input
+                              className="truncate font-sans text-[10px] text-muted-foreground bg-transparent w-full outline-none focus:bg-muted/20 rounded px-1 -ml-1"
+                              value={track.artist}
+                              onChange={(e) => setStagedTracks((prev) => prev.map((t, j) => j === i ? { ...t, artist: e.target.value } : t))}
+                            />
+                          </div>
                           <input
-                            className="truncate font-sans text-[10px] text-muted-foreground bg-transparent w-full outline-none focus:bg-muted/20 rounded px-1 -ml-1"
-                            value={track.artist}
-                            onChange={(e) => setStagedTracks((prev) => prev.map((t, j) => j === i ? { ...t, artist: e.target.value } : t))}
+                            type="number"
+                            className="w-12 font-mono text-[10px] text-muted-foreground bg-transparent outline-none focus:bg-muted/20 rounded px-1 text-right"
+                            value={track.duration || ""}
+                            onChange={(e) => setStagedTracks((prev) => prev.map((t, j) => j === i ? { ...t, duration: parseInt(e.target.value) || 0 } : t))}
+                            placeholder="sec"
+                            title="Duration in seconds"
                           />
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => moveTrack(i, -1)} disabled={i === 0} className="p-1 rounded hover:bg-muted/20 disabled:opacity-20">
+                              <ArrowUp className="h-3 w-3 text-muted-foreground" />
+                            </button>
+                            <button onClick={() => moveTrack(i, 1)} disabled={i === stagedTracks.length - 1} className="p-1 rounded hover:bg-muted/20 disabled:opacity-20">
+                              <ArrowDown className="h-3 w-3 text-muted-foreground" />
+                            </button>
+                            <button onClick={() => removeTrack(i)} className="p-1 rounded hover:bg-red-500/20">
+                              <Trash2 className="h-3 w-3" style={{ color: "oklch(0.60 0.20 25)" }} />
+                            </button>
+                          </div>
                         </div>
-                        <input
-                          type="number"
-                          className="w-12 font-mono text-[10px] text-muted-foreground bg-transparent outline-none focus:bg-muted/20 rounded px-1 text-right"
-                          value={track.duration || ""}
-                          onChange={(e) => setStagedTracks((prev) => prev.map((t, j) => j === i ? { ...t, duration: parseInt(e.target.value) || 0 } : t))}
-                          placeholder="sec"
-                          title="Duration in seconds"
+                        {/* Info snippet — shown to listeners while this track plays */}
+                        <textarea
+                          value={track.infoSnippet || ""}
+                          onChange={(e) => setStagedTracks((prev) => prev.map((t, j) => j === i ? { ...t, infoSnippet: e.target.value } : t))}
+                          placeholder="Optional info blurb shown to listeners while this track plays…"
+                          rows={2}
+                          maxLength={500}
+                          className="mt-1.5 ml-7 w-[calc(100%-1.75rem)] resize-y rounded-md bg-muted/15 px-2 py-1.5 font-sans text-[11px] text-muted-foreground outline-none focus:bg-muted/25 focus:text-foreground border border-transparent focus:border-border/40"
                         />
-                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => moveTrack(i, -1)} disabled={i === 0} className="p-1 rounded hover:bg-muted/20 disabled:opacity-20">
-                            <ArrowUp className="h-3 w-3 text-muted-foreground" />
-                          </button>
-                          <button onClick={() => moveTrack(i, 1)} disabled={i === stagedTracks.length - 1} className="p-1 rounded hover:bg-muted/20 disabled:opacity-20">
-                            <ArrowDown className="h-3 w-3 text-muted-foreground" />
-                          </button>
-                          <button onClick={() => removeTrack(i)} className="p-1 rounded hover:bg-red-500/20">
-                            <Trash2 className="h-3 w-3" style={{ color: "oklch(0.60 0.20 25)" }} />
-                          </button>
-                        </div>
                       </div>
                     ))
                   )}

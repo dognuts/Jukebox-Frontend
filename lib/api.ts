@@ -97,6 +97,7 @@ export interface APITrack {
   source: "youtube" | "soundcloud" | "mp3"
   sourceUrl: string
   albumGradient: string
+  infoSnippet?: string
 }
 
 export interface APIRoom {
@@ -274,6 +275,7 @@ export function toFrontendRoom(r: APIRoom, nowPlaying?: APITrack | null, queue?:
           sourceUrl: nowPlaying.sourceUrl,
           submittedBy: "DJ",
           albumGradient: nowPlaying.albumGradient || "linear-gradient(135deg, oklch(0.45 0.15 30), oklch(0.35 0.20 350))",
+          infoSnippet: nowPlaying.infoSnippet,
         }
       : {
           id: "placeholder",

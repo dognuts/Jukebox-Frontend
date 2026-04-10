@@ -180,6 +180,20 @@ export function NowPlaying({
                 {track.submittedBy}
               </span>
             </p>
+            {track.infoSnippet && (
+              <div
+                key={track.id}
+                className="mt-3 max-w-md rounded-lg px-3 py-2 text-left animate-in fade-in slide-in-from-bottom-1 duration-300"
+                style={{
+                  background: "oklch(0.14 0.02 280 / 0.6)",
+                  border: "1px solid oklch(0.30 0.04 280 / 0.4)",
+                }}
+              >
+                <p className="font-sans text-[13px] leading-snug text-foreground/90 whitespace-pre-wrap break-words">
+                  {track.infoSnippet}
+                </p>
+              </div>
+            )}
             {soundCloudUrl && (
               <a
                 href={soundCloudUrl}

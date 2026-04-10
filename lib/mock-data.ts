@@ -11,6 +11,7 @@ export interface Track {
   sourceUrl: string
   submittedBy: string
   albumGradient: string // CSS gradient for placeholder art
+  infoSnippet?: string // optional admin-authored blurb shown to listeners
 }
 
 export interface ChatMessage {

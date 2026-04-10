@@ -183,6 +183,7 @@ export default function RoomPage() {
         sourceUrl: ws.currentTrack.sourceUrl,
         submittedBy: "DJ",
         albumGradient: ws.currentTrack.albumGradient || "linear-gradient(135deg, oklch(0.45 0.15 30), oklch(0.35 0.20 350))",
+        infoSnippet: ws.currentTrack.infoSnippet,
       }
     }
     return room?.nowPlaying ?? null
