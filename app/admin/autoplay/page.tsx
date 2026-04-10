@@ -5,6 +5,7 @@ import Link from "next/link"
 import {
   Shield, ArrowLeft, ChevronRight, Radio, Plus, Trash2, Play, Pause,
   GripVertical, Loader2, Check, RotateCcw, Zap, Music, ArrowUp, ArrowDown,
+  Upload, X, Pencil,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -40,6 +41,8 @@ interface AutoplayRoom {
   genre: string
   isLive: boolean
   isAutoplay: boolean
+  coverArt?: string
+  coverGradient?: string
 }
 
 const GRADIENT_PRESETS = [
@@ -69,6 +72,13 @@ export default function AdminAutoplayPage() {
   const [newDesc, setNewDesc] = useState("")
   const [newGradient, setNewGradient] = useState("")
   const [creating, setCreating] = useState(false)
+
+  // Edit room (cover photo + gradient)
+  const [showEditCover, setShowEditCover] = useState(false)
+  const [editCoverArt, setEditCoverArt] = useState<string | null>(null)
+  const [editGradient, setEditGradient] = useState<string>("")
+  const [savingCover, setSavingCover] = useState(false)
+  const [coverDragOver, setCoverDragOver] = useState(false)
 
   // Staged playlist editor
   const [stagedName, setStagedName] = useState("")
@@ -108,7 +118,58 @@ export default function AdminAutoplayPage() {
 
   const selectRoom = (room: AutoplayRoom) => {
     setSelectedRoom(room)
+    setShowEditCover(false)
+    setEditCoverArt(room.coverArt || null)
+    setEditGradient(room.coverGradient || "")
     loadPlaylists(room.id)
+  }
+
+  // Cover art upload (reused pattern from /create page)
+  const handleCoverFile = useCallback((file: File) => {
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file")
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image must be 5MB or smaller")
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = (e) => setEditCoverArt(e.target?.result as string)
+    reader.readAsDataURL(file)
+  }, [])
+
+  const handleCoverDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setCoverDragOver(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) handleCoverFile(file)
+  }, [handleCoverFile])
+
+  const handleSaveCover = async () => {
+    if (!selectedRoom) return
+    setSavingCover(true)
+    try {
+      const updated = await authRequest<AutoplayRoom>(`/api/admin/rooms/${selectedRoom.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          coverArt: editCoverArt ?? "",
+          coverGradient: editGradient,
+        }),
+      })
+      setRooms((prev) => prev.map((r) => r.id === selectedRoom.id
+        ? { ...r, coverArt: updated?.coverArt ?? (editCoverArt ?? ""), coverGradient: updated?.coverGradient ?? editGradient }
+        : r))
+      setSelectedRoom((prev) => prev ? {
+        ...prev,
+        coverArt: updated?.coverArt ?? (editCoverArt ?? ""),
+        coverGradient: updated?.coverGradient ?? editGradient,
+      } : prev)
+      setShowEditCover(false)
+    } catch {
+      alert("Failed to update cover")
+    }
+    setSavingCover(false)
   }
 
   // Create room
@@ -322,15 +383,40 @@ export default function AdminAutoplayPage() {
           {selectedRoom && (
             <div className="flex-1">
               {/* Room header */}
-              <div className="flex items-center justify-between mb-4">
-                <div>
+              <div className="flex items-center justify-between mb-4 gap-3">
+                <div className="flex items-center gap-3 min-w-0">
                   <button onClick={() => setSelectedRoom(null)} className="lg:hidden flex items-center gap-1 font-sans text-xs text-muted-foreground mb-2">
                     <ArrowLeft className="h-3.5 w-3.5" /> Back
                   </button>
-                  <h2 className="font-sans text-lg font-bold text-foreground">{selectedRoom.name}</h2>
-                  <p className="font-sans text-xs text-muted-foreground">{selectedRoom.slug} · {selectedRoom.genre}</p>
+                  {/* Cover thumbnail */}
+                  <div
+                    className="h-14 w-14 shrink-0 rounded-lg overflow-hidden relative"
+                    style={{
+                      background: selectedRoom.coverGradient || "oklch(0.25 0.05 280)",
+                      backgroundImage: selectedRoom.coverArt ? `url(${selectedRoom.coverArt})` : undefined,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                      border: "1px solid oklch(0.25 0.02 280 / 0.4)",
+                    }}
+                  />
+                  <div className="min-w-0">
+                    <h2 className="font-sans text-lg font-bold text-foreground truncate">{selectedRoom.name}</h2>
+                    <p className="font-sans text-xs text-muted-foreground truncate">{selectedRoom.slug} · {selectedRoom.genre}</p>
+                  </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setShowEditCover((v) => !v)
+                      setEditCoverArt(selectedRoom.coverArt || null)
+                      setEditGradient(selectedRoom.coverGradient || "")
+                    }}
+                    className="gap-1.5 rounded-lg text-xs"
+                  >
+                    <Pencil className="h-3.5 w-3.5" /> Cover
+                  </Button>
                   {selectedRoom.isLive ? (
                     <Button size="sm" variant="ghost" onClick={handleStop} className="gap-1.5 rounded-lg text-xs" style={{ color: "oklch(0.60 0.20 25)" }}>
                       <Pause className="h-3.5 w-3.5" /> Stop
@@ -340,6 +426,96 @@ export default function AdminAutoplayPage() {
                   )}
                 </div>
               </div>
+
+              {/* Cover photo editor */}
+              {showEditCover && (
+                <div className="mb-4 rounded-xl p-4" style={{ background: "oklch(0.14 0.015 280 / 0.6)", border: "1px solid oklch(0.25 0.02 280 / 0.4)" }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-sans text-sm font-semibold text-foreground">Edit Cover</h3>
+                    <button onClick={() => setShowEditCover(false)} className="p-1 rounded hover:bg-muted/20">
+                      <X className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-[auto,1fr]">
+                    {/* Preview */}
+                    <div
+                      className="h-32 w-32 rounded-xl overflow-hidden relative mx-auto sm:mx-0"
+                      style={{
+                        background: editGradient || "oklch(0.25 0.05 280)",
+                        backgroundImage: editCoverArt ? `url(${editCoverArt})` : undefined,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        border: "1px solid oklch(0.25 0.02 280 / 0.4)",
+                      }}
+                    >
+                      {editCoverArt && (
+                        <button
+                          onClick={() => setEditCoverArt(null)}
+                          className="absolute top-1 right-1 p-1 rounded-full bg-black/60 hover:bg-black/80"
+                          title="Remove image"
+                        >
+                          <X className="h-3 w-3 text-white" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-3 min-w-0">
+                      {/* Drag & drop upload */}
+                      <label
+                        onDragOver={(e) => { e.preventDefault(); setCoverDragOver(true) }}
+                        onDragLeave={() => setCoverDragOver(false)}
+                        onDrop={handleCoverDrop}
+                        className={`flex items-center justify-center gap-2 rounded-lg px-4 py-3 cursor-pointer transition-colors border-2 border-dashed ${
+                          coverDragOver ? "border-primary bg-primary/5" : "border-border/40 hover:border-border/60"
+                        }`}
+                      >
+                        <Upload className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-sans text-xs text-muted-foreground">
+                          {editCoverArt ? "Replace image" : "Drop image or click to upload (max 5MB)"}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) handleCoverFile(file)
+                          }}
+                        />
+                      </label>
+
+                      {/* Gradient fallback */}
+                      <div>
+                        <p className="font-sans text-[10px] text-muted-foreground mb-1.5">Gradient (shown when no image)</p>
+                        <div className="flex flex-wrap gap-2">
+                          {GRADIENT_PRESETS.map((g) => (
+                            <button
+                              key={g.value}
+                              onClick={() => setEditGradient(g.value)}
+                              className="h-8 w-16 rounded-lg transition-all"
+                              style={{
+                                background: g.value,
+                                border: editGradient === g.value ? "2px solid oklch(0.82 0.18 80)" : "2px solid transparent",
+                                boxShadow: editGradient === g.value ? "0 0 8px oklch(0.82 0.18 80 / 0.4)" : "none",
+                              }}
+                              title={g.name}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 mt-4">
+                    <Button size="sm" variant="ghost" onClick={() => setShowEditCover(false)} className="rounded-lg text-xs">Cancel</Button>
+                    <Button size="sm" onClick={handleSaveCover} disabled={savingCover} className="rounded-lg text-xs gap-1.5">
+                      {savingCover ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                      Save Cover
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {/* Live playlist status */}
               {livePlaylist && (
