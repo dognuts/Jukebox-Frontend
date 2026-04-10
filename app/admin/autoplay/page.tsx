@@ -150,12 +150,15 @@ export default function AdminAutoplayPage() {
     if (!selectedRoom) return
     setSavingCover(true)
     try {
+      const payload = JSON.stringify({
+        coverArt: editCoverArt ?? "",
+        coverGradient: editGradient,
+      })
+      // Log payload size so we can diagnose body-size issues
+      console.log(`[admin/autoplay] PATCH cover: ${(payload.length / 1024 / 1024).toFixed(2)} MB`)
       const updated = await authRequest<AutoplayRoom>(`/api/admin/rooms/${selectedRoom.id}`, {
         method: "PATCH",
-        body: JSON.stringify({
-          coverArt: editCoverArt ?? "",
-          coverGradient: editGradient,
-        }),
+        body: payload,
       })
       setRooms((prev) => prev.map((r) => r.id === selectedRoom.id
         ? { ...r, coverArt: updated?.coverArt ?? (editCoverArt ?? ""), coverGradient: updated?.coverGradient ?? editGradient }
@@ -166,8 +169,10 @@ export default function AdminAutoplayPage() {
         coverGradient: updated?.coverGradient ?? editGradient,
       } : prev)
       setShowEditCover(false)
-    } catch {
-      alert("Failed to update cover")
+    } catch (err) {
+      console.error("[admin/autoplay] save cover failed:", err)
+      const msg = err instanceof Error ? err.message : String(err)
+      alert(`Failed to update cover: ${msg}`)
     }
     setSavingCover(false)
   }
