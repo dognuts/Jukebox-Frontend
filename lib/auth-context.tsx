@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || ""
 
@@ -272,13 +272,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }, [authFetch])
 
-  return (
-    <AuthContext.Provider value={{
+  const value = useMemo(
+    () => ({
       user, loading, isLoggedIn: !!user, accessToken,
       signup, login, logout, refreshAuth, updateProfile,
       changePassword, forgotPassword, resetPassword,
       verifyEmail, resendVerification, deleteAccount, authFetch,
-    }}>
+    }),
+    [
+      user, loading, accessToken,
+      signup, login, logout, refreshAuth, updateProfile,
+      changePassword, forgotPassword, resetPassword,
+      verifyEmail, resendVerification, deleteAccount, authFetch,
+    ]
+  )
+
+  return (
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )

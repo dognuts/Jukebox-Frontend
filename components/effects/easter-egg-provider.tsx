@@ -65,6 +65,7 @@ export function EasterEggProvider({ children }: { children: ReactNode }) {
                           style={{
                             height: `${h * 40}px`,
                             background: `oklch(0.82 0.18 ${80 + i * 40})`,
+                            transformOrigin: "bottom",
                             animation: `visualizer-bar ${0.3 + i * 0.1}s ease-in-out infinite alternate`,
                           }}
                         />

@@ -6,6 +6,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   type ReactNode,
 } from "react"
@@ -326,23 +327,39 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
     [playlists]
   )
 
+  const value = useMemo(
+    () => ({
+      playlists,
+      loading,
+      createPlaylist,
+      renamePlaylist,
+      deletePlaylist,
+      addTrack,
+      removeTrack,
+      isTrackSaved,
+      getPlaylistsForTrack,
+      toggleLike,
+      isLiked,
+      refresh,
+    }),
+    [
+      playlists,
+      loading,
+      createPlaylist,
+      renamePlaylist,
+      deletePlaylist,
+      addTrack,
+      removeTrack,
+      isTrackSaved,
+      getPlaylistsForTrack,
+      toggleLike,
+      isLiked,
+      refresh,
+    ]
+  )
+
   return (
-    <PlaylistContext.Provider
-      value={{
-        playlists,
-        loading,
-        createPlaylist,
-        renamePlaylist,
-        deletePlaylist,
-        addTrack,
-        removeTrack,
-        isTrackSaved,
-        getPlaylistsForTrack,
-        toggleLike,
-        isLiked,
-        refresh,
-      }}
-    >
+    <PlaylistContext.Provider value={value}>
       {children}
     </PlaylistContext.Provider>
   )

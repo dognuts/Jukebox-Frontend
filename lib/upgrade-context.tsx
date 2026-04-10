@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react"
+import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from "react"
 import { useAuth } from "./auth-context"
 
 export type PlanTier = "free" | "premium"
@@ -38,10 +38,13 @@ export function UpgradeProvider({ children }: { children: ReactNode }) {
   const upgradeToPremium = useCallback(() => {}, [])
   const downgradeToFree = useCallback(() => {}, [])
 
+  const value = useMemo(
+    () => ({ plan, isDialogOpen, openUpgradeDialog, closeUpgradeDialog, upgradeToPremium, downgradeToFree }),
+    [plan, isDialogOpen, openUpgradeDialog, closeUpgradeDialog, upgradeToPremium, downgradeToFree]
+  )
+
   return (
-    <UpgradeContext.Provider
-      value={{ plan, isDialogOpen, openUpgradeDialog, closeUpgradeDialog, upgradeToPremium, downgradeToFree }}
-    >
+    <UpgradeContext.Provider value={value}>
       {children}
     </UpgradeContext.Provider>
   )

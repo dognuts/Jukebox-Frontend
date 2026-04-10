@@ -6,6 +6,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useMemo,
   type ReactNode,
 } from "react"
 import { type Track } from "@/lib/mock-data"
@@ -156,19 +157,32 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setPlayer(null)
   }, [])
 
+  const visiblePlayer = hydrated ? player : null
+  const value = useMemo(
+    () => ({
+      player: visiblePlayer,
+      setRoom,
+      updateTrack,
+      updatePlaybackTime,
+      togglePlay,
+      setVolume,
+      toggleMute,
+      close,
+    }),
+    [
+      visiblePlayer,
+      setRoom,
+      updateTrack,
+      updatePlaybackTime,
+      togglePlay,
+      setVolume,
+      toggleMute,
+      close,
+    ]
+  )
+
   return (
-    <PlayerContext.Provider
-      value={{
-        player: hydrated ? player : null,
-        setRoom,
-        updateTrack,
-        updatePlaybackTime,
-        togglePlay,
-        setVolume,
-        toggleMute,
-        close,
-      }}
-    >
+    <PlayerContext.Provider value={value}>
       {children}
     </PlayerContext.Provider>
   )

@@ -6,7 +6,10 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true,
+    formats: ["image/avif", "image/webp"],
+    remotePatterns: [
+      { protocol: "https", hostname: "**" },
+    ],
   },
   // Disable source maps in production to prevent easy code copying
   productionBrowserSourceMaps: false,

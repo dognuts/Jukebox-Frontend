@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useCallback, ReactNode } from "react"
+import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from "react"
 import { toast } from "sonner"
 
 interface FavoritesContextValue {
@@ -30,8 +30,13 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  const value = useMemo(
+    () => ({ favorites, isFavorite, toggleFavorite }),
+    [favorites, isFavorite, toggleFavorite]
+  )
+
   return (
-    <FavoritesContext.Provider value={{ favorites, isFavorite, toggleFavorite }}>
+    <FavoritesContext.Provider value={value}>
       {children}
     </FavoritesContext.Provider>
   )

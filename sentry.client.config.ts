@@ -6,15 +6,20 @@ Sentry.init({
   // Only enable in production
   enabled: process.env.NODE_ENV === "production",
 
-  // Performance monitoring — sample 20% of transactions
-  tracesSampleRate: 0.2,
+  // Performance monitoring — sample 10% of transactions
+  tracesSampleRate: 0.1,
 
-  // Session replay — capture 5% of sessions, 100% of sessions with errors
-  replaysSessionSampleRate: 0.05,
-  replaysOnErrorSampleRate: 1.0,
+  // Session replay — disabled by default to avoid input-latency overhead;
+  // still capture replays on errors but at a reduced rate
+  replaysSessionSampleRate: 0,
+  replaysOnErrorSampleRate: 0.25,
 
   integrations: [
-    Sentry.replayIntegration(),
+    Sentry.replayIntegration({
+      // Mask all text/media so replay processing is cheaper and PII-safe
+      maskAllText: true,
+      blockAllMedia: true,
+    }),
   ],
 
   // Don't send PII

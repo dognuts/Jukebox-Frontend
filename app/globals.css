@@ -188,21 +188,13 @@
 }
 
 @keyframes glow-pulse {
-  0%, 100% {
-    box-shadow: 0 0 8px var(--neon-amber), 0 0 20px oklch(0.82 0.18 80 / 0.3);
-  }
-  50% {
-    box-shadow: 0 0 16px var(--neon-amber), 0 0 40px oklch(0.82 0.18 80 / 0.5);
-  }
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
 }
 
 @keyframes glow-pulse-magenta {
-  0%, 100% {
-    box-shadow: 0 0 8px var(--neon-magenta), 0 0 20px oklch(0.70 0.22 350 / 0.3);
-  }
-  50% {
-    box-shadow: 0 0 16px var(--neon-magenta), 0 0 40px oklch(0.70 0.22 350 / 0.5);
-  }
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
 }
 
 @keyframes live-pulse {
@@ -211,10 +203,10 @@
 }
 
 @keyframes visualizer-bar {
-  0%, 100% { height: 20%; }
-  25% { height: 60%; }
-  50% { height: 100%; }
-  75% { height: 40%; }
+  0%, 100% { transform: scaleY(0.2); }
+  25% { transform: scaleY(0.6); }
+  50% { transform: scaleY(1); }
+  75% { transform: scaleY(0.4); }
 }
 
 @keyframes shake {
@@ -577,35 +569,37 @@
 
 /* Sound wave equalizer animation */
 @keyframes equalizer-bar-1 {
-  0%, 100% { height: 20%; }
-  50% { height: 80%; }
+  0%, 100% { transform: scaleY(0.2); }
+  50% { transform: scaleY(0.8); }
 }
 
 @keyframes equalizer-bar-2 {
-  0%, 100% { height: 40%; }
-  50% { height: 100%; }
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
 }
 
 @keyframes equalizer-bar-3 {
-  0%, 100% { height: 60%; }
-  50% { height: 30%; }
+  0%, 100% { transform: scaleY(0.6); }
+  50% { transform: scaleY(0.3); }
 }
 
 @keyframes equalizer-bar-4 {
-  0%, 100% { height: 30%; }
-  50% { height: 90%; }
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(0.9); }
 }
 
 @keyframes equalizer-bar-5 {
-  0%, 100% { height: 50%; }
-  50% { height: 70%; }
+  0%, 100% { transform: scaleY(0.5); }
+  50% { transform: scaleY(0.7); }
 }
 
 .equalizer-bar {
   width: 3px;
+  height: 100%;
   background: var(--neon-amber);
   border-radius: 1px;
   transform-origin: bottom;
+  will-change: transform;
 }
 
 .equalizer-bar:nth-child(1) { animation: equalizer-bar-1 0.8s ease-in-out infinite; }

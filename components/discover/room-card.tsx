@@ -41,7 +41,9 @@ function useCountdown(targetDate?: Date) {
 
 export function RoomCard({ room }: { room: Room }) {
   const cardRef = useRef<HTMLDivElement>(null)
-  const [tilt, setTilt] = useState({ x: 0, y: 0 })
+  const rafRef = useRef<number | null>(null)
+  const rectRef = useRef<DOMRect | null>(null)
+  const pendingPos = useRef<{ x: number; y: number } | null>(null)
   const [hovering, setHovering] = useState(false)
   const { requestStatus } = useRoomStatus(room.id)
   const { isFavorite, toggleFavorite } = useFavorites()
@@ -51,20 +53,46 @@ export function RoomCard({ room }: { room: Room }) {
 
   const isUpcoming = !!room.scheduledStart && !room.isLive
 
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!cardRef.current) return
-      const rect = cardRef.current.getBoundingClientRect()
-      const x = (e.clientX - rect.left) / rect.width - 0.5
-      const y = (e.clientY - rect.top) / rect.height - 0.5
-      setTilt({ x: y * -8, y: x * 8 })
-    },
-    []
-  )
+  const handleMouseEnter = useCallback(() => {
+    setHovering(true)
+    // Cache rect once per hover session instead of reading on every mousemove
+    rectRef.current = cardRef.current?.getBoundingClientRect() ?? null
+  }, [])
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    pendingPos.current = { x: e.clientX, y: e.clientY }
+    if (rafRef.current !== null) return
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null
+      const card = cardRef.current
+      const rect = rectRef.current
+      const pos = pendingPos.current
+      if (!card || !rect || !pos) return
+      const nx = (pos.x - rect.left) / rect.width - 0.5
+      const ny = (pos.y - rect.top) / rect.height - 0.5
+      const tiltX = ny * -8
+      const tiltY = nx * 8
+      const angle = Math.sqrt(tiltX * tiltX + tiltY * tiltY)
+      card.style.transform = `rotate3d(${tiltX}, ${tiltY}, 0, ${angle}deg)`
+    })
+  }, [])
 
   const handleMouseLeave = useCallback(() => {
-    setTilt({ x: 0, y: 0 })
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
+    }
+    pendingPos.current = null
+    rectRef.current = null
+    const card = cardRef.current
+    if (card) card.style.transform = ""
     setHovering(false)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+    }
   }, [])
 
   return (
@@ -73,11 +101,11 @@ export function RoomCard({ room }: { room: Room }) {
         ref={cardRef}
         className="group relative cursor-pointer card-hover-effect card-shine"
         onMouseMove={handleMouseMove}
-        onMouseEnter={() => setHovering(true)}
+        onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         style={{
           perspective: "800px",
-          transform: `rotate3d(${tilt.x}, ${tilt.y}, 0, ${Math.sqrt(tilt.x ** 2 + tilt.y ** 2)}deg)`,
+          willChange: hovering ? "transform" : undefined,
           transition: hovering
             ? "transform 0.1s ease-out"
             : "transform 0.4s ease-out",
@@ -326,7 +354,8 @@ export function RoomCard({ room }: { room: Room }) {
                 <div
                   className="absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
                   style={{
-                    background: `radial-gradient(circle at ${50 + tilt.y * 5}% ${50 + tilt.x * 5}%, oklch(0.82 0.18 80 / 0.2), transparent 60%)`,
+                    background:
+                      "radial-gradient(circle at 50% 50%, oklch(0.82 0.18 80 / 0.2), transparent 60%)",
                   }}
                 />
               </div>

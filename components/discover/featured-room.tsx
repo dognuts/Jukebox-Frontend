@@ -104,6 +104,7 @@ export function FeaturedRoom({ room }: { room: Room }) {
                           background: i % 2 === 0
                             ? "oklch(0.95 0.01 80 / 0.85)"
                             : "oklch(0.82 0.18 80 / 0.85)",
+                          transformOrigin: "bottom",
                           animation: `visualizer-bar ${0.3 + i * 0.08}s ease-in-out infinite alternate`,
                           animationDelay: `${i * 0.05}s`,
                         }}

@@ -6,6 +6,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   type ReactNode,
 } from "react"
@@ -333,21 +334,34 @@ export function MessagesProvider({ children }: { children: ReactNode }) {
     []
   )
 
+  const value = useMemo(
+    () => ({
+      conversations,
+      drawerOpen,
+      activeConversation,
+      totalUnread,
+      openDrawer,
+      closeDrawer,
+      setActiveConversation,
+      sendMessage,
+      startConversation,
+      isRealAPI,
+    }),
+    [
+      conversations,
+      drawerOpen,
+      activeConversation,
+      totalUnread,
+      openDrawer,
+      closeDrawer,
+      sendMessage,
+      startConversation,
+      isRealAPI,
+    ]
+  )
+
   return (
-    <MessagesContext.Provider
-      value={{
-        conversations,
-        drawerOpen,
-        activeConversation,
-        totalUnread,
-        openDrawer,
-        closeDrawer,
-        setActiveConversation,
-        sendMessage,
-        startConversation,
-        isRealAPI,
-      }}
-    >
+    <MessagesContext.Provider value={value}>
       {children}
     </MessagesContext.Provider>
   )

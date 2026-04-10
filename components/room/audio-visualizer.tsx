@@ -33,6 +33,7 @@ export function AudioVisualizer({
               maxHeight: "48px",
               minHeight: "3px",
               background: `oklch(0.75 0.15 ${hue})`,
+              transformOrigin: "bottom",
               animation: isPlaying
                 ? `visualizer-bar ${0.25 + i * 0.06}s ease-in-out ${i * 0.04}s infinite alternate`
                 : "none",

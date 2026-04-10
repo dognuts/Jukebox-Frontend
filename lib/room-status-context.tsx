@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, type Dispatch, type SetStateAction } from "react"
+import { createContext, useContext, useState, useMemo, type Dispatch, type SetStateAction } from "react"
 import { rooms, type RequestPolicy } from "@/lib/mock-data"
 
 export type RequestStatus = "open" | "paused" | "closed"
@@ -26,8 +26,10 @@ export function RoomStatusProvider({ children }: { children: React.ReactNode }) 
     return initial
   })
 
+  const value = useMemo(() => ({ statusMap, setStatusMap }), [statusMap])
+
   return (
-    <RoomStatusContext.Provider value={{ statusMap, setStatusMap }}>
+    <RoomStatusContext.Provider value={value}>
       {children}
     </RoomStatusContext.Provider>
   )

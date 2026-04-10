@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, createContext, useContext, type ReactNode } from "react"
+import { useState, useCallback, useMemo, createContext, useContext, type ReactNode } from "react"
 import { X, Check, Zap, Crown, Loader2, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth-context"
@@ -27,8 +27,10 @@ export function PricingModalProvider({ children }: { children: ReactNode }) {
   const open = useCallback(() => setIsOpen(true), [])
   const close = useCallback(() => setIsOpen(false), [])
 
+  const value = useMemo(() => ({ isOpen, open, close }), [isOpen, open, close])
+
   return (
-    <PricingModalContext.Provider value={{ isOpen, open, close }}>
+    <PricingModalContext.Provider value={value}>
       {children}
       {isOpen && <PricingModal onClose={close} />}
     </PricingModalContext.Provider>
