@@ -311,6 +311,23 @@ export default function AdminAutoplayPage() {
     } catch { alert("Failed to stop") }
   }
 
+  // Relaunch a stopped room using its existing live playlist
+  const [relaunching, setRelaunching] = useState(false)
+  const handleRelaunch = async () => {
+    if (!selectedRoom) return
+    setRelaunching(true)
+    try {
+      await authRequest(`/api/admin/autoplay/rooms/${selectedRoom.id}/start`, { method: "POST" })
+      await loadRooms()
+      await loadPlaylists(selectedRoom.id)
+      setSelectedRoom((prev) => prev ? { ...prev, isLive: true } : null)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      alert(`Failed to relaunch: ${msg}`)
+    }
+    setRelaunching(false)
+  }
+
   const livePlaylist = playlists.find((p) => p.status === "live")
   const stagedPlaylist = playlists.find((p) => p.status === "staged")
 
@@ -451,6 +468,17 @@ export default function AdminAutoplayPage() {
                   {selectedRoom.isLive ? (
                     <Button size="sm" variant="ghost" onClick={handleStop} className="gap-1.5 rounded-lg text-xs" style={{ color: "oklch(0.60 0.20 25)" }}>
                       <Pause className="h-3.5 w-3.5" /> Stop
+                    </Button>
+                  ) : liveTracks.length > 0 ? (
+                    <Button
+                      size="sm"
+                      onClick={handleRelaunch}
+                      disabled={relaunching}
+                      className="gap-1.5 rounded-lg text-xs"
+                      style={{ background: "oklch(0.55 0.20 150 / 0.8)", color: "white" }}
+                    >
+                      {relaunching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+                      Relaunch
                     </Button>
                   ) : (
                     <Badge variant="outline" className="text-xs text-muted-foreground">Offline</Badge>
