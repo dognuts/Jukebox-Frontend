@@ -189,7 +189,7 @@ export default function HomePage() {
       <div className="relative z-10">
         <Navbar />
 
-        <main className="mx-auto w-full max-w-[800px] px-4 pb-10 sm:px-6">
+        <main className="mx-auto w-full max-w-6xl px-4 pb-12 sm:px-6 lg:px-8 lg:pb-20">
           {/* Connection status banner */}
           {loaded && usingMock && (
             <div
@@ -213,7 +213,7 @@ export default function HomePage() {
 
           {/* Featured room card — hidden while loading or filtering by genre */}
           {loaded && !selectedGenre && featuredRoom && (
-            <ScrollReveal className="mb-6">
+            <ScrollReveal className="mb-8 lg:mb-14">
               <FeaturedRoomCard
                 room={featuredRoom}
                 chatPreview={featuredChat.length > 0 ? featuredChat : undefined}
@@ -223,7 +223,7 @@ export default function HomePage() {
 
           {/* Live now grid */}
           {loaded && (
-            <ScrollReveal delay={100} className="mb-6">
+            <ScrollReveal delay={100} className="mb-8 lg:mb-16">
               <LiveRoomGrid
                 rooms={filteredLiveRooms}
                 headerLabel={selectedGenre ? `${selectedGenre} rooms live` : "Live now"}
@@ -238,7 +238,7 @@ export default function HomePage() {
 
           {/* Activity feed — hidden while filtering */}
           {loaded && !selectedGenre && (
-            <ScrollReveal delay={200} className="mb-6">
+            <ScrollReveal delay={200} className="mb-8 lg:mb-12">
               <ActivityFeed rooms={allRooms} />
             </ScrollReveal>
           )}

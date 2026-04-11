@@ -20,20 +20,22 @@ export function HomeHero({ liveCount, selectedGenre, onSelectGenre }: HomeHeroPr
       : `${liveCount} room${liveCount === 1 ? "" : "s"} live now`
 
   return (
-    <section className="relative overflow-hidden px-4 pt-10 pb-8 sm:px-6 sm:pt-12 sm:pb-10">
-      {/* Ambient amber glow */}
+    <section className="relative overflow-hidden px-4 pb-8 pt-10 sm:px-6 sm:pb-12 sm:pt-14 lg:pb-20 lg:pt-24">
+      {/* Ambient amber glow — grows with the viewport so the wash stays
+          proportional on laptop widths instead of clustering in the
+          middle of the hero */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-0 h-[200px] w-[500px] max-w-full -translate-x-1/2"
+        className="pointer-events-none absolute left-1/2 top-0 h-[240px] w-[560px] max-w-[90%] -translate-x-1/2 lg:h-[320px] lg:w-[780px]"
         style={{
           background:
-            "radial-gradient(ellipse, rgba(232,154,60,0.08) 0%, transparent 70%)",
+            "radial-gradient(ellipse, rgba(232,154,60,0.09) 0%, transparent 70%)",
         }}
       />
 
-      <div className="relative z-[1] text-center">
+      <div className="relative z-[1] mx-auto max-w-3xl text-center">
         <div
-          className="mb-2 text-[11px] uppercase tracking-[0.2em]"
+          className="mb-3 text-[11px] uppercase tracking-[0.2em] lg:mb-4 lg:text-xs"
           style={{ color: "rgba(232,154,60,0.7)" }}
         >
           <span
@@ -47,19 +49,22 @@ export function HomeHero({ liveCount, selectedGenre, onSelectGenre }: HomeHeroPr
           {liveLabel}
         </div>
         <h1
-          className="mb-1 text-2xl font-bold sm:text-[28px]"
+          className="mb-2 text-[28px] font-bold leading-[1.08] tracking-tight sm:text-[34px] lg:mb-3 lg:text-[44px]"
           style={{ color: "#e8e6ea" }}
         >
           What are you in the mood for?
         </h1>
-        <p className="mb-7 text-sm" style={{ color: "rgba(232,230,234,0.45)" }}>
+        <p
+          className="mb-8 text-sm lg:mb-10 lg:text-base"
+          style={{ color: "rgba(232,230,234,0.5)" }}
+        >
           Jump into a live room or start your own
         </p>
 
         <div
           role="group"
           aria-label="Filter by mood"
-          className="flex flex-wrap justify-center gap-2"
+          className="flex flex-wrap justify-center gap-2 lg:gap-2.5"
         >
           {MOOD_GENRES.map((genre) => {
             const isSelected = selectedGenre === genre
@@ -69,7 +74,7 @@ export function HomeHero({ liveCount, selectedGenre, onSelectGenre }: HomeHeroPr
                 type="button"
                 aria-pressed={isSelected}
                 onClick={() => onSelectGenre(isSelected ? null : genre)}
-                className="rounded-full px-[18px] py-2 text-[13px] font-medium transition-colors"
+                className="rounded-full px-5 py-2 text-[13px] font-medium transition-colors lg:px-6 lg:py-2.5 lg:text-sm"
                 style={{
                   background: isSelected
                     ? "rgba(232,154,60,0.12)"

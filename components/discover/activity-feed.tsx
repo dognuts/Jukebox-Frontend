@@ -114,9 +114,13 @@ export function ActivityFeed({ rooms }: ActivityFeedProps) {
   if (events.length === 0) return null
 
   return (
-    <section>
+    // The activity feed intentionally stays narrower than the rest of
+    // the homepage. A list of short text rows is hard to scan when
+    // stretched across ~1100px, so we constrain it to a readable
+    // reading column inside the wider main container.
+    <section className="mx-auto w-full max-w-3xl">
       <h2
-        className="mb-3 text-[15px] font-semibold"
+        className="mb-3 text-[15px] font-semibold lg:mb-4 lg:text-lg"
         style={{ color: "#e8e6ea" }}
       >
         Happening now
@@ -127,17 +131,17 @@ export function ActivityFeed({ rooms }: ActivityFeedProps) {
           return (
             <div
               key={ev.key}
-              className="flex items-center gap-3 px-3.5 py-2.5"
+              className="flex items-center gap-3 px-3.5 py-2.5 lg:gap-3.5 lg:px-4 lg:py-3"
               style={{ background: "rgba(255,255,255,0.02)" }}
             >
               <div
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold lg:h-8 lg:w-8 lg:text-[11px]"
                 style={{ background: color, color: "#0d0b10" }}
               >
                 {initials(ev.username)}
               </div>
               <div
-                className="min-w-0 flex-1 truncate text-xs"
+                className="min-w-0 flex-1 truncate text-xs lg:text-[13px]"
                 style={{ color: "rgba(232,230,234,0.6)" }}
               >
                 <span className="font-medium" style={{ color }}>
@@ -173,7 +177,7 @@ export function ActivityFeed({ rooms }: ActivityFeedProps) {
                 )}
               </div>
               <div
-                className="shrink-0 text-[10px]"
+                className="shrink-0 text-[10px] lg:text-[11px]"
                 style={{ color: "rgba(232,230,234,0.25)" }}
               >
                 {relativeTime(ev.timestamp)}

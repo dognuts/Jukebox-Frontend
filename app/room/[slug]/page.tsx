@@ -598,12 +598,13 @@ export default function RoomPage() {
       />
 
       {/* Main 2-column layout: music experience on the left, chat on the
-          right. Below md the grid collapses to a single stacked column so
-          the chat sits under the now-playing on phones. */}
+          right. Below md the grid collapses to a single stacked column
+          so the chat sits under the now-playing on phones. On lg+ the
+          chat rail widens from 280px to 320px for a more comfortable
+          laptop experience. */}
       <div
-        className="mx-auto flex w-full max-w-[800px] flex-col md:grid"
+        className="mx-auto flex w-full max-w-5xl flex-col md:grid md:grid-cols-[minmax(0,1fr)_280px] lg:grid-cols-[minmax(0,1fr)_320px]"
         style={{
-          gridTemplateColumns: "minmax(0, 1fr) 280px",
           minHeight: "calc(100vh - 40px)",
         }}
       >

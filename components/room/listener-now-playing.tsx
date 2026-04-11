@@ -52,7 +52,7 @@ export function ListenerNowPlaying({
       : 0
 
   return (
-    <div className="relative px-6 pb-6 pt-8 sm:px-6">
+    <div className="relative px-6 pb-6 pt-8 sm:px-6 lg:px-8 lg:pb-8 lg:pt-10">
       {/* Ambient amber wash */}
       <div
         aria-hidden="true"
@@ -106,7 +106,7 @@ export function ListenerNowPlaying({
         <div className="flex items-center gap-5">
           {/* Album art */}
           <div
-            className="relative flex h-[100px] w-[100px] shrink-0 items-center justify-center overflow-hidden rounded-xl"
+            className="relative flex h-[100px] w-[100px] shrink-0 items-center justify-center overflow-hidden rounded-xl lg:h-[120px] lg:w-[120px]"
             style={{
               background: albumArtUrl
                 ? `url(${albumArtUrl}) center/cover no-repeat`
@@ -136,13 +136,13 @@ export function ListenerNowPlaying({
               Now playing
             </div>
             <div
-              className="mb-1 truncate text-[22px] font-bold leading-tight"
+              className="mb-1 truncate text-[22px] font-bold leading-tight lg:mb-1.5 lg:text-[26px]"
               style={{ color: "#e8e6ea" }}
             >
               {trackTitle}
             </div>
             <div
-              className="mb-3 truncate text-[15px]"
+              className="mb-3 truncate text-[15px] lg:mb-4 lg:text-base"
               style={{ color: "rgba(232,230,234,0.5)" }}
             >
               {trackArtist}
