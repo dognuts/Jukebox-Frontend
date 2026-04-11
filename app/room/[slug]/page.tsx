@@ -13,6 +13,7 @@ import { ListenerNowPlaying } from "@/components/room/listener-now-playing"
 import { ListenerDjContext } from "@/components/room/listener-dj-context"
 import { ListenerQueue } from "@/components/room/listener-queue"
 import { ListenerChatColumn } from "@/components/room/listener-chat-column"
+import { DjRightColumn } from "@/components/room/dj-right-column"
 import { type Room, type Track, type ChatMessage, getRoomBySlug, rooms } from "@/lib/mock-data"
 import { usePlayer } from "@/lib/player-context"
 import { usePlaylist } from "@/lib/playlist-context"
@@ -614,6 +615,19 @@ export default function RoomPage() {
   // whatever the engine has already emitted.
   const effectiveAlbumArt = audioArtwork || null
 
+  // Derive a compact hype summary for the DJ right column.
+  const djHypeScore = (() => {
+    const raw =
+      hypeTracking.recentTips * 2 +
+      hypeTracking.recentChats * 0.5 +
+      hypeTracking.recentReactions * 1
+    return Math.min(100, Math.round((raw / 50) * 100))
+  })()
+  const djHypeLabel =
+    djHypeScore >= 80 ? "On fire" : djHypeScore >= 50 ? "Hyped" : djHypeScore >= 25 ? "Warming" : "Chill"
+  const djHypeColor =
+    djHypeScore >= 80 ? "#ff5a3a" : djHypeScore >= 50 ? "#e89a3c" : djHypeScore >= 25 ? "#4a8fe8" : "#8a8a9a"
+
   return (
     <div className="min-h-screen" style={{ background: "#0d0b10", color: "#e8e6ea" }}>
       {/* Audio engine mounts once per track so playback keeps running while
@@ -748,63 +762,62 @@ export default function RoomPage() {
               what's lined up. */}
           <ListenerQueue tracks={queueTracks} />
 
-          {/* DJ-only tool strip, rendered below the queue so it doesn't
-              interfere with the listener-first layout. */}
-          {isDJ && (
-            <div
-              className="flex flex-col gap-3 px-6 pb-6 pt-2"
-              style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)" }}
-            >
-              <DJControls
-                requestPolicy={room.requestPolicy}
-                requestStatus={requestStatus as "open" | "paused" | "closed"}
-                onRequestStatusChange={(status) => {
-                  if (ws.connected) {
-                    const policyMap: Record<string, string> = {
-                      open: "open",
-                      paused: "approval",
-                      closed: "closed",
-                    }
-                    ws.djSetPolicy(policyMap[status] || "closed")
-                  }
-                }}
-                onSubmitTrack={handleSubmitTrack}
-                onMicChange={handleMicChange}
-                onEndRoom={ws.connected ? ws.djEndRoom : undefined}
-                listenerCount={listenerCount}
-              />
-
-              {ws.pendingRequests.length > 0 && (
-                <PendingRequests
-                  requests={ws.pendingRequests}
-                  onApprove={ws.djApprove}
-                  onReject={ws.djReject}
-                  onApproveAll={() => ws.pendingRequests.forEach((r) => ws.djApprove(r.id))}
-                  onRejectAll={() => ws.pendingRequests.forEach((r) => ws.djReject(r.id))}
-                />
-              )}
-
-              <HypeMeter
-                recentTips={hypeTracking.recentTips}
-                recentChats={hypeTracking.recentChats}
-                recentReactions={hypeTracking.recentReactions}
-              />
-              <IntermissionScheduler />
-            </div>
-          )}
+          {/* DJ-only tool strip removed in Option C — all DJ controls
+              live inside the right column's Controls / Requests /
+              Stats tabs. */}
         </div>
 
-        {/* Right: chat column */}
-        <ListenerChatColumn
-          messages={chatMessages}
-          listeners={ws.listeners}
-          listenerCount={listenerCount}
-          onSendMessage={ws.connected ? ws.sendChat : undefined}
-          onSendReaction={ws.connected ? ws.sendReaction : undefined}
-          connected={ws.connected}
-          djName={room.djName}
-          overlayRef={chatOverlayRef}
-        />
+        {/* Right column — listeners get chat, DJs get a tabbed
+            Chat/Controls/Requests/Stats panel (Option C). */}
+        {isDJ ? (
+          <DjRightColumn
+            messages={chatMessages}
+            listeners={ws.listeners}
+            listenerCount={listenerCount}
+            onSendMessage={ws.connected ? ws.sendChat : undefined}
+            onSendReaction={ws.connected ? ws.sendReaction : undefined}
+            connected={ws.connected}
+            djName={room.djName}
+            overlayRef={chatOverlayRef}
+            requestStatus={requestStatus as "open" | "paused" | "closed"}
+            onRequestStatusChange={(status) => {
+              if (ws.connected) {
+                const policyMap: Record<string, string> = {
+                  open: "open",
+                  paused: "approval",
+                  closed: "closed",
+                }
+                ws.djSetPolicy(policyMap[status] || "closed")
+              }
+            }}
+            audioPlaying={audioPlaying}
+            onTogglePlay={handleDJTogglePlay}
+            onSkip={handleSkip}
+            onMicChange={handleMicChange}
+            onSubmitTrack={handleSubmitTrack}
+            onEndRoom={ws.connected ? ws.djEndRoom : undefined}
+            pendingRequests={ws.pendingRequests}
+            onApprove={ws.djApprove}
+            onReject={ws.djReject}
+            hypeScore={djHypeScore}
+            hypeLabel={djHypeLabel}
+            hypeColor={djHypeColor}
+            recentTips={hypeTracking.recentTips}
+            recentChats={hypeTracking.recentChats}
+            recentReactions={hypeTracking.recentReactions}
+          />
+        ) : (
+          <ListenerChatColumn
+            messages={chatMessages}
+            listeners={ws.listeners}
+            listenerCount={listenerCount}
+            onSendMessage={ws.connected ? ws.sendChat : undefined}
+            onSendReaction={ws.connected ? ws.sendReaction : undefined}
+            connected={ws.connected}
+            djName={room.djName}
+            overlayRef={chatOverlayRef}
+          />
+        )}
       </div>
 
       {/* Modals */}
