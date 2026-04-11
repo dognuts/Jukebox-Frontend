@@ -26,6 +26,13 @@ interface ListenerNowPlayingProps {
   // to the user's profile, and render a "Listen on SoundCloud" badge
   // below the action buttons, per the SoundCloud API Terms of Use.
   soundCloudUrl?: string | null
+  // When the current track is a YouTube video, pass isYouTube={true}
+  // and a ytSlotRef callback. The component will render a 16:9 portal
+  // target in place of the album-art square, and the parent-owned
+  // AudioEngine will portal its iframe into that slot so the video
+  // appears where the cover art normally does.
+  isYouTube?: boolean
+  ytSlotRef?: (el: HTMLDivElement | null) => void
 }
 
 function formatTime(seconds: number): string {
@@ -53,6 +60,8 @@ export function ListenerNowPlaying({
   albumArtUrl,
   albumGradient,
   soundCloudUrl,
+  isYouTube = false,
+  ytSlotRef,
 }: ListenerNowPlayingProps) {
   const pct =
     duration > 0
@@ -126,30 +135,52 @@ export function ListenerNowPlaying({
 
         {/* Track display */}
         <div className="flex items-center gap-5">
-          {/* Album art */}
-          <div
-            className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-xl"
-            style={{
-              width: "clamp(88px, 10vw, 128px)",
-              height: "clamp(88px, 10vw, 128px)",
-              background: albumArtUrl
-                ? `url(${albumArtUrl}) center/cover no-repeat`
-                : albumGradient ||
-                  "linear-gradient(135deg, #3d2b1a 0%, #1a1225 100%)",
-            }}
-          >
-            {!albumArtUrl && (
-              <div
-                className="flex h-10 w-10 items-center justify-center rounded-full"
-                style={{ border: "3px solid rgba(232,154,60,0.2)" }}
-              >
+          {isYouTube ? (
+            // YouTube portal target — the room page's AudioEngine
+            // portal-mounts the <YouTubePlayer> (which creates the YT
+            // iframe sized 100%/100%) into this div. 16:9 aspect ratio
+            // so the iframe fills without letterboxing, and a slightly
+            // larger height than the album-art square so the video
+            // reads as a meaningful visual rather than a thumbnail.
+            <div
+              ref={ytSlotRef}
+              className="relative shrink-0 overflow-hidden rounded-xl"
+              style={{
+                height: "clamp(100px, 12vw, 135px)",
+                aspectRatio: "16 / 9",
+                background: "#000",
+                border: "1px solid rgba(232,154,60,0.18)",
+                boxShadow:
+                  "0 12px 32px -12px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,0,0,0.5) inset",
+              }}
+              aria-label="YouTube player"
+            />
+          ) : (
+            // Standard album-art square for SoundCloud / MP3.
+            <div
+              className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-xl"
+              style={{
+                width: "clamp(88px, 10vw, 128px)",
+                height: "clamp(88px, 10vw, 128px)",
+                background: albumArtUrl
+                  ? `url(${albumArtUrl}) center/cover no-repeat`
+                  : albumGradient ||
+                    "linear-gradient(135deg, #3d2b1a 0%, #1a1225 100%)",
+              }}
+            >
+              {!albumArtUrl && (
                 <div
-                  className="h-2 w-2 rounded-full"
-                  style={{ background: "rgba(232,154,60,0.4)" }}
-                />
-              </div>
-            )}
-          </div>
+                  className="flex h-10 w-10 items-center justify-center rounded-full"
+                  style={{ border: "3px solid rgba(232,154,60,0.2)" }}
+                >
+                  <div
+                    className="h-2 w-2 rounded-full"
+                    style={{ background: "rgba(232,154,60,0.4)" }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Track info */}
           <div className="min-w-0 flex-1">

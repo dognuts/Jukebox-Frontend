@@ -355,6 +355,11 @@ export default function RoomPage() {
   const [audioArtwork, setAudioArtwork] = useState<string | null>(null)
   const [roomVolume, setRoomVolume] = useState(75)
   const [roomMuted, setRoomMuted] = useState(false)
+  // Portal target for the YouTube iframe. ListenerNowPlaying renders
+  // a 16:9 div in its album-art slot when the current track is YouTube
+  // and forwards the ref up via the ytSlotRef callback prop. AudioEngine
+  // then uses createPortal to mount the YouTubePlayer into that element.
+  const [ytSlot, setYtSlot] = useState<HTMLDivElement | null>(null)
 
   // Report track duration to server for autoplay rooms
   const lastReportedDuration = useRef("")
@@ -571,8 +576,10 @@ export default function RoomPage() {
   return (
     <div className="min-h-screen" style={{ background: "#0d0b10", color: "#e8e6ea" }}>
       {/* Audio engine mounts once per track so playback keeps running while
-          the listener browses. Corner-rendered for YouTube to satisfy the
-          ToS requirement that the iframe stay visible. */}
+          the listener browses. For YouTube tracks, it portals the iframe
+          into the album-art slot inside ListenerNowPlaying (via ytSlot) so
+          the video is the primary visual instead of a hidden corner
+          fallback. Non-YouTube tracks don't use the slot. */}
       {audioTrack && (
         <AudioEngine
           track={audioTrack}
@@ -581,6 +588,7 @@ export default function RoomPage() {
           muted={roomMuted}
           isDJ={isDJ}
           visible={false}
+          inlineTarget={ytSlot}
           forcePaused={isDJ ? (micActive && micPausesMusic) : (ws.djMicActive && ws.djMicPauseMusic)}
           onTimeUpdate={setAudioCurrentTime}
           onDuration={handleDuration}
@@ -683,6 +691,8 @@ export default function RoomPage() {
                     ? audioTrack.sourceUrl
                     : undefined
                 }
+                isYouTube={audioTrack?.source === "youtube"}
+                ytSlotRef={setYtSlot}
               />
 
               <ListenerDjContext

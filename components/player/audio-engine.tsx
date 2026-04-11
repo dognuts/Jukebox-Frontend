@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useState, useEffect, useCallback } from "react"
+import { createPortal } from "react-dom"
 import { YouTubePlayer, type AudioPlayerHandle } from "./youtube-player"
 import { HTML5AudioPlayer } from "./html5-audio-player"
 import { SoundCloudPlayer } from "./soundcloud-player"
@@ -26,6 +27,12 @@ interface AudioEngineProps {
   onTrackEnd?: () => void
   onPlayStateChange?: (playing: boolean) => void
   onArtwork?: (url: string | null) => void // SoundCloud only
+  // When set, YouTube tracks render their iframe via React portal into
+  // this element instead of using the inline or fixed-corner fallback.
+  // Used by the listener room view to place the video where the
+  // album-art slot normally lives. Mini-player leaves this null so it
+  // keeps the fixed-corner render.
+  inlineTarget?: HTMLDivElement | null
 }
 
 /**
@@ -49,6 +56,7 @@ export function AudioEngine({
   onTrackEnd,
   onPlayStateChange,
   onArtwork,
+  inlineTarget,
 }: AudioEngineProps) {
   const playerRef = useRef<AudioPlayerHandle>(null)
   const [ready, setReady] = useState(false)
@@ -223,39 +231,50 @@ export function AudioEngine({
 
   // Render the appropriate player
   switch (track.source) {
-    case "youtube":
+    case "youtube": {
       if (!track.videoId) return null
-      // YouTube: show the official embed inline when visible=true.
-      // When visible=false (mini-player / background playback), still render
-      // the iframe at a small but visible size in a fixed corner — YouTube ToS
-      // requires the embed to be visible, never hidden via display:none.
-      return visible ? (
-        <div className="w-full">
-          <YouTubePlayer
-            ref={playerRef}
-            videoId={track.videoId}
-            onReady={handleReady}
-            onStateChange={handleStateChange}
-            onDuration={onDuration}
-            onTimeUpdate={onTimeUpdate}
-          />
-        </div>
-      ) : (
+      // The YouTubePlayer element is the same regardless of where we
+      // mount it — React preserves the imperative handle via the ref,
+      // so the audio engine can control playback from any branch.
+      const youtubePlayer = (
+        <YouTubePlayer
+          ref={playerRef}
+          videoId={track.videoId}
+          onReady={handleReady}
+          onStateChange={handleStateChange}
+          onDuration={onDuration}
+          onTimeUpdate={onTimeUpdate}
+        />
+      )
+
+      // 1) Inline portal — the listener room view passes an inlineTarget
+      //    so the iframe lands in the album-art slot inside the
+      //    now-playing hero instead of the fixed corner. The target is
+      //    already sized 16:9 by the parent.
+      if (inlineTarget) {
+        return createPortal(youtubePlayer, inlineTarget)
+      }
+
+      // 2) Legacy visible-inline render — used when a parent lays out
+      //    its own full-width YouTube container.
+      if (visible) {
+        return <div className="w-full">{youtubePlayer}</div>
+      }
+
+      // 3) Fixed-corner fallback — used by the mini-player and anywhere
+      //    else playback runs in the background. The iframe must stay
+      //    visible per YouTube ToS, which this satisfies at a small
+      //    but meaningful size.
+      return (
         <div
           className="fixed bottom-20 right-3 z-40 w-[200px] overflow-hidden rounded-lg shadow-lg sm:bottom-24 sm:right-4 sm:w-[240px]"
           style={{ border: "1px solid oklch(0.30 0.04 280 / 0.5)" }}
           aria-label="YouTube background player"
         >
-          <YouTubePlayer
-            ref={playerRef}
-            videoId={track.videoId}
-            onReady={handleReady}
-            onStateChange={handleStateChange}
-            onDuration={onDuration}
-            onTimeUpdate={onTimeUpdate}
-          />
+          {youtubePlayer}
         </div>
       )
+    }
 
     case "soundcloud":
       // SoundCloud: always hidden iframe — Jukebox controls handle UI
