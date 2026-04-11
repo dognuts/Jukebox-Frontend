@@ -2,24 +2,16 @@
 
 import Link from "next/link"
 import { useRef, useCallback, useState, useEffect } from "react"
-import { Search, Plus, MessageCircle, Crown, Zap } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+import { MessageCircle } from "lucide-react"
 import { useEasterEggs } from "@/hooks/use-easter-eggs"
 import { useMessages } from "@/lib/messages-context"
-import { useUpgrade } from "@/lib/upgrade-context"
-import { usePricingModal } from "@/components/pricing-modal"
 import { useAuth } from "@/lib/auth-context"
 import { UserMenu } from "@/components/layout/user-menu"
-import { NeonJukeboxLogo } from "@/components/effects/neon-jukebox-logo"
 
 export function Navbar() {
-  const { triggerRainbow, classicModeBadge } = useEasterEggs()
+  const { triggerRainbow } = useEasterEggs()
   const { totalUnread, openDrawer } = useMessages()
-  const { plan, openUpgradeDialog } = useUpgrade()
-  const pricingModal = usePricingModal()
-  const { isLoggedIn, user } = useAuth()
+  const { isLoggedIn } = useAuth()
   const clickCount = useRef(0)
   const clickTimer = useRef<NodeJS.Timeout | null>(null)
   const [hidden, setHidden] = useState(false)
@@ -69,10 +61,8 @@ export function Navbar() {
 
     const apply = () => {
       if (mq.matches) {
-        // Desktop/tablet — enable hide-on-scroll
         if (!unbindScroll) bindScroll()
       } else {
-        // Mobile — keep nav pinned and drop any active listener
         if (unbindScroll) {
           unbindScroll()
           unbindScroll = null
@@ -92,6 +82,7 @@ export function Navbar() {
     }
   }, [])
 
+  // 5-click logo rainbow easter egg — preserved from the old navbar.
   const handleLogoClick = useCallback(() => {
     clickCount.current += 1
     if (clickTimer.current) clearTimeout(clickTimer.current)
@@ -107,116 +98,93 @@ export function Navbar() {
 
   return (
     <header
-      className={`sticky top-0 z-40 w-full border-b border-border/50 transition-transform duration-300 ${hidden ? "-translate-y-full" : "translate-y-0"}`}
+      className={`sticky top-0 z-40 w-full transition-transform duration-300 ${hidden ? "-translate-y-full" : "translate-y-0"}`}
       style={{
-        background: "oklch(0.10 0.015 280 / 0.92)",
+        background: "rgba(13,11,16,0.95)",
         backdropFilter: "blur(12px)",
         WebkitBackdropFilter: "blur(12px)",
+        borderBottom: "0.5px solid rgba(255,255,255,0.06)",
         willChange: "transform",
       }}
     >
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 lg:px-6">
-        {/* Logo */}
-        <div className="flex flex-col items-center gap-0.5">
-          <Link href="/">
-            <button
-              onClick={handleLogoClick}
-              className="flex items-center bg-transparent border-0 cursor-pointer"
-            >
-              <NeonJukeboxLogo size="sm" />
-            </button>
-          </Link>
-          <span className="font-sans text-[9px] font-normal text-foreground/50 leading-none tracking-[0.2em] uppercase">
-            Listen Together
-          </span>
-          {classicModeBadge && (
-            <Badge
-              variant="outline"
-              className="border-primary/40 text-primary text-xs animate-neon-flicker mt-1"
-            >
-              Classic
-            </Badge>
-          )}
+        {/* Left: "Listen together" muted label */}
+        <div
+          className="hidden text-[11px] uppercase sm:block"
+          style={{
+            color: "rgba(232,230,234,0.4)",
+            letterSpacing: "0.15em",
+          }}
+        >
+          Listen together
         </div>
 
-        {/* Search - hidden on mobile */}
-        <div className="hidden flex-1 items-center justify-center px-8 md:flex">
-          <div className="relative w-full max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search rooms, DJs, genres..."
-              className="h-9 w-full rounded-full border-border/50 bg-muted/50 pl-9 font-sans text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:ring-primary/20"
+        {/* Right cluster: search, create, messages, user menu, JUKEBOX */}
+        <div className="ml-auto flex items-center gap-4">
+          {/* Search pill — matches mockup: 180×30, rounded-full */}
+          <div
+            className="hidden h-[30px] w-[180px] items-center rounded-full px-3 sm:flex"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "0.5px solid rgba(255,255,255,0.08)",
+            }}
+          >
+            <input
+              type="text"
+              placeholder="Search rooms..."
+              className="w-full bg-transparent text-[12px] outline-none placeholder:text-[rgba(232,230,234,0.3)]"
+              style={{ color: "#e8e6ea" }}
+              aria-label="Search rooms"
             />
           </div>
-        </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-3">
+          {/* Create room — solid light pill, logged in only */}
+          {isLoggedIn && (
+            <Link
+              href="/create"
+              className="rounded-[14px] px-[14px] py-[5px] text-xs font-medium transition-opacity hover:opacity-90"
+              style={{ background: "#e8e6ea", color: "#0d0b10" }}
+            >
+              Create room
+            </Link>
+          )}
+
           {/* Messages */}
           <button
+            type="button"
             onClick={() => openDrawer()}
-            className="relative flex items-center justify-center rounded-full p-2 transition-colors hover:bg-muted/30"
+            className="relative flex items-center justify-center rounded-full p-1.5 transition-colors hover:bg-white/[0.06]"
             aria-label="Messages"
           >
-            <MessageCircle className="h-5 w-5 text-muted-foreground" />
+            <MessageCircle
+              className="h-[18px] w-[18px]"
+              style={{ color: "rgba(232,230,234,0.55)" }}
+            />
             {totalUnread > 0 && (
               <span
-                className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-mono text-[9px] font-bold"
-                style={{
-                  background: "oklch(0.55 0.20 270)",
-                  color: "oklch(0.95 0.01 280)",
-                }}
+                className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-mono text-[9px] font-bold"
+                style={{ background: "#e89a3c", color: "#0d0b10" }}
               >
                 {totalUnread}
               </span>
             )}
           </button>
 
-          {isLoggedIn && (
-            <Link href="/create">
-              <Button
-                size="sm"
-                className="gap-2 rounded-full bg-primary font-sans text-primary-foreground hover:bg-primary/90"
-              >
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Create Jukebox</span>
-              </Button>
-            </Link>
-          )}
-
-          {/* Neon balance */}
-          {isLoggedIn && (
-            <button
-              onClick={pricingModal.open}
-              className="hidden items-center gap-1 rounded-full px-2.5 py-1 font-mono text-xs font-semibold transition-all hover:opacity-80 sm:flex"
-              style={{
-                background: "oklch(0.72 0.18 195 / 0.1)",
-                border: "1px solid oklch(0.72 0.18 195 / 0.25)",
-                color: "oklch(0.72 0.18 195)",
-              }}
-            >
-              <Zap className="h-3 w-3" />
-              {((user as any)?.neonBalance ?? 0).toLocaleString()}
-            </button>
-          )}
-
+          {/* User menu (auth-aware avatar + dropdown) */}
           <UserMenu />
 
-          {plan === "free" && (
-            <button
-              onClick={pricingModal.open}
-              className="hidden sm:flex items-center gap-1.5 rounded-full px-3 py-1.5 font-sans text-xs font-semibold transition-all upgrade-button-premium"
-              style={{
-                background: "linear-gradient(135deg, oklch(0.82 0.18 80) 0%, oklch(0.85 0.20 60) 50%, oklch(0.72 0.18 250) 100%)",
-                backgroundSize: "200% auto",
-                border: "1px solid oklch(0.82 0.18 80 / 0.5)",
-                color: "oklch(0.15 0.02 80)",
-              }}
-            >
-              <Crown className="h-3.5 w-3.5" />
-              Upgrade
-            </button>
-          )}
+          {/* JUKEBOX wordmark — plain text, amber, subtle glow */}
+          <Link
+            href="/"
+            onClick={handleLogoClick}
+            className="text-[13px] font-bold tracking-[0.04em]"
+            style={{
+              color: "#e89a3c",
+              textShadow: "0 0 12px rgba(232,154,60,0.3)",
+            }}
+          >
+            JUKEBOX
+          </Link>
         </div>
       </div>
     </header>
