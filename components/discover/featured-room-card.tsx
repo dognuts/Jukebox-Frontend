@@ -42,42 +42,66 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
 
   return (
     <div
-      className="relative mx-auto w-full max-w-4xl overflow-hidden rounded-2xl p-5 sm:p-6 lg:rounded-[20px] lg:p-8"
+      className="relative mx-auto w-full max-w-4xl overflow-hidden rounded-2xl"
       style={{
+        padding: "var(--space-lg)",
         background:
           "linear-gradient(135deg, rgba(60,30,15,0.5) 0%, rgba(20,15,25,0.8) 100%)",
         border: "0.5px solid rgba(232,154,60,0.15)",
       }}
     >
       {/* Header: Featured badge, room name, listener count */}
-      <div className="mb-4 flex items-center justify-between gap-3 lg:mb-5">
-        <div className="flex min-w-0 items-center gap-2 lg:gap-2.5">
+      <div
+        className="flex items-center justify-between"
+        style={{
+          marginBottom: "var(--space-md)",
+          gap: "var(--space-sm)",
+        }}
+      >
+        <div
+          className="flex min-w-0 items-center"
+          style={{ gap: "var(--space-sm)" }}
+        >
           <span
-            className="shrink-0 rounded-[10px] px-2.5 py-[3px] text-[10px] font-bold uppercase tracking-[0.1em] lg:px-3 lg:py-1 lg:text-[11px]"
-            style={{ background: "rgba(232,154,60,0.15)", color: "#e89a3c" }}
+            className="shrink-0 rounded-[10px] font-bold uppercase tracking-[0.1em]"
+            style={{
+              paddingInline: "var(--space-sm)",
+              paddingBlock: "3px",
+              fontSize: "var(--fs-meta)",
+              background: "rgba(232,154,60,0.15)",
+              color: "#e89a3c",
+            }}
           >
             Featured
           </span>
           <span
-            className="truncate text-xs lg:text-sm"
-            style={{ color: "rgba(232,230,234,0.4)" }}
+            className="truncate"
+            style={{
+              fontSize: "var(--fs-small)",
+              color: "rgba(232,230,234,0.4)",
+            }}
           >
             {room.name}
           </span>
         </div>
         <div
-          className="shrink-0 text-xs lg:text-sm"
-          style={{ color: "rgba(232,230,234,0.35)" }}
+          className="shrink-0"
+          style={{
+            fontSize: "var(--fs-small)",
+            color: "rgba(232,230,234,0.35)",
+          }}
         >
           {formatListenerCount(room.listenerCount)} listening
         </div>
       </div>
 
       {/* Now playing row */}
-      <div className="flex items-center gap-4 lg:gap-5">
+      <div className="flex items-center" style={{ gap: "var(--space-md)" }}>
         <div
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[10px] lg:h-[72px] lg:w-[72px] lg:rounded-xl"
+          className="flex shrink-0 items-center justify-center rounded-[10px]"
           style={{
+            width: "clamp(56px, 7vw, 72px)",
+            height: "clamp(56px, 7vw, 72px)",
             background: room.coverArt
               ? `url(${room.coverArt}) center/cover no-repeat`
               : room.nowPlaying.albumGradient ||
@@ -85,28 +109,44 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
           }}
         >
           <div
-            className="h-5 w-5 rounded-full lg:h-6 lg:w-6"
-            style={{ border: "2px solid rgba(232,154,60,0.4)" }}
+            className="rounded-full"
+            style={{
+              width: "clamp(20px, 2.5vw, 24px)",
+              height: "clamp(20px, 2.5vw, 24px)",
+              border: "2px solid rgba(232,154,60,0.4)",
+            }}
           />
         </div>
         <div className="min-w-0 flex-1">
           <div
-            className="truncate text-base font-semibold lg:text-lg"
-            style={{ color: "#e8e6ea" }}
+            className="truncate font-semibold"
+            style={{
+              fontSize: "var(--fs-display)",
+              color: "#e8e6ea",
+            }}
           >
             {room.nowPlaying.title}
           </div>
           <div
-            className="truncate text-[13px] lg:text-sm"
-            style={{ color: "rgba(232,230,234,0.5)" }}
+            className="truncate"
+            style={{
+              fontSize: "var(--fs-small)",
+              color: "rgba(232,230,234,0.5)",
+            }}
           >
             {room.nowPlaying.artist}
           </div>
         </div>
         <Link
           href={`/room/${room.slug}`}
-          className="shrink-0 rounded-[20px] px-[22px] py-2.5 text-[13px] font-semibold transition-opacity hover:opacity-90 lg:rounded-full lg:px-6 lg:py-3 lg:text-sm"
-          style={{ background: "#e89a3c", color: "#0d0b10" }}
+          className="shrink-0 rounded-full font-semibold transition-opacity hover:opacity-90"
+          style={{
+            paddingInline: "var(--space-lg)",
+            paddingBlock: "var(--space-sm)",
+            fontSize: "var(--fs-small)",
+            background: "#e89a3c",
+            color: "#0d0b10",
+          }}
         >
           Tune in
         </Link>
@@ -115,22 +155,40 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
       {/* Chat preview */}
       {preview.length > 0 && (
         <div
-          className="mt-4 flex flex-col gap-1.5 border-t pt-3.5 lg:mt-5 lg:gap-2 lg:pt-4"
-          style={{ borderColor: "rgba(255,255,255,0.06)" }}
+          className="flex flex-col border-t"
+          style={{
+            marginTop: "var(--space-md)",
+            paddingTop: "var(--space-sm)",
+            gap: "var(--space-xs)",
+            borderColor: "rgba(255,255,255,0.06)",
+          }}
         >
           {preview.map((msg) => {
             const color = avatarColorFor(msg.username)
             return (
-              <div key={msg.id} className="flex items-center gap-2 lg:gap-2.5">
+              <div
+                key={msg.id}
+                className="flex items-center"
+                style={{ gap: "var(--space-sm)" }}
+              >
                 <div
-                  className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full text-[8px] font-bold lg:h-5 lg:w-5 lg:text-[9px]"
-                  style={{ background: color, color: "#0d0b10" }}
+                  className="flex shrink-0 items-center justify-center rounded-full font-bold"
+                  style={{
+                    width: "18px",
+                    height: "18px",
+                    fontSize: "8px",
+                    background: color,
+                    color: "#0d0b10",
+                  }}
                 >
                   {initials(msg.username)}
                 </div>
                 <span
-                  className="truncate text-xs lg:text-[13px]"
-                  style={{ color: "rgba(232,230,234,0.5)" }}
+                  className="truncate"
+                  style={{
+                    fontSize: "var(--fs-small)",
+                    color: "rgba(232,230,234,0.5)",
+                  }}
                 >
                   <span className="font-medium" style={{ color }}>
                     {msg.username}

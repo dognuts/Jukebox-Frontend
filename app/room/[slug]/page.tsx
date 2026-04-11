@@ -603,7 +603,7 @@ export default function RoomPage() {
           chat rail widens from 280px to 320px for a more comfortable
           laptop experience. */}
       <div
-        className="mx-auto flex w-full max-w-5xl flex-col md:grid md:grid-cols-[minmax(0,1fr)_280px] lg:grid-cols-[minmax(0,1fr)_320px]"
+        className="shell-narrow flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_280px] lg:grid-cols-[minmax(0,1fr)_320px]"
         style={{
           minHeight: "calc(100vh - 40px)",
         }}

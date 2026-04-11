@@ -189,15 +189,22 @@ export default function HomePage() {
       <div className="relative z-10">
         <Navbar />
 
-        <main className="mx-auto w-full max-w-6xl px-4 pb-12 sm:px-6 lg:px-8 lg:pb-20">
+        <main
+          className="shell"
+          style={{ paddingBottom: "var(--space-3xl)" }}
+        >
           {/* Connection status banner */}
           {loaded && usingMock && (
             <div
-              className="mt-4 rounded-xl px-4 py-2 text-center text-xs"
+              className="rounded-xl text-center"
               style={{
+                marginTop: "var(--space-md)",
+                paddingBlock: "var(--space-sm)",
+                paddingInline: "var(--space-md)",
                 background: "rgba(232,154,60,0.1)",
                 border: "0.5px solid rgba(232,154,60,0.25)",
                 color: "#e89a3c",
+                fontSize: "var(--fs-small)",
               }}
             >
               Backend offline — showing demo data. Start the Go server to see live rooms.
@@ -213,39 +220,45 @@ export default function HomePage() {
 
           {/* Featured room card — hidden while loading or filtering by genre */}
           {loaded && !selectedGenre && featuredRoom && (
-            <ScrollReveal className="mb-8 lg:mb-14">
-              <FeaturedRoomCard
-                room={featuredRoom}
-                chatPreview={featuredChat.length > 0 ? featuredChat : undefined}
-              />
-            </ScrollReveal>
+            <div style={{ marginBottom: "var(--space-2xl)" }}>
+              <ScrollReveal>
+                <FeaturedRoomCard
+                  room={featuredRoom}
+                  chatPreview={featuredChat.length > 0 ? featuredChat : undefined}
+                />
+              </ScrollReveal>
+            </div>
           )}
 
           {/* Live now grid */}
           {loaded && (
-            <ScrollReveal delay={100} className="mb-8 lg:mb-16">
-              <LiveRoomGrid
-                rooms={filteredLiveRooms}
-                headerLabel={selectedGenre ? `${selectedGenre} rooms live` : "Live now"}
-                emptyLabel={
-                  selectedGenre
-                    ? `No ${selectedGenre} rooms streaming right now`
-                    : "No rooms live right now"
-                }
-              />
-            </ScrollReveal>
+            <div style={{ marginBottom: "var(--space-2xl)" }}>
+              <ScrollReveal delay={100}>
+                <LiveRoomGrid
+                  rooms={filteredLiveRooms}
+                  headerLabel={selectedGenre ? `${selectedGenre} rooms live` : "Live now"}
+                  emptyLabel={
+                    selectedGenre
+                      ? `No ${selectedGenre} rooms streaming right now`
+                      : "No rooms live right now"
+                  }
+                />
+              </ScrollReveal>
+            </div>
           )}
 
           {/* Activity feed — hidden while filtering */}
           {loaded && !selectedGenre && (
-            <ScrollReveal delay={200} className="mb-8 lg:mb-12">
-              <ActivityFeed rooms={allRooms} />
-            </ScrollReveal>
+            <div style={{ marginBottom: "var(--space-xl)" }}>
+              <ScrollReveal delay={200}>
+                <ActivityFeed rooms={allRooms} />
+              </ScrollReveal>
+            </div>
           )}
 
           {/* No rooms at all */}
           {loaded && !usingMock && allRooms.length === 0 && (
-            <div className="mt-6">
+            <div style={{ marginTop: "var(--space-lg)" }}>
               <EmptyState
                 variant="no-rooms"
                 title="No rooms live"

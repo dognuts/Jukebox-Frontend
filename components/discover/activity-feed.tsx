@@ -116,12 +116,15 @@ export function ActivityFeed({ rooms }: ActivityFeedProps) {
   return (
     // The activity feed intentionally stays narrower than the rest of
     // the homepage. A list of short text rows is hard to scan when
-    // stretched across ~1100px, so we constrain it to a readable
-    // reading column inside the wider main container.
+    // stretched across the full shell width, so we cap at ~720px.
     <section className="mx-auto w-full max-w-3xl">
       <h2
-        className="mb-3 text-[15px] font-semibold lg:mb-4 lg:text-lg"
-        style={{ color: "#e8e6ea" }}
+        className="font-semibold"
+        style={{
+          marginBottom: "var(--space-sm)",
+          fontSize: "var(--fs-h2)",
+          color: "#e8e6ea",
+        }}
       >
         Happening now
       </h2>
@@ -131,18 +134,32 @@ export function ActivityFeed({ rooms }: ActivityFeedProps) {
           return (
             <div
               key={ev.key}
-              className="flex items-center gap-3 px-3.5 py-2.5 lg:gap-3.5 lg:px-4 lg:py-3"
-              style={{ background: "rgba(255,255,255,0.02)" }}
+              className="flex items-center"
+              style={{
+                gap: "var(--space-sm)",
+                paddingInline: "var(--space-md)",
+                paddingBlock: "var(--space-sm)",
+                background: "rgba(255,255,255,0.02)",
+              }}
             >
               <div
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold lg:h-8 lg:w-8 lg:text-[11px]"
-                style={{ background: color, color: "#0d0b10" }}
+                className="flex shrink-0 items-center justify-center rounded-full font-bold"
+                style={{
+                  width: "clamp(26px, 2vw, 32px)",
+                  height: "clamp(26px, 2vw, 32px)",
+                  fontSize: "var(--fs-meta)",
+                  background: color,
+                  color: "#0d0b10",
+                }}
               >
                 {initials(ev.username)}
               </div>
               <div
-                className="min-w-0 flex-1 truncate text-xs lg:text-[13px]"
-                style={{ color: "rgba(232,230,234,0.6)" }}
+                className="min-w-0 flex-1 truncate"
+                style={{
+                  fontSize: "var(--fs-small)",
+                  color: "rgba(232,230,234,0.6)",
+                }}
               >
                 <span className="font-medium" style={{ color }}>
                   {ev.username}
@@ -177,8 +194,11 @@ export function ActivityFeed({ rooms }: ActivityFeedProps) {
                 )}
               </div>
               <div
-                className="shrink-0 text-[10px] lg:text-[11px]"
-                style={{ color: "rgba(232,230,234,0.25)" }}
+                className="shrink-0"
+                style={{
+                  fontSize: "var(--fs-meta)",
+                  color: "rgba(232,230,234,0.25)",
+                }}
               >
                 {relativeTime(ev.timestamp)}
               </div>
