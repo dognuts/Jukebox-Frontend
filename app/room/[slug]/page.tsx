@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { Play, Radio } from "lucide-react"
 import { PendingRequests } from "@/components/room/pending-requests"
 import { DJControls } from "@/components/room/dj-controls"
+import { DjRibbon } from "@/components/room/dj-ribbon"
 import { RequestModal } from "@/components/room/request-modal"
 import { ListenerNav } from "@/components/room/listener-nav"
 import { ListenerNowPlaying } from "@/components/room/listener-now-playing"
@@ -614,6 +615,33 @@ export default function RoomPage() {
   // whatever the engine has already emitted.
   const effectiveAlbumArt = audioArtwork || null
 
+  // Derive a compact hype summary for the DJ ribbon/deck — same
+  // formula as HypeMeter but normalized into a 0-100 score + label +
+  // color for display in a pill.
+  const djHypeScore = (() => {
+    const raw =
+      hypeTracking.recentTips * 2 +
+      hypeTracking.recentChats * 0.5 +
+      hypeTracking.recentReactions * 1
+    return Math.min(100, Math.round((raw / 50) * 100))
+  })()
+  const djHypeLabel =
+    djHypeScore >= 80
+      ? "On fire"
+      : djHypeScore >= 50
+      ? "Hyped"
+      : djHypeScore >= 25
+      ? "Warming"
+      : "Chill"
+  const djHypeColor =
+    djHypeScore >= 80
+      ? "#ff5a3a"
+      : djHypeScore >= 50
+      ? "#e89a3c"
+      : djHypeScore >= 25
+      ? "#4a8fe8"
+      : "#8a8a9a"
+
   return (
     <div className="min-h-screen" style={{ background: "#0d0b10", color: "#e8e6ea" }}>
       {/* Audio engine mounts once per track so playback keeps running while
@@ -645,6 +673,36 @@ export default function RoomPage() {
         isLive={room.isLive}
         listenerCount={listenerCount}
       />
+
+      {/* DJ ribbon — sticky control strip visible to hosts only.
+          Option A of the DJ redesign. Listener view below is unchanged. */}
+      {isDJ && (
+        <DjRibbon
+          requestStatus={requestStatus as "open" | "paused" | "closed"}
+          onRequestStatusChange={(status) => {
+            if (ws.connected) {
+              const policyMap: Record<string, string> = {
+                open: "open",
+                paused: "approval",
+                closed: "closed",
+              }
+              ws.djSetPolicy(policyMap[status] || "closed")
+            }
+          }}
+          audioPlaying={audioPlaying}
+          onTogglePlay={handleDJTogglePlay}
+          onSkip={handleSkip}
+          onMicChange={handleMicChange}
+          onSubmitTrack={handleSubmitTrack}
+          onEndRoom={ws.connected ? ws.djEndRoom : undefined}
+          pendingRequests={ws.pendingRequests}
+          onApprove={ws.djApprove}
+          onReject={ws.djReject}
+          hypeScore={djHypeScore}
+          hypeLabel={djHypeLabel}
+          hypeColor={djHypeColor}
+        />
+      )}
 
       {/* Main 2-column layout: music experience on the left, chat on the
           right. Below md the grid collapses to a single stacked column
@@ -748,50 +806,9 @@ export default function RoomPage() {
               what's lined up. */}
           <ListenerQueue tracks={queueTracks} />
 
-          {/* DJ-only tool strip, rendered below the queue so it doesn't
-              interfere with the listener-first layout. */}
-          {isDJ && (
-            <div
-              className="flex flex-col gap-3 px-6 pb-6 pt-2"
-              style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)" }}
-            >
-              <DJControls
-                requestPolicy={room.requestPolicy}
-                requestStatus={requestStatus as "open" | "paused" | "closed"}
-                onRequestStatusChange={(status) => {
-                  if (ws.connected) {
-                    const policyMap: Record<string, string> = {
-                      open: "open",
-                      paused: "approval",
-                      closed: "closed",
-                    }
-                    ws.djSetPolicy(policyMap[status] || "closed")
-                  }
-                }}
-                onSubmitTrack={handleSubmitTrack}
-                onMicChange={handleMicChange}
-                onEndRoom={ws.connected ? ws.djEndRoom : undefined}
-                listenerCount={listenerCount}
-              />
-
-              {ws.pendingRequests.length > 0 && (
-                <PendingRequests
-                  requests={ws.pendingRequests}
-                  onApprove={ws.djApprove}
-                  onReject={ws.djReject}
-                  onApproveAll={() => ws.pendingRequests.forEach((r) => ws.djApprove(r.id))}
-                  onRejectAll={() => ws.pendingRequests.forEach((r) => ws.djReject(r.id))}
-                />
-              )}
-
-              <HypeMeter
-                recentTips={hypeTracking.recentTips}
-                recentChats={hypeTracking.recentChats}
-                recentReactions={hypeTracking.recentReactions}
-              />
-              <IntermissionScheduler />
-            </div>
-          )}
+          {/* DJ-only tool strip removed in Option A — the DjRibbon at
+              the top of the page hosts all DJ controls. Full pending
+              requests management lives in the ribbon's slide-over. */}
         </div>
 
         {/* Right: chat column */}
