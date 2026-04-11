@@ -5,12 +5,14 @@ import { useParams } from "next/navigation"
 import Link from "next/link"
 import { toast } from "sonner"
 import { Play, Radio } from "lucide-react"
+import { Play as PlayIcon, Pause as PauseIcon, SkipForward } from "lucide-react"
 import { PendingRequests } from "@/components/room/pending-requests"
 import { DJControls } from "@/components/room/dj-controls"
 import { RequestModal } from "@/components/room/request-modal"
 import { ListenerNav } from "@/components/room/listener-nav"
 import { ListenerNowPlaying } from "@/components/room/listener-now-playing"
 import { ListenerDjContext } from "@/components/room/listener-dj-context"
+import { DjCockpit } from "@/components/room/dj-cockpit"
 import { ListenerQueue } from "@/components/room/listener-queue"
 import { ListenerChatColumn } from "@/components/room/listener-chat-column"
 import { type Room, type Track, type ChatMessage, getRoomBySlug, rooms } from "@/lib/mock-data"
@@ -614,6 +616,67 @@ export default function RoomPage() {
   // whatever the engine has already emitted.
   const effectiveAlbumArt = audioArtwork || null
 
+  // Derive a compact hype summary for the DJ cockpit.
+  const djHypeScore = (() => {
+    const raw =
+      hypeTracking.recentTips * 2 +
+      hypeTracking.recentChats * 0.5 +
+      hypeTracking.recentReactions * 1
+    return Math.min(100, Math.round((raw / 50) * 100))
+  })()
+  const djHypeLabel =
+    djHypeScore >= 80 ? "On fire" : djHypeScore >= 50 ? "Hyped" : djHypeScore >= 25 ? "Warming" : "Chill"
+  const djHypeColor =
+    djHypeScore >= 80 ? "#ff5a3a" : djHypeScore >= 50 ? "#e89a3c" : djHypeScore >= 25 ? "#4a8fe8" : "#8a8a9a"
+
+  // DJ transport action override — rendered inside the now-playing
+  // hero's action row when the user is the host, replacing
+  // Save/Request/Send Neon with play/pause/skip.
+  const djTransport = isDJ ? (
+    <>
+      <button
+        type="button"
+        onClick={handleDJTogglePlay}
+        aria-label={audioPlaying ? "Pause" : "Play"}
+        className="flex items-center justify-center rounded-full transition-colors hover:brightness-110"
+        style={{
+          width: "clamp(40px, 4vw, 52px)",
+          height: "clamp(40px, 4vw, 52px)",
+          background: "#e89a3c",
+          color: "#0d0b10",
+          boxShadow: "0 8px 22px -6px rgba(232,154,60,0.5)",
+        }}
+      >
+        {audioPlaying ? <PauseIcon className="h-5 w-5" /> : <PlayIcon className="h-5 w-5" />}
+      </button>
+      <button
+        type="button"
+        onClick={handleSkip}
+        aria-label="Skip"
+        className="flex items-center justify-center rounded-full transition-colors hover:bg-white/[0.08]"
+        style={{
+          width: "clamp(36px, 3.5vw, 44px)",
+          height: "clamp(36px, 3.5vw, 44px)",
+          background: "rgba(255,255,255,0.04)",
+          border: "0.5px solid rgba(255,255,255,0.12)",
+          color: "rgba(232,230,234,0.75)",
+        }}
+      >
+        <SkipForward className="h-4 w-4" />
+      </button>
+      <div
+        className="tabular-nums"
+        style={{
+          marginLeft: "var(--space-md)",
+          fontSize: "var(--fs-small)",
+          color: "rgba(232,230,234,0.5)",
+        }}
+      >
+        {audioPlaying ? "Playing" : "Paused"} · {listenerCount} listening
+      </div>
+    </>
+  ) : undefined
+
   return (
     <div className="min-h-screen" style={{ background: "#0d0b10", color: "#e8e6ea" }}>
       {/* Audio engine mounts once per track so playback keeps running while
@@ -734,13 +797,42 @@ export default function RoomPage() {
                 }
                 isYouTube={audioTrack?.source === "youtube"}
                 ytSlotRef={setYtSlot}
+                actionOverride={djTransport}
               />
 
-              <ListenerDjContext
-                djName={room.djName}
-                djInitials={djInitials}
-                body={djContextBody}
-              />
+              {isDJ ? (
+                <DjCockpit
+                  djName={room.djName}
+                  djInitials={djInitials}
+                  requestStatus={requestStatus as "open" | "paused" | "closed"}
+                  onRequestStatusChange={(status) => {
+                    if (ws.connected) {
+                      const policyMap: Record<string, string> = {
+                        open: "open",
+                        paused: "approval",
+                        closed: "closed",
+                      }
+                      ws.djSetPolicy(policyMap[status] || "closed")
+                    }
+                  }}
+                  onMicChange={handleMicChange}
+                  onSubmitTrack={handleSubmitTrack}
+                  onEndRoom={ws.connected ? ws.djEndRoom : undefined}
+                  listenerCount={listenerCount}
+                  pendingRequests={ws.pendingRequests}
+                  onApprove={ws.djApprove}
+                  onReject={ws.djReject}
+                  hypeScore={djHypeScore}
+                  hypeLabel={djHypeLabel}
+                  hypeColor={djHypeColor}
+                />
+              ) : (
+                <ListenerDjContext
+                  djName={room.djName}
+                  djInitials={djInitials}
+                  body={djContextBody}
+                />
+              )}
             </>
           )}
 
@@ -748,50 +840,9 @@ export default function RoomPage() {
               what's lined up. */}
           <ListenerQueue tracks={queueTracks} />
 
-          {/* DJ-only tool strip, rendered below the queue so it doesn't
-              interfere with the listener-first layout. */}
-          {isDJ && (
-            <div
-              className="flex flex-col gap-3 px-6 pb-6 pt-2"
-              style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)" }}
-            >
-              <DJControls
-                requestPolicy={room.requestPolicy}
-                requestStatus={requestStatus as "open" | "paused" | "closed"}
-                onRequestStatusChange={(status) => {
-                  if (ws.connected) {
-                    const policyMap: Record<string, string> = {
-                      open: "open",
-                      paused: "approval",
-                      closed: "closed",
-                    }
-                    ws.djSetPolicy(policyMap[status] || "closed")
-                  }
-                }}
-                onSubmitTrack={handleSubmitTrack}
-                onMicChange={handleMicChange}
-                onEndRoom={ws.connected ? ws.djEndRoom : undefined}
-                listenerCount={listenerCount}
-              />
-
-              {ws.pendingRequests.length > 0 && (
-                <PendingRequests
-                  requests={ws.pendingRequests}
-                  onApprove={ws.djApprove}
-                  onReject={ws.djReject}
-                  onApproveAll={() => ws.pendingRequests.forEach((r) => ws.djApprove(r.id))}
-                  onRejectAll={() => ws.pendingRequests.forEach((r) => ws.djReject(r.id))}
-                />
-              )}
-
-              <HypeMeter
-                recentTips={hypeTracking.recentTips}
-                recentChats={hypeTracking.recentChats}
-                recentReactions={hypeTracking.recentReactions}
-              />
-              <IntermissionScheduler />
-            </div>
-          )}
+          {/* DJ-only tool strip removed in Option B — the DjCockpit
+              above (in place of ListenerDjContext) hosts all DJ
+              controls. Pending requests open as a slide-over. */}
         </div>
 
         {/* Right: chat column */}

@@ -21,6 +21,10 @@ interface ListenerNowPlayingProps {
   sendNeonDisabled?: boolean
   albumArtUrl?: string | null
   albumGradient?: string
+  // When provided, this node is rendered in place of the listener
+  // action buttons row (Save / Request / Send Neon). Used by the DJ
+  // view to swap in a transport control row (play / pause / skip).
+  actionOverride?: React.ReactNode
   // When the current track is hosted on SoundCloud, pass the track URL.
   // The component will link the title to the track and the artist name
   // to the user's profile, and render a "Listen on SoundCloud" badge
@@ -62,6 +66,7 @@ export function ListenerNowPlaying({
   soundCloudUrl,
   isYouTube = false,
   ytSlotRef,
+  actionOverride,
 }: ListenerNowPlayingProps) {
   const pct =
     duration > 0
@@ -295,52 +300,60 @@ export function ListenerNowPlaying({
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div className="mt-3.5 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={onSave}
-            className="flex items-center gap-[5px] rounded-2xl px-4 py-[7px] text-xs transition-colors hover:bg-white/[0.06]"
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "0.5px solid rgba(255,255,255,0.08)",
-              color: "rgba(232,230,234,0.6)",
-            }}
-          >
-            <Heart className="h-3.5 w-3.5" />
-            Save
-          </button>
-          <button
-            type="button"
-            onClick={onRequest}
-            disabled={requestDisabled}
-            className="flex items-center gap-[5px] rounded-2xl px-4 py-[7px] text-xs transition-colors hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-40"
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "0.5px solid rgba(255,255,255,0.08)",
-              color: "rgba(232,230,234,0.6)",
-            }}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Request
-          </button>
-          {onSendNeon && (
+        {/* Action buttons — either the default listener row
+            (Save / Request / Send Neon) or a caller-provided node
+            (the DJ view uses this to render transport controls). */}
+        {actionOverride ? (
+          <div className="mt-3.5 flex flex-wrap items-center" style={{ gap: "var(--space-sm)" }}>
+            {actionOverride}
+          </div>
+        ) : (
+          <div className="mt-3.5 flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={onSendNeon}
-              disabled={sendNeonDisabled}
-              className="flex items-center gap-[5px] rounded-2xl px-4 py-[7px] text-xs transition-colors hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={onSave}
+              className="flex items-center gap-[5px] rounded-2xl px-4 py-[7px] text-xs transition-colors hover:bg-white/[0.06]"
               style={{
-                background: "rgba(232,154,60,0.06)",
-                border: "0.5px solid rgba(232,154,60,0.2)",
-                color: "#e89a3c",
+                background: "rgba(255,255,255,0.04)",
+                border: "0.5px solid rgba(255,255,255,0.08)",
+                color: "rgba(232,230,234,0.6)",
               }}
             >
-              <Zap className="h-3.5 w-3.5" />
-              Send Neon
+              <Heart className="h-3.5 w-3.5" />
+              Save
             </button>
-          )}
-        </div>
+            <button
+              type="button"
+              onClick={onRequest}
+              disabled={requestDisabled}
+              className="flex items-center gap-[5px] rounded-2xl px-4 py-[7px] text-xs transition-colors hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-40"
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "0.5px solid rgba(255,255,255,0.08)",
+                color: "rgba(232,230,234,0.6)",
+              }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Request
+            </button>
+            {onSendNeon && (
+              <button
+                type="button"
+                onClick={onSendNeon}
+                disabled={sendNeonDisabled}
+                className="flex items-center gap-[5px] rounded-2xl px-4 py-[7px] text-xs transition-colors hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-40"
+                style={{
+                  background: "rgba(232,154,60,0.06)",
+                  border: "0.5px solid rgba(232,154,60,0.2)",
+                  color: "#e89a3c",
+                }}
+              >
+                <Zap className="h-3.5 w-3.5" />
+                Send Neon
+              </button>
+            )}
+          </div>
+        )}
 
         {/* SoundCloud attribution badge — required by the SoundCloud
             API Terms of Use when displaying streamed track metadata.
