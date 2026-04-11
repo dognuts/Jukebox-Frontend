@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 
 interface NeonJukeboxLogoProps {
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'xs' | 'sm' | 'md' | 'lg'
 }
 
 // Color A: warm orange (existing)
@@ -194,7 +194,14 @@ export function NeonJukeboxLogo({ size = 'lg' }: NeonJukeboxLogoProps) {
     }
   }, [])
 
-  const sizeClass = size === 'sm' ? 'h-10 w-auto' : size === 'md' ? 'h-12 w-auto' : 'h-16 w-auto'
+  const sizeClass =
+    size === 'xs'
+      ? 'h-7 w-auto'
+      : size === 'sm'
+      ? 'h-10 w-auto'
+      : size === 'md'
+      ? 'h-12 w-auto'
+      : 'h-16 w-auto'
 
   return (
     <div

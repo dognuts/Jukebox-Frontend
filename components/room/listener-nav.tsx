@@ -4,6 +4,7 @@ import Link from "next/link"
 import { ArrowLeft, MessageCircle } from "lucide-react"
 import { useMessages } from "@/lib/messages-context"
 import { UserMenu } from "@/components/layout/user-menu"
+import { NeonJukeboxLogo } from "@/components/effects/neon-jukebox-logo"
 
 interface ListenerNavProps {
   roomName: string
@@ -20,12 +21,24 @@ export function ListenerNav({
 
   return (
     <div
-      className="flex items-center justify-between px-5 py-2.5"
+      className="relative flex items-center justify-between px-5 py-2"
       style={{
         background: "rgba(13,11,16,0.95)",
         borderBottom: "0.5px solid rgba(255,255,255,0.06)",
       }}
     >
+      {/* Animated JUKEBOX logo, centered. Absolutely positioned so the
+          left and right clusters aren't pushed around, and hidden below
+          md so it doesn't collide with the back + room name cluster on
+          phones. */}
+      <Link
+        href="/"
+        aria-label="Jukebox — home"
+        className="pointer-events-auto absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 md:block"
+      >
+        <NeonJukeboxLogo size="xs" />
+      </Link>
+
       {/* Left: back + room name + LIVE badge */}
       <div className="flex min-w-0 items-center gap-2.5">
         <Link

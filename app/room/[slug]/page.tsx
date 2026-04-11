@@ -166,9 +166,18 @@ export default function RoomPage() {
     }
   }, [ws.connected])
 
-  // Use WebSocket data when connected, otherwise room data from initial fetch
+  // Use WebSocket data when connected, otherwise room data from initial
+  // fetch. For the infoSnippet specifically, fall back to the REST
+  // room.nowPlaying value when the WS payload is missing it — this
+  // covers races where the track_changed event lands before the tracks
+  // table row has the latest snippet, and it lets the periodic REST
+  // refresh below populate fresher snippets as they land.
   const currentTrack: Track | null = useMemo(() => {
     if (ws.connected && ws.currentTrack) {
+      const restSnippet =
+        room?.nowPlaying && room.nowPlaying.id === ws.currentTrack.id
+          ? room.nowPlaying.infoSnippet
+          : undefined
       return {
         id: ws.currentTrack.id,
         title: ws.currentTrack.title,
@@ -178,11 +187,43 @@ export default function RoomPage() {
         sourceUrl: ws.currentTrack.sourceUrl,
         submittedBy: "DJ",
         albumGradient: ws.currentTrack.albumGradient || "linear-gradient(135deg, oklch(0.45 0.15 30), oklch(0.35 0.20 350))",
-        infoSnippet: ws.currentTrack.infoSnippet,
+        infoSnippet: ws.currentTrack.infoSnippet || restSnippet,
       }
     }
     return room?.nowPlaying ?? null
   }, [ws.connected, ws.currentTrack, room?.nowPlaying])
+
+  // Periodic REST refresh of room.nowPlaying.infoSnippet. Runs every
+  // 20 seconds as a safety net for snippet drift: if the backend
+  // updates a track's info_snippet after the room loaded or the WS
+  // connected, the next poll will pick it up and feed it into the
+  // currentTrack memo via the fallback path above. Only updates state
+  // when the snippet actually changed to avoid unnecessary re-renders.
+  useEffect(() => {
+    if (!slug || notFound) return
+    const id = setInterval(async () => {
+      try {
+        const detail = await getRoom(slug)
+        const fresh = detail.nowPlaying
+        if (!fresh) return
+        setRoom((prev) => {
+          if (!prev || !prev.nowPlaying) return prev
+          if (prev.nowPlaying.id !== fresh.id) return prev
+          if (prev.nowPlaying.infoSnippet === fresh.infoSnippet) return prev
+          return {
+            ...prev,
+            nowPlaying: {
+              ...prev.nowPlaying,
+              infoSnippet: fresh.infoSnippet,
+            },
+          }
+        })
+      } catch {
+        // Swallow — next tick will try again.
+      }
+    }, 20000)
+    return () => clearInterval(id)
+  }, [slug, notFound])
 
   // Autoplay playlist tracks — fetch for autoplay rooms
   const [autoplayTracks, setAutoplayTracks] = useState<Track[]>([])
@@ -613,7 +654,7 @@ export default function RoomPage() {
       <div
         className="shell-narrow flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_280px] lg:grid-cols-[minmax(0,1fr)_320px]"
         style={{
-          minHeight: "calc(100vh - 40px)",
+          minHeight: "calc(100vh - 48px)",
         }}
       >
         {/* Left: now playing + DJ context + queue */}
