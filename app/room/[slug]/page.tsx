@@ -13,6 +13,7 @@ import { ListenerNowPlaying } from "@/components/room/listener-now-playing"
 import { ListenerDjContext } from "@/components/room/listener-dj-context"
 import { ListenerQueue } from "@/components/room/listener-queue"
 import { ListenerChatColumn } from "@/components/room/listener-chat-column"
+import { DjDeck } from "@/components/room/dj-deck"
 import { type Room, type Track, type ChatMessage, getRoomBySlug, rooms } from "@/lib/mock-data"
 import { usePlayer } from "@/lib/player-context"
 import { usePlaylist } from "@/lib/playlist-context"
@@ -614,6 +615,19 @@ export default function RoomPage() {
   // whatever the engine has already emitted.
   const effectiveAlbumArt = audioArtwork || null
 
+  // Derive a compact hype summary for the DJ deck.
+  const djHypeScore = (() => {
+    const raw =
+      hypeTracking.recentTips * 2 +
+      hypeTracking.recentChats * 0.5 +
+      hypeTracking.recentReactions * 1
+    return Math.min(100, Math.round((raw / 50) * 100))
+  })()
+  const djHypeLabel =
+    djHypeScore >= 80 ? "On fire" : djHypeScore >= 50 ? "Hyped" : djHypeScore >= 25 ? "Warming" : "Chill"
+  const djHypeColor =
+    djHypeScore >= 80 ? "#ff5a3a" : djHypeScore >= 50 ? "#e89a3c" : djHypeScore >= 25 ? "#4a8fe8" : "#8a8a9a"
+
   return (
     <div className="min-h-screen" style={{ background: "#0d0b10", color: "#e8e6ea" }}>
       {/* Audio engine mounts once per track so playback keeps running while
@@ -646,13 +660,16 @@ export default function RoomPage() {
         listenerCount={listenerCount}
       />
 
-      {/* Main 2-column layout: music experience on the left, chat on the
-          right. Below md the grid collapses to a single stacked column
-          so the chat sits under the now-playing on phones. On lg+ the
-          chat rail widens from 280px to 320px for a more comfortable
-          laptop experience. */}
+      {/* Main grid — 2 columns for listeners, 3 columns for DJs in
+          Option D. The DJ third column ("deck") holds all host
+          controls. On narrow viewports it stacks vertically below
+          chat. */}
       <div
-        className="shell-narrow flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_clamp(260px,22vw,360px)]"
+        className={
+          isDJ
+            ? "shell-narrow flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_clamp(240px,20vw,320px)_clamp(260px,20vw,320px)]"
+            : "shell-narrow flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_clamp(260px,22vw,360px)]"
+        }
         style={{
           minHeight: "calc(100vh - 56px)",
         }}
@@ -748,50 +765,9 @@ export default function RoomPage() {
               what's lined up. */}
           <ListenerQueue tracks={queueTracks} />
 
-          {/* DJ-only tool strip, rendered below the queue so it doesn't
-              interfere with the listener-first layout. */}
-          {isDJ && (
-            <div
-              className="flex flex-col gap-3 px-6 pb-6 pt-2"
-              style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)" }}
-            >
-              <DJControls
-                requestPolicy={room.requestPolicy}
-                requestStatus={requestStatus as "open" | "paused" | "closed"}
-                onRequestStatusChange={(status) => {
-                  if (ws.connected) {
-                    const policyMap: Record<string, string> = {
-                      open: "open",
-                      paused: "approval",
-                      closed: "closed",
-                    }
-                    ws.djSetPolicy(policyMap[status] || "closed")
-                  }
-                }}
-                onSubmitTrack={handleSubmitTrack}
-                onMicChange={handleMicChange}
-                onEndRoom={ws.connected ? ws.djEndRoom : undefined}
-                listenerCount={listenerCount}
-              />
-
-              {ws.pendingRequests.length > 0 && (
-                <PendingRequests
-                  requests={ws.pendingRequests}
-                  onApprove={ws.djApprove}
-                  onReject={ws.djReject}
-                  onApproveAll={() => ws.pendingRequests.forEach((r) => ws.djApprove(r.id))}
-                  onRejectAll={() => ws.pendingRequests.forEach((r) => ws.djReject(r.id))}
-                />
-              )}
-
-              <HypeMeter
-                recentTips={hypeTracking.recentTips}
-                recentChats={hypeTracking.recentChats}
-                recentReactions={hypeTracking.recentReactions}
-              />
-              <IntermissionScheduler />
-            </div>
-          )}
+          {/* DJ-only tool strip removed in Option D — controls
+              live in the DjDeck, the third grid column added below
+              when isDJ. */}
         </div>
 
         {/* Right: chat column */}
@@ -805,6 +781,43 @@ export default function RoomPage() {
           djName={room.djName}
           overlayRef={chatOverlayRef}
         />
+
+        {/* Third column — DJ deck with all host controls. Only
+            renders when the user is a DJ; pushes the grid from
+            2 columns to 3. */}
+        {isDJ && (
+          <DjDeck
+            djName={room.djName}
+            djInitials={djInitials}
+            requestStatus={requestStatus as "open" | "paused" | "closed"}
+            onRequestStatusChange={(status) => {
+              if (ws.connected) {
+                const policyMap: Record<string, string> = {
+                  open: "open",
+                  paused: "approval",
+                  closed: "closed",
+                }
+                ws.djSetPolicy(policyMap[status] || "closed")
+              }
+            }}
+            audioPlaying={audioPlaying}
+            onTogglePlay={handleDJTogglePlay}
+            onSkip={handleSkip}
+            onMicChange={handleMicChange}
+            onSubmitTrack={handleSubmitTrack}
+            onEndRoom={ws.connected ? ws.djEndRoom : undefined}
+            listenerCount={listenerCount}
+            pendingRequests={ws.pendingRequests}
+            onApprove={ws.djApprove}
+            onReject={ws.djReject}
+            hypeScore={djHypeScore}
+            hypeLabel={djHypeLabel}
+            hypeColor={djHypeColor}
+            recentTips={hypeTracking.recentTips}
+            recentChats={hypeTracking.recentChats}
+            recentReactions={hypeTracking.recentReactions}
+          />
+        )}
       </div>
 
       {/* Modals */}
