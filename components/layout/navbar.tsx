@@ -28,31 +28,68 @@ export function Navbar() {
   const scrollAccum = useRef(0)
 
   useEffect(() => {
-    const THRESHOLD = 15 // px of scroll in same direction before toggling
-    const onScroll = () => {
-      const y = window.scrollY
-      const delta = y - lastScrollY.current
-      const direction = delta > 0 ? "down" : "up"
+    // Disable hide-on-scroll on mobile viewports. Mobile browsers collapse
+    // their URL bar during scroll which fires spurious scroll events and
+    // toggles the header back and forth. Combined with backdrop-filter blur,
+    // that produces a visible flicker. Keep the nav pinned on mobile and
+    // only run the slide-away behavior on desktop.
+    const mq = window.matchMedia("(min-width: 768px)")
 
-      // Reset accumulator on direction change
-      if (direction !== lastDirection.current) {
-        scrollAccum.current = 0
-        lastDirection.current = direction
+    let unbindScroll: (() => void) | null = null
+
+    const bindScroll = () => {
+      const THRESHOLD = 15 // px of scroll in same direction before toggling
+      const onScroll = () => {
+        // Clamp to 0 so iOS rubber-band overscroll can't feed negative
+        // values into the direction/accumulator logic.
+        const y = Math.max(0, window.scrollY)
+        const delta = y - lastScrollY.current
+        const direction = delta > 0 ? "down" : "up"
+
+        // Reset accumulator on direction change
+        if (direction !== lastDirection.current) {
+          scrollAccum.current = 0
+          lastDirection.current = direction
+        }
+
+        scrollAccum.current += Math.abs(delta)
+        lastScrollY.current = y
+
+        // Only toggle after accumulating enough scroll in one direction
+        if (y <= 32) {
+          setHidden(false)
+          scrollAccum.current = 0
+        } else if (scrollAccum.current > THRESHOLD) {
+          setHidden(direction === "down")
+        }
       }
+      window.addEventListener("scroll", onScroll, { passive: true })
+      unbindScroll = () => window.removeEventListener("scroll", onScroll)
+    }
 
-      scrollAccum.current += Math.abs(delta)
-      lastScrollY.current = y
-
-      // Only toggle after accumulating enough scroll in one direction
-      if (y <= 32) {
+    const apply = () => {
+      if (mq.matches) {
+        // Desktop/tablet — enable hide-on-scroll
+        if (!unbindScroll) bindScroll()
+      } else {
+        // Mobile — keep nav pinned and drop any active listener
+        if (unbindScroll) {
+          unbindScroll()
+          unbindScroll = null
+        }
         setHidden(false)
         scrollAccum.current = 0
-      } else if (scrollAccum.current > THRESHOLD) {
-        setHidden(direction === "down")
+        lastScrollY.current = 0
       }
     }
-    window.addEventListener("scroll", onScroll, { passive: true })
-    return () => window.removeEventListener("scroll", onScroll)
+
+    apply()
+    mq.addEventListener("change", apply)
+
+    return () => {
+      mq.removeEventListener("change", apply)
+      if (unbindScroll) unbindScroll()
+    }
   }, [])
 
   const handleLogoClick = useCallback(() => {
