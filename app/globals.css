@@ -209,6 +209,16 @@
   75% { transform: scaleY(0.4); }
 }
 
+/* EQ bars shown next to the now-playing track on the listener view */
+@keyframes listener-eq-1 { 0%, 100% { height: 8px; } 50% { height: 22px; } }
+@keyframes listener-eq-2 { 0%, 100% { height: 16px; } 50% { height: 6px; } }
+@keyframes listener-eq-3 { 0%, 100% { height: 12px; } 50% { height: 24px; } }
+
+@keyframes listener-reaction-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   10% { transform: translateX(-4px) rotate(-0.5deg); }

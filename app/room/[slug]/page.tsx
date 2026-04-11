@@ -3,33 +3,26 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, ListMusic, MessageCircle, Inbox, PauseCircle, XCircle, Play, Radio, SkipForward, Zap } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Navbar } from "@/components/layout/navbar"
-import { BubbleBackground } from "@/components/effects/bubble-background"
-import { NowPlaying } from "@/components/room/now-playing"
-import { BPMDisplay } from "@/components/room/bpm-display"
-import { SaveTrackMenu } from "@/components/room/save-track-menu"
-import { TrackQueue } from "@/components/room/track-queue"
+import { toast } from "sonner"
+import { Play, Radio } from "lucide-react"
 import { PendingRequests } from "@/components/room/pending-requests"
-import { ChatPanel } from "@/components/room/chat-panel"
-import { ListenerBar } from "@/components/room/listener-bar"
 import { DJControls } from "@/components/room/dj-controls"
 import { RequestModal } from "@/components/room/request-modal"
-import { NeonArches } from "@/components/effects/neon-arches"
+import { ListenerNav } from "@/components/room/listener-nav"
+import { ListenerNowPlaying } from "@/components/room/listener-now-playing"
+import { ListenerDjContext } from "@/components/room/listener-dj-context"
+import { ListenerQueue } from "@/components/room/listener-queue"
+import { ListenerChatColumn } from "@/components/room/listener-chat-column"
 import { type Room, type Track, type ChatMessage, getRoomBySlug, rooms } from "@/lib/mock-data"
 import { usePlayer } from "@/lib/player-context"
+import { usePlaylist } from "@/lib/playlist-context"
 import { getRoom, toFrontendRoom, type RoomDetail } from "@/lib/api"
 import { useRoomWebSocket } from "@/hooks/use-room-websocket"
 import { AudioEngine, type AudioEngineTrack } from "@/components/player/audio-engine"
 import { parseTrackUrl } from "@/lib/track-utils"
-import { NeonTubeViz } from "@/components/room/neon-tube"
 import { SendNeonModal } from "@/components/room/send-neon-modal"
-import { DJSubscribeCard } from "@/components/room/dj-subscribe-card"
-import { SupernovaSparksCascade } from "@/components/room/supernova-sparks"
 import { useAuth } from "@/lib/auth-context"
 import { HypeMeter, useHypeTracking } from "@/components/room/hype-meter"
-import { CollapsibleSection } from "@/components/room/collapsible-section"
 import { IntermissionScheduler } from "@/components/room/intermission-scheduler"
 import { useLiveKitVoice } from "@/hooks/use-livekit-voice"
 
@@ -51,6 +44,7 @@ export default function RoomPage() {
   const [usingMock, setUsingMock] = useState(false)
   const [notFound, setNotFound] = useState(false)
   const { setRoom: setPlayerRoom, updateTrack, updatePlaybackTime, close: closePlayer } = usePlayer()
+  const { toggleLike, isLiked } = usePlaylist()
 
   useEffect(() => {
     let cancelled = false
@@ -104,7 +98,6 @@ export default function RoomPage() {
   const [sendNeonOpen, setSendNeonOpen] = useState(false)
   const tubeBarRef = useRef<HTMLDivElement>(null)
   const { user: authUser } = useAuth()
-  const [mobilePanel, setMobilePanel] = useState<"queue" | "chat">("chat")
   const [micActive, setMicActive] = useState(false)
   const [micPausesMusic, setMicPausesMusic] = useState(true)
 
@@ -139,7 +132,9 @@ export default function RoomPage() {
   // Track reactions via the onReaction callback
   hypeReactionRef.current = hypeTracking.recordReaction
 
-  // Mock tube state for when backend is not connected
+  // Mock tube state for when backend is not connected (kept so Send Neon
+  // can still give local feedback — tube visual is no longer rendered but
+  // the state is still used by the Neon modal cascade.)
   const [mockTube, setMockTube] = useState({ roomId: slug || "", level: 1, fillAmount: 0, fillTarget: 100, totalNeon: 0 })
   const [mockPowerUp, setMockPowerUp] = useState<{ newLevel: number; color: string } | null>(null)
 
@@ -475,626 +470,256 @@ export default function RoomPage() {
     }
   }, [isDJ, ws, djKey, slug, queueTracks])
 
-  // Room not found
+  // ─── Error / loading states ───────────────────────────────────────────────
+  // Restyled to match the redesigned palette. No global navbar — the
+  // in-room nav replaces it; these error states render only a back link.
+
+  const errorShell = (title: string, body: string) => (
+    <div
+      className="flex min-h-screen items-center justify-center"
+      style={{ background: "#0d0b10", color: "#e8e6ea" }}
+    >
+      <div className="flex flex-col items-center gap-3 px-6 text-center">
+        <div
+          className="flex h-14 w-14 items-center justify-center rounded-full"
+          style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }}
+        >
+          <Radio className="h-6 w-6" style={{ color: "#e89a3c" }} />
+        </div>
+        <p className="text-base font-semibold">{title}</p>
+        <p className="max-w-sm text-sm" style={{ color: "rgba(232,230,234,0.5)" }}>
+          {body}
+        </p>
+        <Link
+          href="/"
+          className="mt-2 rounded-full px-5 py-2 text-sm font-semibold"
+          style={{ background: "#e89a3c", color: "#0d0b10" }}
+        >
+          Back to Discover
+        </Link>
+      </div>
+    </div>
+  )
+
   if (notFound) {
-    return (
-      <div className="relative min-h-screen">
-
-        <div className="relative z-10">
-          <Navbar />
-          <div className="flex flex-col items-center justify-center gap-4 py-40">
-            <p className="font-sans text-lg text-foreground">Room not found</p>
-            <p className="font-sans text-sm text-muted-foreground">
-              This room may have been deleted or the link is invalid.
-            </p>
-            <Link
-              href="/"
-              className="mt-2 rounded-full bg-primary px-6 py-2 font-sans text-sm text-primary-foreground hover:bg-primary/90 transition-colors"
-            >
-              Back to Discover
-            </Link>
-          </div>
-        </div>
-      </div>
+    return errorShell(
+      "Room not found",
+      "This room may have been deleted or the link is invalid."
     )
   }
 
-  // Room ended state
   if (ws.roomEnded) {
-    return (
-      <div className="relative min-h-screen">
-
-        <div className="relative z-10">
-          <Navbar />
-          <div className="flex flex-col items-center justify-center gap-4 py-40">
-            <div
-              className="flex h-16 w-16 items-center justify-center rounded-full"
-              style={{
-                background: "oklch(0.18 0.04 280)",
-                border: "1px solid oklch(0.35 0.06 280 / 0.5)",
-              }}
-            >
-              <Radio className="h-7 w-7 text-muted-foreground" />
-            </div>
-            <p className="font-sans text-lg font-semibold text-foreground">Session Ended</p>
-            <p className="max-w-sm text-center font-sans text-sm text-muted-foreground">
-              {ws.roomEndedReason}
-            </p>
-            <Link
-              href="/"
-              className="mt-2 rounded-full bg-primary px-6 py-2 font-sans text-sm text-primary-foreground hover:bg-primary/90 transition-colors"
-            >
-              Back to Discover
-            </Link>
-          </div>
-        </div>
-      </div>
+    return errorShell(
+      "Session ended",
+      ws.roomEndedReason || "The DJ has ended this session."
     )
   }
 
-  // Loading state
   if (!room) {
     return (
-      <div className="relative min-h-screen">
-
-        <div className="relative z-10">
-          <Navbar />
-          <div className="flex items-center justify-center py-40">
-            <p className="font-sans text-muted-foreground">Loading room...</p>
-          </div>
-        </div>
+      <div
+        className="flex min-h-screen items-center justify-center"
+        style={{ background: "#0d0b10", color: "rgba(232,230,234,0.6)" }}
+      >
+        <p className="text-sm">Loading room...</p>
       </div>
     )
   }
 
+  // ─── Derived render data ──────────────────────────────────────────────────
+
   const displayTrack = currentTrack ?? room.nowPlaying
+  const djInitials = (room.djName || "DJ").slice(0, 2).toUpperCase()
+
+  // DJ commentary body: prefer the admin-authored info snippet on the
+  // current track, fall back to the most recent DJ announcement chat.
+  const djAnnouncement = [...chatMessages]
+    .reverse()
+    .find((m) => m.type === "announcement" && m.username === room.djName)
+  const djContextBody = displayTrack?.infoSnippet || djAnnouncement?.message || ""
+
+  // Subtitle shown under the DJ name: genre + (optional) description.
+  const djSubtitle = [room.genre, room.description]
+    .filter(Boolean)
+    .join(" · ")
+
+  const handleSave = () => {
+    if (!displayTrack) return
+    const wasLiked = isLiked(displayTrack.id)
+    toggleLike(displayTrack)
+    toast.success(wasLiked ? "Removed from Liked" : "Saved to Liked")
+  }
+
+  // Determine whether a real track is playing. This gates the listener
+  // "waiting" fallback and the DJ "Go Live" prompt.
+  const apiHasTrack = !!room.nowPlaying && room.nowPlaying.id !== "placeholder"
+  const hasRealPlayback = !!(ws.currentTrack || ws.playbackState || apiHasTrack)
+
+  // DJ view, idle — show the Go Live prompt instead of the now-playing hero.
+  const showDjGoLive = !hasRealPlayback && isDJ
+
+  // Listener view, idle — show a muted waiting message instead.
+  const showWaiting = !hasRealPlayback && !isDJ
+
+  // Whether the listener should see the "DJ is speaking" chip inline.
+  const djSpeaking = !isDJ && (ws.djMicActive || liveKit.djSpeaking)
+
+  // Choose the effective audio artwork: SoundCloud-derived first, then
+  // whatever the engine has already emitted.
+  const effectiveAlbumArt = audioArtwork || null
 
   return (
-    <div className="relative min-h-screen">
+    <div className="min-h-screen" style={{ background: "#0d0b10", color: "#e8e6ea" }}>
+      {/* Audio engine mounts once per track so playback keeps running while
+          the listener browses. Corner-rendered for YouTube to satisfy the
+          ToS requirement that the iframe stay visible. */}
+      {audioTrack && (
+        <AudioEngine
+          track={audioTrack}
+          playbackState={ws.playbackState}
+          volume={roomVolume}
+          muted={roomMuted}
+          isDJ={isDJ}
+          visible={false}
+          forcePaused={isDJ ? (micActive && micPausesMusic) : (ws.djMicActive && ws.djMicPauseMusic)}
+          onTimeUpdate={setAudioCurrentTime}
+          onDuration={handleDuration}
+          onTrackEnd={handleTrackEnd}
+          onPlayStateChange={setAudioPlaying}
+          onArtwork={setAudioArtwork}
+        />
+      )}
 
-      <div className="relative z-10 flex min-h-screen flex-col">
-        <Navbar />
+      {/* Compact in-room nav */}
+      <ListenerNav
+        roomName={room.name}
+        isLive={room.isLive}
+        listenerCount={listenerCount}
+      />
 
-        {/* Back link + DJ mode toggle */}
-        <div className="mx-auto w-full max-w-7xl px-4 pt-4 lg:px-6">
-          <div className="flex items-center justify-between">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 font-sans text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back to Discover
-            </Link>
-            <div className="flex items-center gap-3">
-              {ws.connected && (
-                <span className="font-sans text-[10px] text-green-400/70">● Connected</span>
-              )}
-              <ListenerBar
-                initialCount={listenerCount}
-                isLive={room.isLive}
-                djName={room.djName}
-                isDJ={isDJ}
-                minimal
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Main content */}
-        <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-4 py-4 lg:flex-row lg:gap-6 lg:px-6">
-          {/* Left: Now playing + queue + controls */}
-          <div className="flex flex-col gap-4 lg:flex-1">
-            {/* Jukebox main body with Wurlitzer neon arches */}
-            <div className="relative">
-              <div className="absolute inset-0 z-20 pointer-events-none">
-                <NeonArches />
-              </div>
-
+      {/* Main 2-column layout: music experience on the left, chat on the
+          right. Chat column collapses under the left on narrow screens. */}
+      <div
+        className="mx-auto grid w-full max-w-5xl"
+        style={{
+          gridTemplateColumns: "minmax(0, 1fr) 280px",
+          minHeight: "calc(100vh - 46px)",
+        }}
+      >
+        {/* Left: now playing + DJ context + queue */}
+        <div
+          className="flex flex-col"
+          style={{ borderRight: "0.5px solid rgba(255,255,255,0.06)" }}
+        >
+          {showDjGoLive ? (
+            <div className="flex flex-col items-center gap-4 py-16 text-center">
               <div
-                className="relative overflow-hidden rounded-t-[2.5rem] rounded-b-2xl"
+                className="flex h-20 w-20 items-center justify-center rounded-full"
                 style={{
-                  background: "linear-gradient(180deg, oklch(0.38 0.03 60) 0%, oklch(0.22 0.015 280) 12%, oklch(0.14 0.01 280) 100%)",
-                  padding: "2px",
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(232,154,60,0.3)",
                 }}
               >
-                <div className="relative overflow-hidden rounded-t-[calc(2.5rem-2px)] rounded-b-[calc(1rem-2px)]" style={{ background: "oklch(0.12 0.01 280)" }}>
-
-                {/* Chrome arch highlight */}
-                <div
-                  className="absolute left-0 right-0 top-0 h-10 z-10 pointer-events-none"
-                  style={{
-                    background: "linear-gradient(180deg, oklch(0.48 0.04 60 / 0.4) 0%, transparent 100%)",
-                    borderRadius: "2.5rem 2.5rem 0 0",
-                  }}
-                />
-
-                {/* Bubble columns */}
-                <div className="absolute left-2 top-10 bottom-4 z-20 w-4 flex flex-col items-center gap-2 overflow-hidden pointer-events-none">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div
-                      key={`bl-${i}`}
-                      className="rounded-full shrink-0"
-                      style={{
-                        width: 5 + (i % 3) * 3,
-                        height: 5 + (i % 3) * 3,
-                        background: i % 2 === 0
-                          ? `oklch(0.70 0.22 350 / ${0.2 + i * 0.08})`
-                          : `oklch(0.82 0.18 80 / ${0.15 + i * 0.06})`,
-                        animation: `bubble-float ${4 + i * 1}s ease-in-out infinite`,
-                        animationDelay: `${i * 0.6}s`,
-                      }}
-                    />
-                  ))}
-                </div>
-                <div className="absolute right-2 top-10 bottom-4 z-20 w-4 flex flex-col items-center gap-2 overflow-hidden pointer-events-none">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div
-                      key={`br-${i}`}
-                      className="rounded-full shrink-0"
-                      style={{
-                        width: 4 + (i % 3) * 3,
-                        height: 4 + (i % 3) * 3,
-                        background: i % 2 === 0
-                          ? `oklch(0.72 0.18 250 / ${0.2 + i * 0.08})`
-                          : `oklch(0.82 0.18 80 / ${0.15 + i * 0.06})`,
-                        animation: `bubble-float ${5 + i * 0.8}s ease-in-out infinite`,
-                        animationDelay: `${i * 0.5 + 0.3}s`,
-                      }}
-                    />
-                  ))}
-                </div>
-
-                {/* Room info header */}
-                <div className="relative z-30 px-8 pt-6 pb-4 text-center">
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    <h1 className="font-sans text-xl font-bold text-foreground neon-text-amber">
-                      {room.name}
-                    </h1>
-                    {room.isLive && (
-                      <div
-                        className="flex items-center gap-1 rounded px-1.5 py-0.5"
-                        style={{
-                          background: "oklch(0.08 0.01 280 / 0.9)",
-                          border: "1.5px solid oklch(0.50 0.24 30)",
-                          boxShadow: "0 0 6px oklch(0.50 0.24 30 / 0.6), 0 0 12px oklch(0.50 0.24 30 / 0.3)",
-                        }}
-                      >
-                        <span
-                          className="font-sans text-[10px] font-bold tracking-wider"
-                          style={{ color: "oklch(0.58 0.26 30)", textShadow: "0 0 4px oklch(0.58 0.26 30 / 0.8)" }}
-                        >
-                          ON AIR
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  {room.isLive && (
-                    <span className="mt-1 block font-mono text-xs font-medium text-muted-foreground">
-                      {listenerCount.toLocaleString()} listening
-                    </span>
-                  )}
-                  <p className="mt-2 font-sans text-sm font-medium text-primary">
-                    {room.djName}
-                  </p>
-                  <p className="mt-1.5 font-sans text-xs text-muted-foreground leading-relaxed">
-                    {room.description}
-                  </p>
-                  {/* Request status */}
-                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1"
-                    style={
-                      requestStatus === "open"
-                        ? { background: "oklch(0.82 0.18 80 / 0.1)", border: "1px solid oklch(0.82 0.18 80 / 0.3)" }
-                        : requestStatus === "paused"
-                        ? { background: "oklch(0.78 0.14 60 / 0.1)", border: "1px solid oklch(0.70 0.15 60 / 0.3)" }
-                        : { background: "oklch(0.50 0.01 280 / 0.1)", border: "1px solid oklch(0.35 0.02 280 / 0.3)" }
-                    }
-                  >
-                    {requestStatus === "open" && <Inbox className="h-3 w-3" style={{ color: "oklch(0.82 0.18 80)" }} />}
-                    {requestStatus === "paused" && <PauseCircle className="h-3 w-3" style={{ color: "oklch(0.78 0.14 60)" }} />}
-                    {requestStatus === "closed" && <XCircle className="h-3 w-3 text-muted-foreground" />}
-                    <span className="font-sans text-xs font-semibold"
-                      style={{
-                        color: requestStatus === "open"
-                          ? "oklch(0.82 0.18 80)"
-                          : requestStatus === "paused"
-                          ? "oklch(0.78 0.14 60)"
-                          : "oklch(0.55 0.02 280)",
-                      }}
-                    >
-                      {requestStatus === "open" ? "Requests Open" : requestStatus === "paused" ? "Requests Paused" : "Requests Closed"}
-                    </span>
-                  </div>
-
-                  {/* Subtle divider */}
-                  <div
-                    className="mt-4 mx-auto h-px w-24"
-                    style={{ background: "linear-gradient(90deg, transparent, oklch(0.40 0.02 280 / 0.5), transparent)" }}
-                  />
-                </div>
-
-                {/* DJ Subscription card — listeners only */}
-                {!isDJ && room.creatorUserId && (
-                  <div className="relative z-10 px-6 py-2">
-                    <DJSubscribeCard djUserId={room.creatorUserId} djName={room.djName} />
-                  </div>
-                )}
-
-                {/* Glass display window */}
-                <div className="relative z-10 mx-6 mt-2">
-                  <div
-                    className="absolute -inset-[2px] rounded-2xl pointer-events-none"
-                    style={{
-                      background: "linear-gradient(135deg, rgba(200,200,210,0.4), rgba(120,120,135,0.15) 30%, rgba(220,220,230,0.3) 50%, rgba(100,100,115,0.15) 70%, rgba(180,180,195,0.3))",
-                    }}
-                  />
-                  <div
-                    className="relative rounded-2xl overflow-hidden"
-                    style={{
-                      background: "oklch(0.10 0.008 280 / 0.6)",
-                      backdropFilter: "blur(16px) saturate(1.4)",
-                      border: "1px solid oklch(0.40 0.02 60 / 0.2)",
-                      boxShadow: "inset 0 0 30px oklch(0.08 0.005 280 / 0.5), inset 0 1px 0 oklch(1 0 0 / 0.06)",
-                    }}
-                  >
-                    <div
-                      className="absolute top-0 left-[10%] right-[20%] h-px pointer-events-none"
-                      style={{ background: "linear-gradient(90deg, transparent, oklch(1 0 0 / 0.12), transparent)" }}
-                    />
-                    <div className="p-5">
-                      {/* DJ Speaking indicator — visible to listeners when DJ is broadcasting */}
-                      {!isDJ && (ws.djMicActive || liveKit.djSpeaking) && (
-                        <div
-                          className="mb-4 flex items-center justify-center gap-2 rounded-xl px-4 py-2.5"
-                          style={{
-                            background: "oklch(0.18 0.06 30 / 0.5)",
-                            border: "1px solid oklch(0.50 0.24 30 / 0.4)",
-                            animation: "pulse 2s ease-in-out infinite",
-                          }}
-                        >
-                          <div className="flex gap-0.5">
-                            <span className="inline-block h-3 w-0.5 rounded-full animate-bounce" style={{ background: "oklch(0.68 0.22 30)", animationDelay: "0ms", animationDuration: "0.8s" }} />
-                            <span className="inline-block h-3 w-0.5 rounded-full animate-bounce" style={{ background: "oklch(0.68 0.22 30)", animationDelay: "150ms", animationDuration: "0.8s" }} />
-                            <span className="inline-block h-3 w-0.5 rounded-full animate-bounce" style={{ background: "oklch(0.68 0.22 30)", animationDelay: "300ms", animationDuration: "0.8s" }} />
-                          </div>
-                          <span className="font-sans text-xs font-semibold" style={{ color: "oklch(0.68 0.22 30)" }}>
-                            DJ is speaking
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Determine if there's a real track playing (from server, not mock) */}
-                      {(() => {
-                        // A track is playing if we have it from WS, from the API response, or from playback state
-                        const apiHasTrack = room.nowPlaying && room.nowPlaying.id !== "placeholder"
-                        const hasRealPlayback = !!(ws.currentTrack || ws.playbackState || apiHasTrack)
-                        const realTrack = ws.currentTrack ? displayTrack : (apiHasTrack ? displayTrack : null)
-
-                        // DJ: no track playing → show Go Live
-                        if (!hasRealPlayback && isDJ) {
-                          return (
-                            <div className="flex flex-col items-center gap-4 py-8">
-                              <div
-                                className="flex h-20 w-20 items-center justify-center rounded-full"
-                                style={{
-                                  background: "oklch(0.16 0.02 280)",
-                                  border: "2px solid oklch(0.30 0.04 60 / 0.3)",
-                                }}
-                              >
-                                <Play className="h-8 w-8 text-primary" />
-                              </div>
-                              <div className="text-center">
-                                <h3 className="font-sans text-lg font-bold text-foreground">
-                                  Ready to Go Live
-                                </h3>
-                                <p className="mt-1 font-sans text-sm text-muted-foreground">
-                                  {queueTracks.length > 0
-                                    ? `${queueTracks.length} track${queueTracks.length !== 1 ? "s" : ""} in queue — hit play to start`
-                                    : "Add tracks to the queue, then start playing"}
-                                </p>
-                              </div>
-                              {queueTracks.length > 0 && (
-                                <button
-                                  onClick={handleGoLive}
-                                  className="flex items-center gap-2 rounded-full px-6 py-2.5 font-sans text-sm font-semibold transition-all hover:scale-105 active:scale-95"
-                                  style={{
-                                    background: "linear-gradient(135deg, oklch(0.65 0.24 30), oklch(0.58 0.26 30))",
-                                    color: "white",
-                                    boxShadow: "0 0 20px oklch(0.58 0.26 30 / 0.4), 0 0 40px oklch(0.58 0.26 30 / 0.2)",
-                                  }}
-                                >
-                                  <Play className="h-4 w-4" />
-                                  Go Live
-                                </button>
-                              )}
-                            </div>
-                          )
-                        }
-
-                        // Listener: no track playing → waiting message
-                        if (!hasRealPlayback && !isDJ) {
-                          return (
-                            <div className="flex flex-col items-center gap-3 py-8">
-                              <div
-                                className="flex h-16 w-16 items-center justify-center rounded-full"
-                                style={{ background: "oklch(0.16 0.02 280)", border: "2px solid oklch(0.25 0.02 280 / 0.4)" }}
-                              >
-                                <PauseCircle className="h-7 w-7 text-muted-foreground" />
-                              </div>
-                              <p className="font-sans text-sm text-muted-foreground">
-                                Waiting for the DJ to start playing...
-                              </p>
-                            </div>
-                          )
-                        }
-
-                        // Track is playing → show embedded player + NowPlaying
-                        if (realTrack) {
-                          // Use real duration from audio engine if available (track.duration may be 0)
-                          const trackWithDuration = audioDuration > 0 && realTrack.duration === 0
-                            ? { ...realTrack, duration: Math.floor(audioDuration) }
-                            : realTrack
-                          const isYouTube = audioTrack?.source === "youtube"
-                          const isSoundCloud = audioTrack?.source === "soundcloud"
-                          return (
-                            <>
-                              {/* Audio engine — visible embed for YouTube, hidden for SC/MP3 */}
-                              <AudioEngine
-                                track={audioTrack}
-                                playbackState={ws.playbackState}
-                                volume={roomVolume}
-                                muted={roomMuted}
-                                isDJ={isDJ}
-                                visible={isYouTube}
-                                forcePaused={isDJ ? (micActive && micPausesMusic) : (ws.djMicActive && ws.djMicPauseMusic)}
-                                onTimeUpdate={setAudioCurrentTime}
-                                onDuration={handleDuration}
-                                onTrackEnd={handleTrackEnd}
-                                onPlayStateChange={setAudioPlaying}
-                                onArtwork={setAudioArtwork}
-                              />
-                              {/* YouTube: just show track info below the embed, no Jukebox controls */}
-                              {isYouTube ? (
-                                <div className="mt-4 text-center">
-                                  <div className="flex items-center justify-center gap-2">
-                                    <h2 className="font-sans text-lg font-bold text-foreground">
-                                      {trackWithDuration.title}
-                                    </h2>
-                                    <SaveTrackMenu track={trackWithDuration} size={16} />
-                                  </div>
-                                  <p className="mt-0.5 font-sans text-sm text-muted-foreground">
-                                    {trackWithDuration.artist}
-                                  </p>
-                                  <p className="mt-0.5 font-sans text-xs text-accent">
-                                    Queued by {trackWithDuration.submittedBy}
-                                  </p>
-                                  <div className="mt-2">
-                                    <BPMDisplay
-                                      isPlaying={audioPlaying}
-                                      source="youtube"
-                                      trackTitle={trackWithDuration.title}
-                                      trackArtist={trackWithDuration.artist}
-                                      genre={room?.genre}
-                                    />
-                                  </div>
-                                  {isDJ && (
-                                    <button
-                                      onClick={handleSkip}
-                                      className="mt-3 inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 font-sans text-xs font-medium transition-colors"
-                                      style={{
-                                        background: "oklch(0.20 0.02 280)",
-                                        color: "oklch(0.70 0.04 280)",
-                                        border: "1px solid oklch(0.30 0.03 280 / 0.4)",
-                                      }}
-                                    >
-                                      <SkipForward className="h-3.5 w-3.5" />
-                                      Skip
-                                    </button>
-                                  )}
-                                </div>
-                              ) : (
-                                /* SoundCloud / MP3: full Jukebox controls + SC logo link */
-                                <NowPlaying
-                                  track={trackWithDuration}
-                                  isDJ={isDJ}
-                                  genre={room.genre}
-                                  onSkip={handleSkip}
-                                  onTogglePlay={handleDJTogglePlay}
-                                  micActive={micActive}
-                                  micPausesMusic={micPausesMusic}
-                                  currentTime={ws.connected ? audioCurrentTime : undefined}
-                                  externalPlaying={ws.connected ? audioPlaying : undefined}
-                                  soundCloudUrl={isSoundCloud ? audioTrack?.sourceUrl : undefined}
-                                  albumArtUrl={isSoundCloud ? audioArtwork : undefined}
-                                  volume={roomVolume}
-                                  muted={roomMuted}
-                                  onVolumeChange={setRoomVolume}
-                                  onMutedChange={setRoomMuted}
-                                />
-                              )}
-                            </>
-                          )
-                        }
-
-                        return (
-                          <div className="flex flex-col items-center gap-3 py-8">
-                            <AudioEngine
-                              track={audioTrack}
-                              playbackState={ws.playbackState}
-                              volume={roomVolume}
-                              muted={roomMuted}
-                              isDJ={isDJ}
-                              visible={false}
-                              forcePaused={isDJ ? (micActive && micPausesMusic) : (ws.djMicActive && ws.djMicPauseMusic)}
-                              onTimeUpdate={setAudioCurrentTime}
-                              onDuration={handleDuration}
-                              onTrackEnd={handleTrackEnd}
-                              onPlayStateChange={setAudioPlaying}
-                              onArtwork={setAudioArtwork}
-                            />
-                            <p className="font-sans text-sm text-muted-foreground">No track playing</p>
-                          </div>
-                        )
-                      })()}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Neon Tube + Supernova spark zone starts here */}
-                <div className="relative">
-                  <div ref={tubeBarRef} className="relative z-10 px-6 py-2">
-                    <NeonTubeViz tube={ws.tube ?? mockTube} powerUp={ws.lastPowerUp ?? mockPowerUp} />
-                  </div>
-                </div>
-
-                {/* DJ Controls */}
-                {isDJ && (
-                  <div className="relative z-10 px-6 pb-4">
-                    <DJControls
-                      requestPolicy={room.requestPolicy}
-                      requestStatus={requestStatus as "open" | "paused" | "closed"}
-                      onRequestStatusChange={(status) => {
-                        if (ws.connected) {
-                          // Map UI status to backend policy
-                          const policyMap: Record<string, string> = {
-                            open: "open",
-                            paused: "approval",
-                            closed: "closed",
-                          }
-                          ws.djSetPolicy(policyMap[status] || "closed")
-                        }
-                      }}
-                      onSubmitTrack={handleSubmitTrack}
-                      onMicChange={handleMicChange}
-                      onEndRoom={ws.connected ? ws.djEndRoom : undefined}
-                      listenerCount={listenerCount}
-                    />
-                  </div>
-                )}
-
-                {/* Bottom neon strip */}
-                <div
-                  className="h-1.5"
-                  style={{
-                    background: "linear-gradient(90deg, transparent 5%, oklch(0.72 0.18 250 / 0.4) 20%, oklch(0.82 0.18 80 / 0.5) 40%, oklch(0.70 0.22 350 / 0.5) 60%, oklch(0.82 0.18 80 / 0.4) 80%, transparent 95%)",
-                    boxShadow: "0 0 10px oklch(0.82 0.18 80 / 0.15), 0 0 20px oklch(0.70 0.22 350 / 0.08)",
-                  }}
-                />
+                <Play className="h-8 w-8" style={{ color: "#e89a3c" }} />
               </div>
+              <div>
+                <h3 className="text-lg font-bold" style={{ color: "#e8e6ea" }}>
+                  Ready to go live
+                </h3>
+                <p className="mt-1 text-sm" style={{ color: "rgba(232,230,234,0.5)" }}>
+                  {queueTracks.length > 0
+                    ? `${queueTracks.length} track${queueTracks.length !== 1 ? "s" : ""} in queue — hit play to start`
+                    : "Add tracks to the queue, then start playing"}
+                </p>
               </div>
-            </div>
-
-            {/* Under-glow */}
-            <div
-              className="-mt-2 mx-8 h-4 rounded-full"
-              style={{
-                background: "radial-gradient(ellipse, oklch(0.82 0.18 80 / 0.1), transparent 70%)",
-                filter: "blur(4px)",
-              }}
-            />
-
-            {/* Mobile panel toggle */}
-            <div className="flex gap-2 lg:hidden">
-              <Button
-                variant={mobilePanel === "chat" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setMobilePanel("chat")}
-                className="flex-1 gap-1.5 rounded-xl"
-              >
-                <MessageCircle className="h-4 w-4" />
-                Chat
-              </Button>
-              <Button
-                variant={mobilePanel === "queue" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setMobilePanel("queue")}
-                className="flex-1 gap-1.5 rounded-xl"
-              >
-                <ListMusic className="h-4 w-4" />
-                Queue
-              </Button>
-            </div>
-
-            {/* ── Spark zone: wraps buttons + queue so sparks can fall from tube through everything ── */}
-            <div className="relative" style={{ overflow: "visible" }}>
-              <SupernovaSparksCascade
-                active={(ws.tube ?? mockTube).level === 5 && (ws.tube ?? mockTube).fillAmount > 0}
-                fillPct={Math.min(100, Math.round(((ws.tube ?? mockTube).fillAmount / ((ws.tube ?? mockTube).fillTarget || 100)) * 100))}
-                tubeRef={tubeBarRef}
-              />
-
-            {!isDJ && (
-              <div className="relative z-10 flex flex-wrap items-center justify-center gap-3 py-2">
+              {queueTracks.length > 0 && (
                 <button
-                  onClick={() => setSendNeonOpen(true)}
-                  className="send-neon-btn group relative flex items-center gap-1.5 rounded-full px-4 py-2 font-sans text-xs font-semibold transition-all"
+                  type="button"
+                  onClick={handleGoLive}
+                  className="flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90"
+                  style={{ background: "#e89a3c", color: "#0d0b10" }}
                 >
-                  <Zap className="icon-zap h-3.5 w-3.5" />
-                  Send Neon
+                  <Play className="h-4 w-4" />
+                  Go live
                 </button>
-                {serverPolicy !== "closed" && (
-                  <button
-                    onClick={() => setRequestModalOpen(true)}
-                    className="request-track-btn group relative flex items-center gap-1.5 rounded-full px-4 py-2 font-sans text-xs font-semibold transition-all"
-                  >
-                    <ListMusic className="icon-music h-3.5 w-3.5" />
-                    Request a Track
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* DJ-only: Hype Meter & Intermission Scheduler */}
-            {isDJ && (
-              <div className={`flex flex-col gap-3 ${mobilePanel !== "queue" ? "hidden lg:flex" : ""}`}>
-                <HypeMeter
-                  recentTips={hypeTracking.recentTips}
-                  recentChats={hypeTracking.recentChats}
-                  recentReactions={hypeTracking.recentReactions}
-                />
-                <IntermissionScheduler />
-              </div>
-            )}
-
-            {/* Queue */}
-            <CollapsibleSection
-              title="Queue"
-              defaultOpen={true}
-              badge={
-                <span
-                  className="rounded-full px-1.5 py-0.5 font-mono text-[10px]"
-                  style={{ background: "oklch(0.72 0.18 250 / 0.15)", color: "oklch(0.72 0.18 250)" }}
-                >
-                  {queueTracks.length}
-                </span>
-              }
-            >
-              <TrackQueue
-                tracks={queueTracks}
-                playedTracks={playedTracks}
-                isDJ={isDJ}
-                roomSlug={room?.slug}
-                roomName={room?.name}
-                djName={room?.djName}
-                isAutoplay={room?.isAutoplay}
-                requestPolicy={serverPolicy as "open" | "closed" | "approval"}
-                onSubmitTrack={handleSubmitTrack}
+              )}
+            </div>
+          ) : showWaiting ? (
+            <div className="flex flex-col items-center gap-3 py-20 text-center">
+              <div
+                className="h-14 w-14 rounded-full"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "0.5px solid rgba(255,255,255,0.08)",
+                }}
               />
-            </CollapsibleSection>
-
-            {/* Pending Requests — DJ only, below queue */}
-            {isDJ && requestStatus !== "closed" && ws.pendingRequests.length > 0 && (
-              <CollapsibleSection
-                title="Requests"
-                defaultOpen={true}
-                badge={
-                  <span
-                    className="rounded-full px-1.5 py-0.5 font-mono text-[10px] animate-pulse"
-                    style={{ background: "oklch(0.65 0.20 30 / 0.2)", color: "oklch(0.75 0.18 30)" }}
-                  >
-                    {ws.pendingRequests.length}
-                  </span>
+              <p className="text-sm" style={{ color: "rgba(232,230,234,0.5)" }}>
+                Waiting for the DJ to start playing...
+              </p>
+            </div>
+          ) : (
+            <>
+              <ListenerNowPlaying
+                djName={room.djName}
+                djSubtitle={djSubtitle}
+                djInitials={djInitials}
+                trackTitle={displayTrack.title || "Untitled"}
+                trackArtist={displayTrack.artist || "Unknown artist"}
+                currentTime={ws.connected ? audioCurrentTime : 0}
+                duration={
+                  audioDuration > 0
+                    ? audioDuration
+                    : displayTrack.duration || 0
                 }
-              >
+                isPlaying={audioPlaying}
+                djSpeaking={djSpeaking}
+                onSave={handleSave}
+                onRequest={() => setRequestModalOpen(true)}
+                onSendNeon={!isDJ ? () => setSendNeonOpen(true) : undefined}
+                requestDisabled={serverPolicy === "closed"}
+                albumArtUrl={effectiveAlbumArt}
+                albumGradient={displayTrack.albumGradient}
+              />
+
+              <ListenerDjContext
+                djName={room.djName}
+                djInitials={djInitials}
+                body={djContextBody}
+              />
+            </>
+          )}
+
+          {/* Queue — always render, even in idle state, so DJs can see
+              what's lined up. */}
+          <ListenerQueue tracks={queueTracks} />
+
+          {/* DJ-only tool strip, rendered below the queue so it doesn't
+              interfere with the listener-first layout. */}
+          {isDJ && (
+            <div
+              className="flex flex-col gap-3 px-6 pb-6 pt-2"
+              style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)" }}
+            >
+              <DJControls
+                requestPolicy={room.requestPolicy}
+                requestStatus={requestStatus as "open" | "paused" | "closed"}
+                onRequestStatusChange={(status) => {
+                  if (ws.connected) {
+                    const policyMap: Record<string, string> = {
+                      open: "open",
+                      paused: "approval",
+                      closed: "closed",
+                    }
+                    ws.djSetPolicy(policyMap[status] || "closed")
+                  }
+                }}
+                onSubmitTrack={handleSubmitTrack}
+                onMicChange={handleMicChange}
+                onEndRoom={ws.connected ? ws.djEndRoom : undefined}
+                listenerCount={listenerCount}
+              />
+
+              {ws.pendingRequests.length > 0 && (
                 <PendingRequests
                   requests={ws.pendingRequests}
                   onApprove={ws.djApprove}
@@ -1102,32 +727,32 @@ export default function RoomPage() {
                   onApproveAll={() => ws.pendingRequests.forEach((r) => ws.djApprove(r.id))}
                   onRejectAll={() => ws.pendingRequests.forEach((r) => ws.djReject(r.id))}
                 />
-              </CollapsibleSection>
-            )}
-            </div>{/* end supernova sparks wrapper */}
-          </div>
+              )}
 
-          {/* Right: Chat */}
-          <div
-            className={`flex flex-col lg:w-96 ${mobilePanel !== "chat" ? "hidden lg:flex" : ""}`}
-          >
-            <div className="h-[520px] lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)]">
-              <ChatPanel
-                initialMessages={chatMessages}
-                roomName={room.name}
-                onSendMessage={ws.connected ? ws.sendChat : undefined}
-                onSendReaction={ws.connected ? ws.sendReaction : undefined}
-                connected={ws.connected}
-                overlayRef={chatOverlayRef}
-                listeners={ws.listeners}
-                listenerCount={ws.listenerCount}
+              <HypeMeter
+                recentTips={hypeTracking.recentTips}
+                recentChats={hypeTracking.recentChats}
+                recentReactions={hypeTracking.recentReactions}
               />
+              <IntermissionScheduler />
             </div>
-          </div>
+          )}
         </div>
+
+        {/* Right: chat column */}
+        <ListenerChatColumn
+          messages={chatMessages}
+          listeners={ws.listeners}
+          listenerCount={listenerCount}
+          onSendMessage={ws.connected ? ws.sendChat : undefined}
+          onSendReaction={ws.connected ? ws.sendReaction : undefined}
+          connected={ws.connected}
+          djName={room.djName}
+          overlayRef={chatOverlayRef}
+        />
       </div>
 
-      {/* Request modal */}
+      {/* Modals */}
       <RequestModal
         open={requestModalOpen}
         onClose={() => setRequestModalOpen(false)}
