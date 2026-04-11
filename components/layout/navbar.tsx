@@ -113,7 +113,7 @@ export function Navbar() {
         <Link
           href="/"
           onClick={handleLogoClick}
-          className="flex shrink-0 flex-col items-start gap-0.5 bg-transparent"
+          className="flex shrink-0 flex-col items-center gap-0.5 bg-transparent"
           aria-label="Jukebox — home"
         >
           <NeonJukeboxLogo size="sm" />
