@@ -23,6 +23,17 @@ export function NeonJukeboxLogo({ size = 'lg' }: NeonJukeboxLogoProps) {
   useEffect(() => {
     if (!containerRef.current) return
 
+    // Mobile Firefox/Chrome re-rasterize SVG drop-shadow filters every time
+    // the underlying pixels change, and the per-letter opacity flicker fires
+    // that repaint for the entire wordmark — causing a visible whole-logo
+    // flash on top of the intended per-letter flicker. Skip the JS-driven
+    // filter/color updates on mobile; the CSS media query in <style> below
+    // also drops the drop-shadow filter there, so mobile renders a static
+    // neon with only the per-letter flicker.
+    const isDesktop = typeof window !== "undefined"
+      ? window.matchMedia("(min-width: 768px)").matches
+      : true
+
     const letterGroups = new Map<number, HTMLElement[]>()
 
     // Collect all letter elements
@@ -80,7 +91,9 @@ export function NeonJukeboxLogo({ size = 'lg' }: NeonJukeboxLogoProps) {
 
     for (let i = 0; i < 7; i++) scheduleLetter(i)
 
-    // Rare whole-sign "hum dip"
+    // Rare whole-sign "hum dip" — desktop only. Dimming all 7 letters at
+    // once on mobile would force the drop-shadow filter to re-rasterize
+    // and the cost would show up as a visible flash.
     function globalDip(): void {
       const nextIn = 5000 + Math.random() * 14000
       setTimeout(() => {
@@ -93,9 +106,18 @@ export function NeonJukeboxLogo({ size = 'lg' }: NeonJukeboxLogoProps) {
         globalDip()
       }, nextIn)
     }
-    globalDip()
+    if (isDesktop) globalDip()
 
     // --- Color cycle via rAF ---
+    // Skip entirely on mobile — the warm orange base colors from the CSS
+    // definitions are the final look there. This avoids rewriting .filter
+    // on every tick, which is the primary source of the mobile flicker.
+    if (!isDesktop) {
+      return () => {
+        // per-letter scheduleLetter setTimeouts will cancel naturally as
+        // the component unmounts (refs go stale); no rAF to cancel here.
+      }
+    }
     // Cycle period: ~30 seconds. t oscillates 0→1→0 using a sine wave.
     const CYCLE_MS = 30000
     let rafId: number
@@ -228,6 +250,14 @@ export function NeonJukeboxLogo({ size = 'lg' }: NeonJukeboxLogoProps) {
             }
             @keyframes dash { to { stroke-dashoffset: -850; } }
             .letter { transition: opacity 80ms linear; }
+            /* Mobile: drop the drop-shadow filter and mix-blend-mode so
+               per-letter opacity changes don't force the entire wordmark's
+               filter/blend layer to re-rasterize. The layered strokes
+               still provide the neon look. */
+            @media (max-width: 767px) {
+              .outer, .main, .core, .trail { filter: none !important; }
+              .core, .trail { mix-blend-mode: normal !important; }
+            }
           `}</style>
         </defs>
         <g>
