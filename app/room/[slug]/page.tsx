@@ -654,7 +654,7 @@ export default function RoomPage() {
       <div
         className="shell-narrow flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_280px] lg:grid-cols-[minmax(0,1fr)_320px]"
         style={{
-          minHeight: "calc(100vh - 48px)",
+          minHeight: "calc(100vh - 56px)",
         }}
       >
         {/* Left: now playing + DJ context + queue */}

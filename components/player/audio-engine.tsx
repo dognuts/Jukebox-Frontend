@@ -66,6 +66,115 @@ export function AudioEngine({
   const syncTimeoutsRef = useRef<NodeJS.Timeout[]>([])
   const signaledEndRef = useRef("")  // trackID for which we've already signaled end
 
+  // Persistent YouTube host — a single fixed-position div appended to
+  // document.body that always hosts the portal-rendered YouTubePlayer.
+  // Its position/size is updated via CSS to either match inlineTarget's
+  // bounding rect (when set) or sit at the corner fallback position.
+  // Because the host is stable across all inlineTarget changes, the
+  // YouTubePlayer mounts exactly once per track and never gets torn
+  // down and rebuilt when the target moves — which was the bug that
+  // made the iframe disappear on state transitions.
+  const [ytHost, setYtHost] = useState<HTMLDivElement | null>(null)
+
+  // Create the stable host on mount.
+  useEffect(() => {
+    if (typeof document === "undefined") return
+    const host = document.createElement("div")
+    host.setAttribute("data-yt-host", "")
+    host.style.position = "fixed"
+    host.style.zIndex = "40"
+    host.style.overflow = "hidden"
+    host.style.pointerEvents = "auto"
+    // Default corner position until inlineTarget is wired up.
+    host.style.bottom = "80px"
+    host.style.right = "12px"
+    host.style.width = "200px"
+    host.style.height = "112px"
+    host.style.borderRadius = "10px"
+    host.style.border = "1px solid oklch(0.30 0.04 280 / 0.5)"
+    host.style.boxShadow = "0 8px 24px rgba(0,0,0,0.4)"
+    document.body.appendChild(host)
+    setYtHost(host)
+    return () => {
+      if (host.parentNode) host.parentNode.removeChild(host)
+    }
+  }, [])
+
+  // Track inlineTarget's bounding rect and update the host's fixed
+  // position to overlay it. Rebinds its observers whenever either
+  // inlineTarget or ytHost changes.
+  useEffect(() => {
+    const host = ytHost
+    if (!host) return
+
+    // Corner fallback when there's no target.
+    const cornerPosition = () => {
+      host.style.top = ""
+      host.style.left = ""
+      host.style.bottom = "80px"
+      host.style.right = "12px"
+      host.style.width = "200px"
+      host.style.height = "112px"
+      host.style.borderRadius = "10px"
+      host.style.border = "1px solid oklch(0.30 0.04 280 / 0.5)"
+      host.style.boxShadow = "0 8px 24px rgba(0,0,0,0.4)"
+    }
+
+    if (!inlineTarget) {
+      cornerPosition()
+      return
+    }
+
+    // Overlay mode — track the inlineTarget's position on the page
+    // and keep the fixed host aligned to it as the user scrolls or
+    // the viewport resizes.
+    const overlayPosition = () => {
+      if (!inlineTarget || !inlineTarget.isConnected) {
+        cornerPosition()
+        return
+      }
+      const rect = inlineTarget.getBoundingClientRect()
+      host.style.top = `${rect.top}px`
+      host.style.left = `${rect.left}px`
+      host.style.right = ""
+      host.style.bottom = ""
+      host.style.width = `${rect.width}px`
+      host.style.height = `${rect.height}px`
+      // Inherit the target's border radius so the overlay looks
+      // glued to its slot.
+      const styles = window.getComputedStyle(inlineTarget)
+      host.style.borderRadius = styles.borderRadius || "10px"
+      host.style.border = "0px"
+      host.style.boxShadow = "none"
+    }
+
+    overlayPosition()
+
+    // Use requestAnimationFrame-throttled scroll/resize updates so
+    // the overlay tracks smoothly without flooding the main thread.
+    let frame = 0
+    const schedule = () => {
+      if (frame) return
+      frame = requestAnimationFrame(() => {
+        frame = 0
+        overlayPosition()
+      })
+    }
+
+    const ro = new ResizeObserver(schedule)
+    ro.observe(inlineTarget)
+
+    window.addEventListener("scroll", schedule, { passive: true, capture: true })
+    window.addEventListener("resize", schedule, { passive: true })
+
+    return () => {
+      ro.disconnect()
+      window.removeEventListener("scroll", schedule, { capture: true } as any)
+      window.removeEventListener("resize", schedule)
+      if (frame) cancelAnimationFrame(frame)
+    }
+  }, [inlineTarget, ytHost])
+
   // Helper to clear all pending sync timeouts
   const clearSyncTimeouts = useCallback(() => {
     for (const t of syncTimeoutsRef.current) clearTimeout(t)
@@ -233,10 +342,14 @@ export function AudioEngine({
   switch (track.source) {
     case "youtube": {
       if (!track.videoId) return null
-      // The YouTubePlayer element is the same regardless of where we
-      // mount it — React preserves the imperative handle via the ref,
-      // so the audio engine can control playback from any branch.
-      const youtubePlayer = (
+      // The YouTubePlayer ALWAYS portals into the stable ytHost div
+      // (see the top of the component for how that host is created).
+      // Changing the position of the visible video only changes the
+      // host's CSS — the React tree position of the YouTubePlayer is
+      // constant, which is what keeps the YT.Player instance alive
+      // across inlineTarget transitions.
+      if (!ytHost) return null
+      return createPortal(
         <YouTubePlayer
           ref={playerRef}
           videoId={track.videoId}
@@ -244,35 +357,8 @@ export function AudioEngine({
           onStateChange={handleStateChange}
           onDuration={onDuration}
           onTimeUpdate={onTimeUpdate}
-        />
-      )
-
-      // 1) Inline portal — the listener room view passes an inlineTarget
-      //    so the iframe lands in the album-art slot inside the
-      //    now-playing hero instead of the fixed corner. The target is
-      //    already sized 16:9 by the parent.
-      if (inlineTarget) {
-        return createPortal(youtubePlayer, inlineTarget)
-      }
-
-      // 2) Legacy visible-inline render — used when a parent lays out
-      //    its own full-width YouTube container.
-      if (visible) {
-        return <div className="w-full">{youtubePlayer}</div>
-      }
-
-      // 3) Fixed-corner fallback — used by the mini-player and anywhere
-      //    else playback runs in the background. The iframe must stay
-      //    visible per YouTube ToS, which this satisfies at a small
-      //    but meaningful size.
-      return (
-        <div
-          className="fixed bottom-20 right-3 z-40 w-[200px] overflow-hidden rounded-lg shadow-lg sm:bottom-24 sm:right-4 sm:w-[240px]"
-          style={{ border: "1px solid oklch(0.30 0.04 280 / 0.5)" }}
-          aria-label="YouTube background player"
-        >
-          {youtubePlayer}
-        </div>
+        />,
+        ytHost
       )
     }
 

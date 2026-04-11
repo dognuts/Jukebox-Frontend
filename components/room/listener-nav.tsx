@@ -21,22 +21,23 @@ export function ListenerNav({
 
   return (
     <div
-      className="relative flex items-center justify-between px-5 py-2"
+      className="relative flex h-14 items-center justify-between px-5"
       style={{
         background: "rgba(13,11,16,0.95)",
         borderBottom: "0.5px solid rgba(255,255,255,0.06)",
       }}
     >
-      {/* Animated JUKEBOX logo, centered. Absolutely positioned so the
-          left and right clusters aren't pushed around, and hidden below
-          md so it doesn't collide with the back + room name cluster on
+      {/* Animated JUKEBOX logo, centered. Same size as the homepage
+          navbar (sm → h-10 w-auto). Absolutely positioned so the left
+          and right clusters aren't pushed around, and hidden below md
+          so it doesn't collide with the back + room name cluster on
           phones. */}
       <Link
         href="/"
         aria-label="Jukebox — home"
         className="pointer-events-auto absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 md:block"
       >
-        <NeonJukeboxLogo size="xs" />
+        <NeonJukeboxLogo size="sm" />
       </Link>
 
       {/* Left: back + room name + LIVE badge */}
