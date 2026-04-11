@@ -41,11 +41,17 @@ export function ListenerNav({
       </Link>
 
       {/* Left: back + room name + LIVE badge */}
-      <div className="flex min-w-0 items-center gap-2.5">
+      <div
+        className="flex min-w-0 items-center"
+        style={{ gap: "var(--space-sm)" }}
+      >
         <Link
           href="/"
-          className="flex shrink-0 items-center gap-1 text-xs transition-colors hover:text-white/60"
-          style={{ color: "rgba(232,230,234,0.4)" }}
+          className="flex shrink-0 items-center gap-1 transition-colors hover:text-white/60"
+          style={{
+            color: "rgba(232,230,234,0.4)",
+            fontSize: "var(--fs-small)",
+          }}
         >
           <ArrowLeft className="h-3 w-3" />
           Back
@@ -55,15 +61,24 @@ export function ListenerNav({
           style={{ background: "rgba(255,255,255,0.08)" }}
         />
         <div
-          className="truncate text-[13px] font-semibold"
-          style={{ color: "#e8e6ea" }}
+          className="truncate font-semibold"
+          style={{
+            color: "#e8e6ea",
+            fontSize: "var(--fs-body)",
+          }}
         >
           {roomName}
         </div>
         {isLive && (
           <div
-            className="shrink-0 rounded-lg px-2 py-0.5 text-[9px] font-bold tracking-[0.08em]"
-            style={{ background: "rgba(232,154,60,0.12)", color: "#e89a3c" }}
+            className="shrink-0 rounded-lg font-bold tracking-[0.08em]"
+            style={{
+              paddingInline: "var(--space-sm)",
+              paddingBlock: "2px",
+              background: "rgba(232,154,60,0.12)",
+              color: "#e89a3c",
+              fontSize: "var(--fs-meta)",
+            }}
           >
             LIVE
           </div>
@@ -71,10 +86,16 @@ export function ListenerNav({
       </div>
 
       {/* Right: listener count, messages, user menu */}
-      <div className="flex shrink-0 items-center gap-3">
+      <div
+        className="flex shrink-0 items-center"
+        style={{ gap: "var(--space-md)" }}
+      >
         <div
-          className="flex items-center gap-1 text-[11px]"
-          style={{ color: "rgba(232,230,234,0.4)" }}
+          className="flex items-center gap-1"
+          style={{
+            color: "rgba(232,230,234,0.4)",
+            fontSize: "var(--fs-small)",
+          }}
         >
           <span
             className="h-[5px] w-[5px] rounded-full"
@@ -96,8 +117,12 @@ export function ListenerNav({
           />
           {totalUnread > 0 && (
             <span
-              className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-mono text-[9px] font-bold"
-              style={{ background: "#e89a3c", color: "#0d0b10" }}
+              className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-mono font-bold"
+              style={{
+                background: "#e89a3c",
+                color: "#0d0b10",
+                fontSize: "var(--fs-meta)",
+              }}
             >
               {totalUnread}
             </span>

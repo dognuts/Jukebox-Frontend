@@ -18,31 +18,56 @@ export function ListenerDjContext({
   if (!body) return null
 
   return (
-    <div className="px-6 pb-4">
+    <div
+      style={{
+        paddingInline: "var(--space-lg)",
+        paddingBottom: "var(--space-md)",
+      }}
+    >
       <div
-        className="rounded-[10px] px-3.5 py-3"
+        className="rounded-[10px]"
         style={{
+          paddingInline: "var(--space-md)",
+          paddingBlock: "var(--space-sm)",
           background: "rgba(232,154,60,0.04)",
           border: "0.5px solid rgba(232,154,60,0.1)",
         }}
       >
-        <div className="mb-1.5 flex items-center gap-1.5">
+        <div
+          className="flex items-center"
+          style={{
+            gap: "var(--space-xs)",
+            marginBottom: "var(--space-2xs)",
+          }}
+        >
           <div
-            className="flex h-[14px] w-[14px] shrink-0 items-center justify-center rounded-full text-[7px] font-bold"
-            style={{ background: "#e89a3c", color: "#0d0b10" }}
+            className="flex shrink-0 items-center justify-center rounded-full font-bold"
+            style={{
+              width: "clamp(14px, 1.4vw, 18px)",
+              height: "clamp(14px, 1.4vw, 18px)",
+              fontSize: "var(--fs-meta)",
+              background: "#e89a3c",
+              color: "#0d0b10",
+            }}
           >
             {djInitials}
           </div>
           <span
-            className="text-[11px] font-medium"
-            style={{ color: "#e89a3c" }}
+            className="font-medium"
+            style={{
+              color: "#e89a3c",
+              fontSize: "var(--fs-small)",
+            }}
           >
             {djName}
           </span>
         </div>
         <div
-          className="text-xs leading-[1.5]"
-          style={{ color: "rgba(232,230,234,0.55)" }}
+          className="leading-[1.5]"
+          style={{
+            color: "rgba(232,230,234,0.6)",
+            fontSize: "var(--fs-body)",
+          }}
         >
           {body}
         </div>

@@ -187,12 +187,18 @@ export const ListenerChatColumn = forwardRef<
     >
       {/* Header */}
       <div
-        className="px-4 py-3.5"
-        style={{ borderBottom: "0.5px solid rgba(255,255,255,0.06)" }}
+        style={{
+          paddingInline: "var(--space-md)",
+          paddingBlock: "var(--space-sm)",
+          borderBottom: "0.5px solid rgba(255,255,255,0.06)",
+        }}
       >
         <div
-          className="text-[13px] font-semibold"
-          style={{ color: "#e8e6ea" }}
+          className="font-semibold"
+          style={{
+            color: "#e8e6ea",
+            fontSize: "var(--fs-h2)",
+          }}
         >
           Chat
         </div>
@@ -201,7 +207,12 @@ export const ListenerChatColumn = forwardRef<
       {/* Messages */}
       <div
         ref={scrollRef}
-        className="relative flex flex-1 flex-col gap-2.5 overflow-y-auto px-4 py-3"
+        className="relative flex flex-1 flex-col overflow-y-auto"
+        style={{
+          gap: "var(--space-sm)",
+          paddingInline: "var(--space-md)",
+          paddingBlock: "var(--space-sm)",
+        }}
       >
         {/* Floating emoji overlay — positioned absolute so reactions drift
             upward across the messages list. */}
@@ -213,8 +224,11 @@ export const ListenerChatColumn = forwardRef<
 
         {displayed.length === 0 && (
           <div
-            className="text-center text-[11px]"
-            style={{ color: "rgba(232,230,234,0.3)" }}
+            className="text-center"
+            style={{
+              color: "rgba(232,230,234,0.3)",
+              fontSize: "var(--fs-small)",
+            }}
           >
             {connected ? "Say something to start the chat" : "Connecting..."}
           </div>
@@ -225,28 +239,39 @@ export const ListenerChatColumn = forwardRef<
           const isDjMsg = msg.username === djName || msg.type === "announcement"
           return (
             <div key={msg.id}>
-              <div className="mb-[3px] flex items-center gap-1.5">
+              <div
+                className="flex items-center gap-1.5"
+                style={{ marginBottom: "var(--space-2xs)" }}
+              >
                 <div
-                  className="h-4 w-4 shrink-0 rounded-full"
-                  style={{ background: color }}
+                  className="shrink-0 rounded-full"
+                  style={{
+                    width: "clamp(14px, 1.4vw, 18px)",
+                    height: "clamp(14px, 1.4vw, 18px)",
+                    background: color,
+                  }}
                 />
                 <span
-                  className="text-[11px] font-medium"
-                  style={{ color }}
+                  className="font-medium"
+                  style={{ color, fontSize: "var(--fs-small)" }}
                 >
                   {msg.username}
                 </span>
                 {isDjMsg && (
                   <span
-                    className="text-[9px]"
-                    style={{ color: "rgba(232,154,60,0.4)" }}
+                    style={{
+                      color: "rgba(232,154,60,0.5)",
+                      fontSize: "var(--fs-meta)",
+                    }}
                   >
                     DJ
                   </span>
                 )}
                 <span
-                  className="text-[9px]"
-                  style={{ color: "rgba(232,230,234,0.2)" }}
+                  style={{
+                    color: "rgba(232,230,234,0.25)",
+                    fontSize: "var(--fs-meta)",
+                  }}
                 >
                   {relativeTime(
                     msg.timestamp instanceof Date
@@ -256,8 +281,12 @@ export const ListenerChatColumn = forwardRef<
                 </span>
               </div>
               <div
-                className="pl-[22px] text-xs leading-[1.4]"
-                style={{ color: "rgba(232,230,234,0.55)" }}
+                className="leading-[1.4]"
+                style={{
+                  paddingLeft: "calc(clamp(14px, 1.4vw, 18px) + 0.375rem)",
+                  color: "rgba(232,230,234,0.6)",
+                  fontSize: "var(--fs-body)",
+                }}
               >
                 {msg.type === "request" ? (
                   <span className="italic">requested: {msg.message}</span>
@@ -271,12 +300,20 @@ export const ListenerChatColumn = forwardRef<
 
         {/* Inline reaction cluster */}
         {topReactions.length > 0 && (
-          <div className="flex gap-1 pl-[22px]">
+          <div
+            className="flex gap-1"
+            style={{
+              paddingLeft: "calc(clamp(14px, 1.4vw, 18px) + 0.375rem)",
+            }}
+          >
             {topReactions.map(([emoji, count], i) => (
               <span
                 key={emoji}
-                className="rounded-[10px] px-2 py-0.5 text-[13px]"
+                className="rounded-[10px]"
                 style={{
+                  paddingInline: "var(--space-sm)",
+                  paddingBlock: "2px",
+                  fontSize: "var(--fs-body)",
                   background: "rgba(255,255,255,0.04)",
                   animation:
                     i === 0
@@ -293,8 +330,9 @@ export const ListenerChatColumn = forwardRef<
 
       {/* Listeners bar */}
       <div
-        className="px-4 py-2"
         style={{
+          paddingInline: "var(--space-md)",
+          paddingBlock: "var(--space-sm)",
           borderTop: "0.5px solid rgba(255,255,255,0.06)",
           borderBottom: "0.5px solid rgba(255,255,255,0.06)",
         }}
@@ -303,8 +341,10 @@ export const ListenerChatColumn = forwardRef<
           {listeners.slice(0, 4).map((l, i) => (
             <div
               key={`${l.username}-${i}`}
-              className="h-5 w-5 rounded-full"
+              className="rounded-full"
               style={{
+                width: "clamp(18px, 1.8vw, 24px)",
+                height: "clamp(18px, 1.8vw, 24px)",
                 background: l.avatarColor || colorFor(l.username),
                 border: "1.5px solid #0d0b10",
                 marginLeft: i === 0 ? 0 : -6,
@@ -315,12 +355,15 @@ export const ListenerChatColumn = forwardRef<
           ))}
           {listenerCount > 4 && (
             <div
-              className="flex h-5 w-5 items-center justify-center rounded-full text-[8px]"
+              className="flex items-center justify-center rounded-full"
               style={{
+                width: "clamp(18px, 1.8vw, 24px)",
+                height: "clamp(18px, 1.8vw, 24px)",
                 background: "rgba(255,255,255,0.08)",
                 border: "1.5px solid #0d0b10",
                 marginLeft: -6,
                 color: "rgba(232,230,234,0.4)",
+                fontSize: "var(--fs-meta)",
                 zIndex: 1,
               }}
             >
@@ -331,15 +374,25 @@ export const ListenerChatColumn = forwardRef<
       </div>
 
       {/* Reaction tray — quick way to send a reaction without typing. */}
-      <div className="flex items-center gap-1.5 px-4 pt-2.5">
+      <div
+        className="flex items-center"
+        style={{
+          gap: "var(--space-xs)",
+          paddingInline: "var(--space-md)",
+          paddingTop: "var(--space-sm)",
+        }}
+      >
         {REACTION_EMOJIS.map((emoji) => (
           <button
             key={emoji}
             type="button"
             onClick={() => handleReactionClick(emoji)}
             disabled={!connected}
-            className="rounded-full px-2 py-0.5 text-sm transition-colors hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-full transition-colors hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-40"
             style={{
+              paddingInline: "var(--space-sm)",
+              paddingBlock: "2px",
+              fontSize: "var(--fs-body)",
               background: "rgba(255,255,255,0.04)",
               border: "0.5px solid rgba(255,255,255,0.08)",
             }}
@@ -351,7 +404,13 @@ export const ListenerChatColumn = forwardRef<
       </div>
 
       {/* Chat input */}
-      <div className="px-4 pb-3 pt-2.5">
+      <div
+        style={{
+          paddingInline: "var(--space-md)",
+          paddingBottom: "var(--space-sm)",
+          paddingTop: "var(--space-sm)",
+        }}
+      >
         <div className="flex items-center gap-2">
           <input
             type="text"
@@ -365,8 +424,11 @@ export const ListenerChatColumn = forwardRef<
             }}
             placeholder="Say something..."
             disabled={!connected || !onSendMessage}
-            className="h-[34px] flex-1 rounded-[17px] px-3.5 text-xs outline-none transition-colors placeholder:text-[rgba(232,230,234,0.25)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex-1 rounded-full outline-none transition-colors placeholder:text-[rgba(232,230,234,0.25)] disabled:cursor-not-allowed disabled:opacity-60"
             style={{
+              height: "clamp(34px, 4vw, 42px)",
+              paddingInline: "var(--space-md)",
+              fontSize: "var(--fs-body)",
               background: "rgba(255,255,255,0.04)",
               border: "0.5px solid rgba(255,255,255,0.08)",
               color: "#e8e6ea",

@@ -19,14 +19,31 @@ function formatDuration(seconds: number): string {
 
 export function ListenerQueue({ tracks, startIndex = 2 }: ListenerQueueProps) {
   return (
-    <div className="flex-1 px-6 pb-6">
-      <div className="mb-2.5 flex items-center justify-between">
-        <div className="text-[13px] font-semibold" style={{ color: "#e8e6ea" }}>
+    <div
+      className="flex-1"
+      style={{
+        paddingInline: "var(--space-lg)",
+        paddingBottom: "var(--space-lg)",
+      }}
+    >
+      <div
+        className="flex items-center justify-between"
+        style={{ marginBottom: "var(--space-sm)" }}
+      >
+        <div
+          className="font-semibold"
+          style={{
+            color: "#e8e6ea",
+            fontSize: "var(--fs-h2)",
+          }}
+        >
           Up next
         </div>
         <div
-          className="text-[11px]"
-          style={{ color: "rgba(232,230,234,0.3)" }}
+          style={{
+            color: "rgba(232,230,234,0.3)",
+            fontSize: "var(--fs-small)",
+          }}
         >
           {tracks.length} {tracks.length === 1 ? "track" : "tracks"}
         </div>
@@ -34,10 +51,13 @@ export function ListenerQueue({ tracks, startIndex = 2 }: ListenerQueueProps) {
 
       {tracks.length === 0 ? (
         <div
-          className="rounded-lg px-3 py-4 text-center text-[11px]"
+          className="rounded-lg text-center"
           style={{
+            paddingInline: "var(--space-md)",
+            paddingBlock: "var(--space-md)",
             background: "rgba(255,255,255,0.02)",
             color: "rgba(232,230,234,0.35)",
+            fontSize: "var(--fs-small)",
           }}
         >
           Queue is empty
@@ -47,21 +67,30 @@ export function ListenerQueue({ tracks, startIndex = 2 }: ListenerQueueProps) {
           {tracks.slice(0, 12).map((track, i) => (
             <div
               key={track.id ?? `${track.title}-${i}`}
-              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2"
+              className="flex items-center rounded-lg"
               style={{
+                gap: "var(--space-sm)",
+                paddingInline: "var(--space-sm)",
+                paddingBlock: "var(--space-sm)",
                 background:
                   i === 0 ? "rgba(255,255,255,0.02)" : "transparent",
               }}
             >
               <span
-                className="w-4 text-right text-[11px] tabular-nums"
-                style={{ color: "rgba(232,230,234,0.2)" }}
+                className="text-right tabular-nums"
+                style={{
+                  width: "1.25rem",
+                  color: "rgba(232,230,234,0.25)",
+                  fontSize: "var(--fs-small)",
+                }}
               >
                 {startIndex + i}
               </span>
               <div
-                className="h-8 w-8 shrink-0 rounded-md"
+                className="shrink-0 rounded-md"
                 style={{
+                  width: "clamp(32px, 3vw, 44px)",
+                  height: "clamp(32px, 3vw, 44px)",
                   background:
                     track.albumGradient ||
                     "linear-gradient(135deg, #2a1a0a, #1a0d18)",
@@ -69,21 +98,30 @@ export function ListenerQueue({ tracks, startIndex = 2 }: ListenerQueueProps) {
               />
               <div className="min-w-0 flex-1">
                 <div
-                  className="truncate text-xs font-medium"
-                  style={{ color: "#e8e6ea" }}
+                  className="truncate font-medium"
+                  style={{
+                    color: "#e8e6ea",
+                    fontSize: "var(--fs-body)",
+                  }}
                 >
                   {track.title || "Untitled"}
                 </div>
                 <div
-                  className="truncate text-[10px]"
-                  style={{ color: "rgba(232,230,234,0.4)" }}
+                  className="truncate"
+                  style={{
+                    color: "rgba(232,230,234,0.4)",
+                    fontSize: "var(--fs-small)",
+                  }}
                 >
                   {track.artist || "Unknown artist"}
                 </div>
               </div>
               <div
-                className="shrink-0 text-[10px] tabular-nums"
-                style={{ color: "rgba(232,230,234,0.25)" }}
+                className="shrink-0 tabular-nums"
+                style={{
+                  color: "rgba(232,230,234,0.3)",
+                  fontSize: "var(--fs-small)",
+                }}
               >
                 {formatDuration(track.duration)}
               </div>
