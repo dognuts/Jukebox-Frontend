@@ -7,6 +7,7 @@ import { useEasterEggs } from "@/hooks/use-easter-eggs"
 import { useMessages } from "@/lib/messages-context"
 import { useAuth } from "@/lib/auth-context"
 import { UserMenu } from "@/components/layout/user-menu"
+import { NeonJukeboxLogo } from "@/components/effects/neon-jukebox-logo"
 
 export function Navbar() {
   const { triggerRainbow } = useEasterEggs()
@@ -107,20 +108,28 @@ export function Navbar() {
         willChange: "transform",
       }}
     >
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 lg:px-6">
-        {/* Left: "Listen together" muted label */}
-        <div
-          className="hidden text-[11px] uppercase sm:block"
-          style={{
-            color: "rgba(232,230,234,0.4)",
-            letterSpacing: "0.15em",
-          }}
+      <div className="mx-auto flex h-14 w-full max-w-[800px] items-center justify-between gap-4 px-4 sm:px-6">
+        {/* Left: animated neon logo + Listen Together tagline */}
+        <Link
+          href="/"
+          onClick={handleLogoClick}
+          className="flex shrink-0 flex-col items-start gap-0.5 bg-transparent"
+          aria-label="Jukebox — home"
         >
-          Listen together
-        </div>
+          <NeonJukeboxLogo size="sm" />
+          <span
+            className="hidden text-[9px] uppercase leading-none sm:block"
+            style={{
+              color: "rgba(232,230,234,0.5)",
+              letterSpacing: "0.2em",
+            }}
+          >
+            Listen together
+          </span>
+        </Link>
 
-        {/* Right cluster: search, create, messages, user menu, JUKEBOX */}
-        <div className="ml-auto flex items-center gap-4">
+        {/* Right cluster: search, create, messages, user menu */}
+        <div className="flex shrink-0 items-center gap-3 sm:gap-4">
           {/* Search pill — matches mockup: 180×30, rounded-full */}
           <div
             className="hidden h-[30px] w-[180px] items-center rounded-full px-3 sm:flex"
@@ -172,19 +181,6 @@ export function Navbar() {
 
           {/* User menu (auth-aware avatar + dropdown) */}
           <UserMenu />
-
-          {/* JUKEBOX wordmark — plain text, amber, subtle glow */}
-          <Link
-            href="/"
-            onClick={handleLogoClick}
-            className="text-[13px] font-bold tracking-[0.04em]"
-            style={{
-              color: "#e89a3c",
-              textShadow: "0 0 12px rgba(232,154,60,0.3)",
-            }}
-          >
-            JUKEBOX
-          </Link>
         </div>
       </div>
     </header>

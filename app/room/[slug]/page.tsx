@@ -598,19 +598,17 @@ export default function RoomPage() {
       />
 
       {/* Main 2-column layout: music experience on the left, chat on the
-          right. Chat column collapses under the left on narrow screens. */}
+          right. Below md the grid collapses to a single stacked column so
+          the chat sits under the now-playing on phones. */}
       <div
-        className="mx-auto grid w-full max-w-5xl"
+        className="mx-auto flex w-full max-w-[800px] flex-col md:grid"
         style={{
           gridTemplateColumns: "minmax(0, 1fr) 280px",
-          minHeight: "calc(100vh - 46px)",
+          minHeight: "calc(100vh - 40px)",
         }}
       >
         {/* Left: now playing + DJ context + queue */}
-        <div
-          className="flex flex-col"
-          style={{ borderRight: "0.5px solid rgba(255,255,255,0.06)" }}
-        >
+        <div className="flex flex-col md:border-r md:border-white/[0.06]">
           {showDjGoLive ? (
             <div className="flex flex-col items-center gap-4 py-16 text-center">
               <div

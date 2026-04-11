@@ -189,7 +189,7 @@ export default function HomePage() {
       <div className="relative z-10">
         <Navbar />
 
-        <main className="mx-auto w-full max-w-3xl px-4 pb-10 sm:px-6">
+        <main className="mx-auto w-full max-w-[800px] px-4 pb-10 sm:px-6">
           {/* Connection status banner */}
           {loaded && usingMock && (
             <div

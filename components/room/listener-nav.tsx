@@ -62,16 +62,6 @@ export function ListenerNav({
           />
           {listenerCount}
         </div>
-        <Link
-          href="/"
-          className="text-[13px] font-bold tracking-[0.04em]"
-          style={{
-            color: "#e89a3c",
-            textShadow: "0 0 12px rgba(232,154,60,0.3)",
-          }}
-        >
-          JUKEBOX
-        </Link>
       </div>
     </div>
   )

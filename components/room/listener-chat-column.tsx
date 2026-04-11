@@ -179,8 +179,11 @@ export const ListenerChatColumn = forwardRef<
 
   return (
     <div
-      className="flex flex-col"
-      style={{ background: "rgba(255,255,255,0.01)" }}
+      className="flex flex-col border-t border-white/[0.06] md:border-t-0"
+      style={{
+        background: "rgba(255,255,255,0.01)",
+        minHeight: "400px",
+      }}
     >
       {/* Header */}
       <div
