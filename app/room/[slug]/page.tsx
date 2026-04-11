@@ -678,6 +678,11 @@ export default function RoomPage() {
                 requestDisabled={serverPolicy === "closed"}
                 albumArtUrl={effectiveAlbumArt}
                 albumGradient={displayTrack.albumGradient}
+                soundCloudUrl={
+                  audioTrack?.source === "soundcloud"
+                    ? audioTrack.sourceUrl
+                    : undefined
+                }
               />
 
               <ListenerDjContext

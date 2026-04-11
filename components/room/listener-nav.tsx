@@ -1,7 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, MessageCircle } from "lucide-react"
+import { useMessages } from "@/lib/messages-context"
+import { UserMenu } from "@/components/layout/user-menu"
 
 interface ListenerNavProps {
   roomName: string
@@ -14,6 +16,8 @@ export function ListenerNav({
   isLive,
   listenerCount,
 }: ListenerNavProps) {
+  const { totalUnread, openDrawer } = useMessages()
+
   return (
     <div
       className="flex items-center justify-between px-5 py-2.5"
@@ -22,6 +26,7 @@ export function ListenerNav({
         borderBottom: "0.5px solid rgba(255,255,255,0.06)",
       }}
     >
+      {/* Left: back + room name + LIVE badge */}
       <div className="flex min-w-0 items-center gap-2.5">
         <Link
           href="/"
@@ -51,6 +56,7 @@ export function ListenerNav({
         )}
       </div>
 
+      {/* Right: listener count, messages, user menu */}
       <div className="flex shrink-0 items-center gap-3">
         <div
           className="flex items-center gap-1 text-[11px]"
@@ -62,6 +68,30 @@ export function ListenerNav({
           />
           {listenerCount}
         </div>
+
+        {/* Messages — matches global Navbar treatment */}
+        <button
+          type="button"
+          onClick={() => openDrawer()}
+          className="relative flex items-center justify-center rounded-full p-1.5 transition-colors hover:bg-white/[0.06]"
+          aria-label="Messages"
+        >
+          <MessageCircle
+            className="h-[18px] w-[18px]"
+            style={{ color: "rgba(232,230,234,0.55)" }}
+          />
+          {totalUnread > 0 && (
+            <span
+              className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-mono text-[9px] font-bold"
+              style={{ background: "#e89a3c", color: "#0d0b10" }}
+            >
+              {totalUnread}
+            </span>
+          )}
+        </button>
+
+        {/* User menu (auth-aware avatar + dropdown) */}
+        <UserMenu />
       </div>
     </div>
   )

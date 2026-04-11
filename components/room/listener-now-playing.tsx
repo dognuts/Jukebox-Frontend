@@ -1,6 +1,8 @@
 "use client"
 
+import Link from "next/link"
 import { Heart, Plus, Zap, Mic } from "lucide-react"
+import { soundcloudProfileUrl } from "@/lib/track-utils"
 
 interface ListenerNowPlayingProps {
   djName: string
@@ -19,6 +21,11 @@ interface ListenerNowPlayingProps {
   sendNeonDisabled?: boolean
   albumArtUrl?: string | null
   albumGradient?: string
+  // When the current track is hosted on SoundCloud, pass the track URL.
+  // The component will link the title to the track and the artist name
+  // to the user's profile, and render a "Listen on SoundCloud" badge
+  // below the action buttons, per the SoundCloud API Terms of Use.
+  soundCloudUrl?: string | null
 }
 
 function formatTime(seconds: number): string {
@@ -45,11 +52,19 @@ export function ListenerNowPlaying({
   sendNeonDisabled = false,
   albumArtUrl,
   albumGradient,
+  soundCloudUrl,
 }: ListenerNowPlayingProps) {
   const pct =
     duration > 0
       ? Math.min(100, Math.max(0, (currentTime / duration) * 100))
       : 0
+
+  // SoundCloud attribution: link the title to the track URL and the
+  // artist name to the uploader's profile URL, both required by the
+  // SoundCloud API Terms of Use when displaying track metadata.
+  const scProfileUrl = soundCloudUrl
+    ? soundcloudProfileUrl(soundCloudUrl)
+    : null
 
   return (
     <div
@@ -156,7 +171,19 @@ export function ListenerNowPlaying({
                 color: "#e8e6ea",
               }}
             >
-              {trackTitle}
+              {soundCloudUrl ? (
+                <a
+                  href={soundCloudUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="transition-colors hover:text-[color:rgba(232,154,60,1)]"
+                  style={{ color: "inherit" }}
+                >
+                  {trackTitle}
+                </a>
+              ) : (
+                trackTitle
+              )}
             </div>
             <div
               className="truncate"
@@ -166,7 +193,19 @@ export function ListenerNowPlaying({
                 color: "rgba(232,230,234,0.5)",
               }}
             >
-              {trackArtist}
+              {scProfileUrl ? (
+                <a
+                  href={scProfileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="transition-colors hover:underline"
+                  style={{ color: "inherit" }}
+                >
+                  {trackArtist}
+                </a>
+              ) : (
+                trackArtist
+              )}
             </div>
 
             {/* EQ bars */}
@@ -271,6 +310,34 @@ export function ListenerNowPlaying({
             </button>
           )}
         </div>
+
+        {/* SoundCloud attribution badge — required by the SoundCloud
+            API Terms of Use when displaying streamed track metadata.
+            Links out to the track URL on soundcloud.com. */}
+        {soundCloudUrl && (
+          <a
+            href={soundCloudUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-sans text-[11px] font-semibold transition-all hover:scale-[1.02]"
+            style={{
+              background: "rgba(15,8,3,0.6)",
+              border: "0.5px solid rgba(232,115,74,0.35)",
+              color: "#f4b25c",
+            }}
+            aria-label="Listen on SoundCloud"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-3.5 w-3.5"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M11.56 8.87V17h8.76c1.85-.13 2.68-1.27 2.68-2.5 0-1.62-1.13-2.5-2.56-2.5-.33 0-.56.05-.83.16C19.3 10.09 17.58 8.5 15.5 8.5c-.71 0-1.39.17-1.98.5-.16.08-.25.18-.25.38v-.01H13v.03c-.15-.07-.39-.13-.6-.13-.63 0-1.14.47-1.14 1.09v.28c-.34-.55-.93-.87-1.6-.87H11.56zm-1.59 1.5V17H8.89v-5.3c0-.37.3-.65.63-.65.36 0 .64.28.64.65v-.33h.01zm-2.13.74V17H6.75v-4.8c0-.35.28-.66.56-.66.31 0 .53.3.53.66v-.09zm-2.13.74V17H4.62v-3.76c0-.31.26-.54.5-.54.27 0 .59.23.59.54v-.17zm-2.13.62V17h-1.1v-3.14c0-.27.22-.5.55-.5.31 0 .55.22.55.5v-.03zM1.45 13.3V17H.34v-2.4c0-.53.48-.6.48-.6s.42.03.63.3z" />
+            </svg>
+            Listen on SoundCloud
+          </a>
+        )}
       </div>
     </div>
   )
