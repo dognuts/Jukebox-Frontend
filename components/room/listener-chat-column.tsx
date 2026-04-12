@@ -245,9 +245,9 @@ export const ListenerChatColumn = forwardRef<
         {displayed.map((msg) => {
           const color = colorFor(msg.username)
           const isDjMsg = msg.username === djName || msg.type === "announcement"
-          const hasMedia = !!(msg as any).mediaUrl
-          const mediaUrl = (msg as any).mediaUrl as string | undefined
-          const mediaType = (msg as any).mediaType as string | undefined
+          const mediaUrl = msg.mediaUrl
+          const mediaType = msg.mediaType
+          const hasMedia = !!mediaUrl
 
           return (
             <div key={msg.id}>
