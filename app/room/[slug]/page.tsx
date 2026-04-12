@@ -141,6 +141,35 @@ export default function RoomPage() {
   const [mockSupernovaEvent, setMockSupernovaEvent] = useState<{ prestigeCount: number; activatedBy: string } | null>(null)
   const [mockRoomEffect, setMockRoomEffect] = useState<import("@/hooks/use-room-websocket").RoomEffect | null>(null)
 
+  // Track prestige locally — the backend doesn't support prestigeCount
+  // yet, so we detect Supernova resets by watching the tube level drop
+  // from 5 to a lower value and trigger effects on the frontend.
+  const [localPrestige, setLocalPrestige] = useState(0)
+  const [localSupernovaEvent, setLocalSupernovaEvent] = useState<{ prestigeCount: number; activatedBy: string } | null>(null)
+  const [localRoomEffect, setLocalRoomEffect] = useState<import("@/hooks/use-room-websocket").RoomEffect | null>(null)
+  const prevTubeLevelRef = useRef<number>(0)
+
+  useEffect(() => {
+    const tube = ws.connected ? ws.tube : mockTube
+    if (!tube) return
+    const prevLevel = prevTubeLevelRef.current
+    prevTubeLevelRef.current = tube.level
+
+    // Detect prestige: level was 5, now it's lower (backend reset)
+    if (prevLevel >= 5 && tube.level < prevLevel) {
+      setLocalPrestige((p) => {
+        const newP = p + 1
+        setLocalSupernovaEvent({ prestigeCount: newP, activatedBy: "A listener" })
+        setTimeout(() => setLocalSupernovaEvent(null), 8000)
+        const effects = ["aurora", "neon_rain", "stardust"] as const
+        const effect = effects[newP % effects.length]
+        const expiry = new Date(Date.now() + 30 * 60 * 1000).toISOString()
+        setLocalRoomEffect({ type: effect, expiresAt: expiry, activatedBy: "A listener" })
+        return newP
+      })
+    }
+  }, [ws.connected, ws.tube, ws.tube?.level, mockTube, mockTube.level]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Fetch real tube state on room load
   useEffect(() => {
     if (!room?.id) return
@@ -643,14 +672,16 @@ export default function RoomPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "#0d0b10", color: "#e8e6ea" }}>
-      {/* Supernova explosion — full-screen particle burst when level 5 maxes out */}
+      {/* Supernova explosion — full-screen particle burst when level 5 maxes out.
+          Uses backend event when available, falls back to local detection. */}
       <SupernovaExplosion
-        active={!!(ws.connected ? ws.supernovaEvent : mockSupernovaEvent)}
-        activatedBy={(ws.connected ? ws.supernovaEvent : mockSupernovaEvent)?.activatedBy}
+        active={!!(ws.supernovaEvent || localSupernovaEvent || mockSupernovaEvent)}
+        activatedBy={(ws.supernovaEvent || localSupernovaEvent || mockSupernovaEvent)?.activatedBy}
       />
 
-      {/* Room effect overlay — persistent visual theme unlocked by Supernova */}
-      <RoomEffectOverlay effect={ws.connected ? ws.activeRoomEffect : mockRoomEffect} />
+      {/* Room effect overlay — persistent visual theme unlocked by Supernova.
+          Uses backend event when available, falls back to local state. */}
+      <RoomEffectOverlay effect={ws.activeRoomEffect || localRoomEffect || mockRoomEffect} />
 
       {/* Audio engine mounts once per track so playback keeps running while
           the listener browses. For YouTube tracks, it portals the iframe
@@ -784,13 +815,20 @@ export default function RoomPage() {
           {/* Neon tube — visible to listeners only. Shows the room's
               energy level powered by neon donations. Clicking opens
               the send-neon modal. */}
-          {!isDJ && (
-            <NeonTube
-              tube={ws.connected ? ws.tube : mockTube}
-              powerUp={ws.connected ? ws.lastPowerUp : mockPowerUp}
-              onSendNeon={() => setSendNeonOpen(true)}
-            />
-          )}
+          {!isDJ && (() => {
+            const tubeState = ws.connected ? ws.tube : mockTube
+            // Merge local prestige count until backend supports it
+            const tubeWithPrestige = tubeState
+              ? { ...tubeState, prestigeCount: tubeState.prestigeCount || localPrestige || mockTube.prestigeCount }
+              : null
+            return (
+              <NeonTube
+                tube={tubeWithPrestige}
+                powerUp={ws.connected ? ws.lastPowerUp : mockPowerUp}
+                onSendNeon={() => setSendNeonOpen(true)}
+              />
+            )
+          })()}
 
           {/* Queue — always render, even in idle state, so DJs can see
               what's lined up. */}
