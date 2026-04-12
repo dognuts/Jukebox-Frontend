@@ -636,7 +636,6 @@ export function NeonTube({ tube, powerUp, onSendNeon }: NeonTubeProps) {
                 border: `0.5px solid rgba(${lv.glowRgb},0.3)`,
                 color: lv.css,
                 boxShadow: `0 0 12px rgba(${lv.glowRgb},0.08)`,
-                animation: "neon-tube-breathe 4s ease-in-out infinite",
               }}
             >
               <Zap className="h-3.5 w-3.5" />
