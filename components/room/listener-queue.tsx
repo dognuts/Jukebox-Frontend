@@ -20,7 +20,6 @@ function formatDuration(seconds: number): string {
 export function ListenerQueue({ tracks, startIndex = 2 }: ListenerQueueProps) {
   return (
     <div
-      className="flex-1"
       style={{
         paddingInline: "var(--space-lg)",
         paddingBottom: "var(--space-lg)",
@@ -63,8 +62,16 @@ export function ListenerQueue({ tracks, startIndex = 2 }: ListenerQueueProps) {
           Queue is empty
         </div>
       ) : (
-        <div className="flex flex-col gap-0.5">
-          {tracks.slice(0, 12).map((track, i) => (
+        <div
+          className="flex flex-col gap-0.5 overflow-y-auto"
+          style={{
+            /* Show ~3 tracks then scroll. Each row is roughly 50-68px
+               depending on viewport. 195px comfortably fits 3 rows with
+               a sliver of the 4th peeking to hint at scrollability. */
+            maxHeight: "195px",
+          }}
+        >
+          {tracks.map((track, i) => (
             <div
               key={track.id ?? `${track.title}-${i}`}
               className="flex items-center rounded-lg"

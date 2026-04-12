@@ -179,10 +179,13 @@ export const ListenerChatColumn = forwardRef<
 
   return (
     <div
-      className="flex flex-col border-t border-white/[0.06] md:border-t-0"
+      className="flex flex-col border-t border-white/[0.06] md:border-t-0 md:sticky md:top-[56px] md:self-start"
       style={{
         background: "rgba(255,255,255,0.01)",
-        minHeight: "400px",
+        /* On desktop, lock to viewport height so the input and
+           reactions stay visible without scrolling the page. The
+           messages area scrolls internally via flex-1 + overflow. */
+        maxHeight: "calc(100vh - 56px)",
       }}
     >
       {/* Header */}
