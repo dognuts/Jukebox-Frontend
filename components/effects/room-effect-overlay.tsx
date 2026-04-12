@@ -56,41 +56,41 @@ function AuroraEffect() {
       <div
         className="absolute inset-x-0 top-0"
         style={{
-          height: "45%",
+          height: "55%",
           background: `
             linear-gradient(135deg,
-              oklch(0.30 0.15 195 / 0.06) 0%,
+              oklch(0.35 0.18 195 / 0.18) 0%,
               transparent 25%,
-              oklch(0.28 0.18 330 / 0.05) 40%,
+              oklch(0.32 0.22 330 / 0.15) 40%,
               transparent 55%,
-              oklch(0.32 0.14 80 / 0.06) 70%,
+              oklch(0.38 0.18 80 / 0.18) 70%,
               transparent 85%,
-              oklch(0.28 0.16 270 / 0.04) 100%
+              oklch(0.32 0.20 270 / 0.12) 100%
             )
           `,
           backgroundSize: "300% 300%",
           animation: "room-effect-aurora 20s ease-in-out infinite",
-          maskImage: "linear-gradient(to bottom, black 0%, transparent 100%)",
-          WebkitMaskImage: "linear-gradient(to bottom, black 0%, transparent 100%)",
+          maskImage: "linear-gradient(to bottom, black 0%, transparent 85%)",
+          WebkitMaskImage: "linear-gradient(to bottom, black 0%, transparent 85%)",
         }}
       />
       <div
         className="absolute inset-x-0 top-0"
         style={{
-          height: "35%",
+          height: "45%",
           background: `
             linear-gradient(225deg,
-              oklch(0.25 0.12 160 / 0.04) 0%,
+              oklch(0.30 0.16 160 / 0.14) 0%,
               transparent 30%,
-              oklch(0.30 0.16 280 / 0.05) 50%,
+              oklch(0.35 0.20 280 / 0.16) 50%,
               transparent 70%,
-              oklch(0.28 0.14 350 / 0.04) 100%
+              oklch(0.32 0.18 350 / 0.12) 100%
             )
           `,
           backgroundSize: "250% 250%",
           animation: "room-effect-aurora 15s ease-in-out infinite reverse",
-          maskImage: "linear-gradient(to bottom, black 0%, transparent 100%)",
-          WebkitMaskImage: "linear-gradient(to bottom, black 0%, transparent 100%)",
+          maskImage: "linear-gradient(to bottom, black 0%, transparent 85%)",
+          WebkitMaskImage: "linear-gradient(to bottom, black 0%, transparent 85%)",
         }}
       />
     </div>
@@ -135,7 +135,7 @@ function NeonRainEffect() {
     }
 
     const drops: Drop[] = []
-    const MAX_DROPS = 25
+    const MAX_DROPS = 40
 
     let lastFrame = 0
 
@@ -149,15 +149,15 @@ function NeonRainEffect() {
       ctx!.clearRect(0, 0, w, h)
 
       // Spawn
-      if (drops.length < MAX_DROPS && Math.random() < 0.15) {
+      if (drops.length < MAX_DROPS && Math.random() < 0.2) {
         const c = colors[Math.floor(Math.random() * colors.length)]
         drops.push({
           x: Math.random() * w,
           y: -20,
           speed: 0.8 + Math.random() * 1.5,
-          length: 20 + Math.random() * 40,
+          length: 30 + Math.random() * 60,
           color: c,
-          opacity: 0.03 + Math.random() * 0.06,
+          opacity: 0.08 + Math.random() * 0.12,
         })
       }
 
@@ -253,7 +253,7 @@ function StardustEffect() {
     }
 
     // Pre-generate fixed stars
-    const stars: Star[] = Array.from({ length: 40 }, () => ({
+    const stars: Star[] = Array.from({ length: 60 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
       size: 0.5 + Math.random() * 1.5,
@@ -281,7 +281,7 @@ function StardustEffect() {
 
       for (const s of stars) {
         const twinkle = (Math.sin(timeSec * s.speed + s.phase) + 1) / 2
-        const alpha = 0.02 + twinkle * 0.08
+        const alpha = 0.06 + twinkle * 0.18
 
         // Glow
         ctx!.save()
