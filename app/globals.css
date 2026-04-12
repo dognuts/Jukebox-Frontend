@@ -348,6 +348,80 @@
   }
 }
 
+/* Neon tube liquid surface wobble */
+@keyframes neon-tube-surface-wobble {
+  0%, 100% { transform: translateX(0) scaleX(1); }
+  25% { transform: translateX(1px) scaleX(1.04); }
+  50% { transform: translateX(-0.5px) scaleX(0.97); }
+  75% { transform: translateX(0.5px) scaleX(1.02); }
+}
+
+/* Neon tube liquid color cycling (rainbow / supernova) */
+@keyframes neon-tube-liquid-cycle {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 0% 100%; }
+}
+
+/* Neon tube power-up shake */
+@keyframes neon-tube-powerup-shake {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  10% { transform: translateX(-3px) rotate(-1deg); }
+  20% { transform: translateX(3px) rotate(1deg); }
+  30% { transform: translateX(-3px) rotate(-0.5deg); }
+  40% { transform: translateX(2px) rotate(0.5deg); }
+  50% { transform: translateX(-1.5px) rotate(-0.3deg); }
+  60% { transform: translateX(1px) rotate(0.2deg); }
+  70% { transform: translateX(-0.5px); }
+  80% { transform: translateX(0.5px); }
+}
+
+/* White flash overlay on power-up */
+@keyframes neon-tube-flash {
+  0% { opacity: 0; }
+  15% { opacity: 0.85; }
+  40% { opacity: 0.4; }
+  100% { opacity: 0; }
+}
+
+/* Expanding ring burst on level-up */
+@keyframes neon-tube-ring-burst {
+  0% {
+    width: 10px;
+    height: 10px;
+    opacity: 1;
+    border-width: 2px;
+  }
+  100% {
+    width: 120px;
+    height: 120px;
+    opacity: 0;
+    border-width: 1px;
+  }
+}
+
+/* Splash at liquid surface when neon arrives */
+@keyframes neon-tube-splash {
+  0% {
+    transform: translateX(-50%) scaleY(1) scaleX(0.6);
+    opacity: 1;
+  }
+  40% {
+    transform: translateX(-50%) scaleY(1.8) scaleX(1.2);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateX(-50%) scaleY(0.3) scaleX(1.5);
+    opacity: 0;
+  }
+}
+
+/* Level-up badge pop */
+@keyframes neon-tube-badge-pulse {
+  0% { transform: scale(0.5); opacity: 0; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 @keyframes sparkle {
   0% { transform: scale(0) rotate(0deg); opacity: 1; }
   50% { transform: scale(1.2) rotate(180deg); opacity: 0.8; }

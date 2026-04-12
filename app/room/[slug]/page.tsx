@@ -12,6 +12,7 @@ import { ListenerDjContext } from "@/components/room/listener-dj-context"
 import { ListenerQueue } from "@/components/room/listener-queue"
 import { ListenerChatColumn } from "@/components/room/listener-chat-column"
 import { DjDeck } from "@/components/room/dj-deck"
+import { NeonTube } from "@/components/room/neon-tube"
 import { type Room, type Track, type ChatMessage, getRoomBySlug, rooms } from "@/lib/mock-data"
 import { usePlayer } from "@/lib/player-context"
 import { usePlaylist } from "@/lib/playlist-context"
@@ -755,6 +756,17 @@ export default function RoomPage() {
                 body={djContextBody}
               />
             </>
+          )}
+
+          {/* Neon tube — visible to listeners only. Shows the room's
+              energy level powered by neon donations. Clicking opens
+              the send-neon modal. */}
+          {!isDJ && (
+            <NeonTube
+              tube={ws.connected ? ws.tube : mockTube}
+              powerUp={ws.connected ? ws.lastPowerUp : mockPowerUp}
+              onSendNeon={() => setSendNeonOpen(true)}
+            />
           )}
 
           {/* Queue — always render, even in idle state, so DJs can see
