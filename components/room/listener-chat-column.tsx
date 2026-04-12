@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback, forwardRef } from "react"
 import { type ChatMessage } from "@/lib/mock-data"
 import { type ListenerInfo } from "@/hooks/use-room-websocket"
 import { GifPicker } from "@/components/room/gif-picker"
+import { ChatMediaInline } from "@/components/room/chat-media-inline"
 
 // Per-user colour palette. Hash username → fixed slot so the same name is
 // always the same colour.
@@ -316,33 +317,7 @@ export const ListenerChatColumn = forwardRef<
                 {/* Inline GIF/image */}
                 {hasMedia && mediaUrl && (
                   <div style={{ marginTop: msg.message ? "var(--space-2xs)" : 0 }}>
-                    {mediaType === "gif" && mediaUrl.endsWith(".mp4") ? (
-                      <video
-                        src={mediaUrl}
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        className="rounded-lg"
-                        style={{
-                          maxWidth: "220px",
-                          display: "block",
-                          border: "0.5px solid rgba(255,255,255,0.06)",
-                        }}
-                      />
-                    ) : (
-                      <img
-                        src={mediaUrl}
-                        alt=""
-                        className="rounded-lg"
-                        style={{
-                          maxWidth: "220px",
-                          display: "block",
-                          border: "0.5px solid rgba(255,255,255,0.06)",
-                        }}
-                        loading="lazy"
-                      />
-                    )}
+                    <ChatMediaInline url={mediaUrl} type={mediaType} />
                   </div>
                 )}
               </div>

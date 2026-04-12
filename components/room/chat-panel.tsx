@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import { ChatMediaInline } from "./chat-media-inline"
 import { Send, Music, Users, MessageSquare, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -327,9 +328,15 @@ export function ChatPanel({
                           {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                         </span>
                       </div>
-                      <div className="flex items-start gap-1">
-                        {msg.type === "request" && <Music className="mt-0.5 h-3 w-3 shrink-0 text-accent" />}
-                        <p className="font-sans text-sm text-foreground/90 break-words">{msg.message}</p>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-start gap-1">
+                          {msg.type === "request" && <Music className="mt-0.5 h-3 w-3 shrink-0 text-accent" />}
+                          {msg.message && <p className="font-sans text-sm text-foreground/90 break-words">{msg.message}</p>}
+                          {!msg.message && (msg as any).mediaUrl && <p className="font-sans text-sm text-foreground/50 italic">sent a GIF</p>}
+                        </div>
+                        {(msg as any).mediaUrl && (
+                          <ChatMediaInline url={(msg as any).mediaUrl} type={(msg as any).mediaType} />
+                        )}
                       </div>
                     </div>
                   </div>

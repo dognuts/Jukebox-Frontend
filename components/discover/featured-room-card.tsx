@@ -326,7 +326,9 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
                   <span className="font-semibold" style={{ color }}>
                     {msg.username}
                   </span>{" "}
-                  {msg.message}
+                  {(msg as any).mediaUrl
+                    ? <span style={{ opacity: 0.7, fontStyle: "italic" }}>[GIF]</span>
+                    : msg.message}
                 </span>
               </div>
             )

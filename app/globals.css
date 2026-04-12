@@ -451,6 +451,12 @@
   100% { background-position: 0% 0%; }
 }
 
+/* Chat media loading skeleton */
+@keyframes chat-media-skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
 @keyframes sparkle {
   0% { transform: scale(0) rotate(0deg); opacity: 1; }
   50% { transform: scale(1.2) rotate(180deg); opacity: 0.8; }
