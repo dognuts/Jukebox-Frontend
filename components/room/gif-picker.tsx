@@ -286,11 +286,17 @@ export function GifPicker({ open, onClose, onSelect }: GifPickerProps) {
           borderTop: "0.5px solid rgba(255,255,255,0.06)",
         }}
       >
-        <img
-          src="https://giphy.com/static/img/poweredby_giphy.png"
-          alt="Powered by GIPHY"
-          style={{ height: "14px", opacity: 0.5 }}
-        />
+        <span
+          style={{
+            fontSize: "9px",
+            fontWeight: 600,
+            letterSpacing: "0.05em",
+            color: "rgba(232,230,234,0.35)",
+            textTransform: "uppercase",
+          }}
+        >
+          Powered by GIPHY
+        </span>
       </div>
     </div>
   )
