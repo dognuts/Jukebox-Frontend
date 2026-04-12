@@ -14,7 +14,6 @@ import {
   type Conversation,
   type DirectMessage,
   type ChatUser,
-  getMockConversations,
   currentUser,
 } from "@/lib/mock-data"
 import { useAuth } from "@/lib/auth-context"
@@ -130,7 +129,7 @@ export function MessagesProvider({ children }: { children: ReactNode }) {
 
   const loadConversations = useCallback(async () => {
     if (!isRealAPI) {
-      setConversations(getMockConversations())
+      setConversations([])
       return
     }
 

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Navbar } from "@/components/layout/navbar"
 import { Footer } from "@/components/layout/footer"
@@ -31,7 +32,8 @@ interface APIFavoriteRoom {
 }
 
 export default function AccountPage() {
-  const { user: authUser, isLoggedIn } = useAuth()
+  const router = useRouter()
+  const { user: authUser, isLoggedIn, loading } = useAuth()
   const [stats, setStats] = useState<UserStats>({ totalListenMinutes: 0, roomsVisited: 0, tracksListened: 0 })
   const [favoriteRooms, setFavoriteRooms] = useState<APIFavoriteRoom[]>([])
 
@@ -48,27 +50,40 @@ export default function AccountPage() {
       .catch(() => {})
   }, [isLoggedIn])
 
-  // Build display user with real data
-  const displayUser = isLoggedIn && authUser
-    ? {
-        ...currentUser,
-        displayName: authUser.stageName || authUser.displayName,
-        avatarColor: authUser.avatarColor || currentUser.avatarColor,
-        joinDate: new Date(authUser.createdAt),
-        username: authUser.email?.split("@")[0] || currentUser.username,
-        stageName: authUser.stageName || "",
-        location: {
-          city: authUser.city || "",
-          state: authUser.region || "",
-          country: authUser.country || "",
-        },
-        stats: {
-          totalListenTime: stats.totalListenMinutes,
-          roomsVisited: stats.roomsVisited,
-          tracksListened: stats.tracksListened,
-        },
-      }
-    : currentUser
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!loading && !isLoggedIn) {
+      router.replace("/login")
+    }
+  }, [loading, isLoggedIn, router])
+
+  if (!isLoggedIn || !authUser) {
+    return (
+      <div className="flex min-h-screen items-center justify-center" style={{ background: "#0d0b10", color: "rgba(232,230,234,0.6)" }}>
+        <p className="text-sm">Redirecting to login...</p>
+      </div>
+    )
+  }
+
+  // Build display user with real data (authUser is guaranteed non-null here)
+  const displayUser = {
+    ...currentUser,
+    displayName: authUser.stageName || authUser.displayName,
+    avatarColor: authUser.avatarColor || currentUser.avatarColor,
+    joinDate: new Date(authUser.createdAt),
+    username: authUser.email?.split("@")[0] || currentUser.username,
+    stageName: authUser.stageName || "",
+    location: {
+      city: authUser.city || "",
+      state: authUser.region || "",
+      country: authUser.country || "",
+    },
+    stats: {
+      totalListenTime: stats.totalListenMinutes,
+      roomsVisited: stats.roomsVisited,
+      tracksListened: stats.tracksListened,
+    },
+  }
 
   return (
     <div className="relative min-h-screen">

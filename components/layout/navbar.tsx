@@ -158,8 +158,8 @@ export function Navbar() {
             </Link>
           )}
 
-          {/* Messages */}
-          <button
+          {/* Messages — logged in only */}
+          {isLoggedIn && <button
             type="button"
             onClick={() => openDrawer()}
             className="relative flex items-center justify-center rounded-full p-1.5 transition-colors hover:bg-white/[0.06]"
@@ -177,7 +177,7 @@ export function Navbar() {
                 {totalUnread}
               </span>
             )}
-          </button>
+          </button>}
 
           {/* User menu (auth-aware avatar + dropdown) */}
           <UserMenu />
