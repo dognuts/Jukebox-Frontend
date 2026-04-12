@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Heart, Plus, Zap, Mic } from "lucide-react"
+import { Heart, Plus, Mic } from "lucide-react"
 import { soundcloudProfileUrl } from "@/lib/track-utils"
 
 interface ListenerNowPlayingProps {
@@ -16,9 +16,7 @@ interface ListenerNowPlayingProps {
   djSpeaking?: boolean
   onSave?: () => void
   onRequest?: () => void
-  onSendNeon?: () => void
   requestDisabled?: boolean
-  sendNeonDisabled?: boolean
   albumArtUrl?: string | null
   albumGradient?: string
   // When the current track is hosted on SoundCloud, pass the track URL.
@@ -54,9 +52,7 @@ export function ListenerNowPlaying({
   djSpeaking = false,
   onSave,
   onRequest,
-  onSendNeon,
   requestDisabled = false,
-  sendNeonDisabled = false,
   albumArtUrl,
   albumGradient,
   soundCloudUrl,
@@ -324,22 +320,6 @@ export function ListenerNowPlaying({
             <Plus className="h-3.5 w-3.5" />
             Request
           </button>
-          {onSendNeon && (
-            <button
-              type="button"
-              onClick={onSendNeon}
-              disabled={sendNeonDisabled}
-              className="flex items-center gap-[5px] rounded-2xl px-4 py-[7px] text-xs transition-colors hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-40"
-              style={{
-                background: "rgba(232,154,60,0.06)",
-                border: "0.5px solid rgba(232,154,60,0.2)",
-                color: "#e89a3c",
-              }}
-            >
-              <Zap className="h-3.5 w-3.5" />
-              Send Neon
-            </button>
-          )}
         </div>
 
         {/* SoundCloud attribution badge — required by the SoundCloud

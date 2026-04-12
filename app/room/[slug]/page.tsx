@@ -737,7 +737,6 @@ export default function RoomPage() {
                 djSpeaking={djSpeaking}
                 onSave={handleSave}
                 onRequest={() => setRequestModalOpen(true)}
-                onSendNeon={!isDJ ? () => setSendNeonOpen(true) : undefined}
                 requestDisabled={serverPolicy === "closed"}
                 albumArtUrl={effectiveAlbumArt}
                 albumGradient={displayTrack.albumGradient}
