@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useMemo, useCallback } from "react"
+import { useEffect, useState, useMemo, useCallback, useRef } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Volume2, VolumeX, X, Radio, ArrowUpRight } from "lucide-react"
@@ -116,10 +116,16 @@ export function MiniPlayer() {
     }
   }, [player, updateTrack, updatePlaybackTime, close])
 
+  // Store syncWithServer in a ref so handleTrackEnd has a stable identity.
+  // This prevents AudioEngine from recreating its sync callback chain
+  // every time the player context updates (which was causing YouTube freezes).
+  const syncWithServerRef = useRef(syncWithServer)
+  syncWithServerRef.current = syncWithServer
+
   // Fire syncWithServer when the local engine signals end-of-track.
   const handleTrackEnd = useCallback(() => {
-    syncWithServer()
-  }, [syncWithServer])
+    syncWithServerRef.current()
+  }, [])
 
   // Periodic poll — catches track changes driven by the DJ or by the
   // server's autoplay advance loop even without a WebSocket connection.

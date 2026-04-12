@@ -66,6 +66,13 @@ export function AudioEngine({
   const syncTimeoutsRef = useRef<NodeJS.Timeout[]>([])
   const signaledEndRef = useRef("")  // trackID for which we've already signaled end
 
+  // Store callbacks in refs so syncToServer doesn't recreate when they change.
+  // This prevents the seek+play churn that was freezing YouTube in the mini-player.
+  const onTrackEndRef = useRef(onTrackEnd)
+  onTrackEndRef.current = onTrackEnd
+  const onPlayStateChangeRef = useRef(onPlayStateChange)
+  onPlayStateChangeRef.current = onPlayStateChange
+
   // Persistent YouTube host — a single fixed-position div appended to
   // document.body that always hosts the portal-rendered YouTubePlayer.
   // Its position/size is updated via CSS to either match inlineTarget's
@@ -192,7 +199,10 @@ export function AudioEngine({
     }
   }, [volume, muted, ready, synced])
 
-  // Sync to server playback state
+  // Sync to server playback state.
+  // Uses refs for onTrackEnd/onPlayStateChange so this callback only
+  // recreates when actual playback parameters change — not when the
+  // parent re-renders with new callback identities.
   const syncToServer = useCallback(() => {
     if (!playbackState || !ready || !playerRef.current) return
     if (forcePaused) return // DJ mic is active — don't resume
@@ -209,7 +219,7 @@ export function AudioEngine({
         playerRef.current.seekTo(playbackState.pausePosition)
       }
       setSynced(true)
-      onPlayStateChange?.(false)
+      onPlayStateChangeRef.current?.(false)
       return
     }
 
@@ -227,12 +237,12 @@ export function AudioEngine({
       // Track should have ended — trigger onTrackEnd to notify server (only once per track)
       if (hasPlayedRef.current && signaledEndRef.current !== playbackState.trackId) {
         signaledEndRef.current = playbackState.trackId || ""
-        onTrackEnd?.()
+        onTrackEndRef.current?.()
       }
       // Still play from current position while waiting for server to advance
       playerRef.current.play()
       if (!synced) setTimeout(() => setSynced(true), 600)
-      else onPlayStateChange?.(true)
+      else onPlayStateChangeRef.current?.(true)
       return
     }
 
@@ -240,7 +250,7 @@ export function AudioEngine({
     if (playerDuration <= 0 && targetSeconds > 600) {
       playerRef.current.play()
       if (!synced) setTimeout(() => setSynced(true), 600)
-      else onPlayStateChange?.(true)
+      else onPlayStateChangeRef.current?.(true)
       return
     }
 
@@ -261,9 +271,9 @@ export function AudioEngine({
         setSynced(true)
       }, 300)
     } else {
-      onPlayStateChange?.(true)
+      onPlayStateChangeRef.current?.(true)
     }
-  }, [playbackState, ready, synced, forcePaused, onPlayStateChange, onTrackEnd])
+  }, [playbackState, ready, synced, forcePaused])
 
   // Sync when playback state changes
   useEffect(() => {
@@ -321,20 +331,20 @@ export function AudioEngine({
 
   const handleStateChange = useCallback((state: "playing" | "paused" | "ended" | "buffering") => {
     setPlayerState(state)
-    
+
     if (state === "playing") {
       hasPlayedRef.current = true
-      onPlayStateChange?.(true)
+      onPlayStateChangeRef.current?.(true)
     } else if (state === "paused") {
-      onPlayStateChange?.(false)
+      onPlayStateChangeRef.current?.(false)
     } else if (state === "ended") {
       // Only trigger track end if the player has actually played something
       // YouTube IFrame API can fire "ended" (state 0) during initialization
       if (hasPlayedRef.current) {
-        onTrackEnd?.()
+        onTrackEndRef.current?.()
       }
     }
-  }, [onTrackEnd, onPlayStateChange])
+  }, [])
 
   if (!track) return null
 
