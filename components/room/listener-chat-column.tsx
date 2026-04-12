@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback, forwardRef } from "react"
 import { type ChatMessage } from "@/lib/mock-data"
 import { type ListenerInfo } from "@/hooks/use-room-websocket"
+import { GifPicker } from "@/components/room/gif-picker"
 
 // Per-user colour palette. Hash username → fixed slot so the same name is
 // always the same colour.
@@ -39,13 +40,10 @@ interface ListenerChatColumnProps {
   messages: ChatMessage[]
   listeners: ListenerInfo[]
   listenerCount: number
-  onSendMessage?: (message: string) => void
+  onSendMessage?: (message: string, media?: { mediaUrl: string; mediaType: string }) => void
   onSendReaction?: (emoji: string) => void
   connected: boolean
   djName: string
-  // Ref that page.tsx uses to call `_fireReaction(emoji)` on incoming WS
-  // reactions. We attach a method to its `current` so the existing
-  // handleIncomingReaction in page.tsx still works.
   overlayRef?: React.RefObject<HTMLDivElement | null>
 }
 
@@ -67,6 +65,7 @@ export const ListenerChatColumn = forwardRef<
 ) {
   const [input, setInput] = useState("")
   const [counts, setCounts] = useState<Record<string, number>>({})
+  const [gifPickerOpen, setGifPickerOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const overlayElRef = useRef<HTMLDivElement>(null)
 
@@ -77,9 +76,7 @@ export const ListenerChatColumn = forwardRef<
     el.scrollTop = el.scrollHeight
   }, [messages.length])
 
-  // Spawn a floating emoji in the overlay layer — keeps parity with the
-  // old ChatPanel so existing incoming-reaction wiring in page.tsx still
-  // fires animations here.
+  // Spawn a floating emoji in the overlay layer
   const spawnEmoji = useCallback((emoji: string) => {
     const container = overlayElRef.current
     if (!container) return
@@ -140,8 +137,7 @@ export const ListenerChatColumn = forwardRef<
     [spawnEmoji]
   )
 
-  // Expose fireReaction on the overlayRef provided by page.tsx so the
-  // existing handleIncomingReaction call site works unchanged.
+  // Expose fireReaction on the overlayRef provided by page.tsx
   useEffect(() => {
     const el = overlayElRef.current as any
     if (el) el._fireReaction = fireReaction
@@ -156,6 +152,18 @@ export const ListenerChatColumn = forwardRef<
     onSendMessage(trimmed)
     setInput("")
   }, [input, onSendMessage])
+
+  const handleGifSelect = useCallback(
+    (gifUrl: string) => {
+      if (!onSendMessage) return
+      // Send with optional caption text
+      const caption = input.trim()
+      onSendMessage(caption, { mediaUrl: gifUrl, mediaType: "gif" })
+      setInput("")
+      setGifPickerOpen(false)
+    },
+    [input, onSendMessage]
+  )
 
   const handleReactionClick = useCallback(
     (emoji: string) => {
@@ -182,9 +190,6 @@ export const ListenerChatColumn = forwardRef<
       className="flex flex-col border-t border-white/[0.06] md:border-t-0 md:sticky md:top-[56px] md:self-start"
       style={{
         background: "rgba(255,255,255,0.01)",
-        /* On desktop, lock to viewport height so the input and
-           reactions stay visible without scrolling the page. The
-           messages area scrolls internally via flex-1 + overflow. */
         maxHeight: "calc(100vh - 56px)",
       }}
     >
@@ -217,8 +222,7 @@ export const ListenerChatColumn = forwardRef<
           paddingBlock: "var(--space-sm)",
         }}
       >
-        {/* Floating emoji overlay — positioned absolute so reactions drift
-            upward across the messages list. */}
+        {/* Floating emoji overlay */}
         <div
           ref={overlayElRef}
           aria-hidden="true"
@@ -240,6 +244,10 @@ export const ListenerChatColumn = forwardRef<
         {displayed.map((msg) => {
           const color = colorFor(msg.username)
           const isDjMsg = msg.username === djName || msg.type === "announcement"
+          const hasMedia = !!(msg as any).mediaUrl
+          const mediaUrl = (msg as any).mediaUrl as string | undefined
+          const mediaType = (msg as any).mediaType as string | undefined
+
           return (
             <div key={msg.id}>
               <div
@@ -284,17 +292,58 @@ export const ListenerChatColumn = forwardRef<
                 </span>
               </div>
               <div
-                className="leading-[1.4]"
                 style={{
                   paddingLeft: "calc(clamp(14px, 1.4vw, 18px) + 0.375rem)",
-                  color: "rgba(232,230,234,0.6)",
-                  fontSize: "var(--fs-body)",
                 }}
               >
-                {msg.type === "request" ? (
-                  <span className="italic">requested: {msg.message}</span>
-                ) : (
-                  msg.message
+                {/* Text content */}
+                {msg.message && (
+                  <div
+                    className="leading-[1.4]"
+                    style={{
+                      color: "rgba(232,230,234,0.6)",
+                      fontSize: "var(--fs-body)",
+                    }}
+                  >
+                    {msg.type === "request" ? (
+                      <span className="italic">requested: {msg.message}</span>
+                    ) : (
+                      msg.message
+                    )}
+                  </div>
+                )}
+
+                {/* Inline GIF/image */}
+                {hasMedia && mediaUrl && (
+                  <div style={{ marginTop: msg.message ? "var(--space-2xs)" : 0 }}>
+                    {mediaType === "gif" && mediaUrl.endsWith(".mp4") ? (
+                      <video
+                        src={mediaUrl}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="rounded-lg"
+                        style={{
+                          maxWidth: "220px",
+                          display: "block",
+                          border: "0.5px solid rgba(255,255,255,0.06)",
+                        }}
+                      />
+                    ) : (
+                      <img
+                        src={mediaUrl}
+                        alt=""
+                        className="rounded-lg"
+                        style={{
+                          maxWidth: "220px",
+                          display: "block",
+                          border: "0.5px solid rgba(255,255,255,0.06)",
+                        }}
+                        loading="lazy"
+                      />
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -376,7 +425,7 @@ export const ListenerChatColumn = forwardRef<
         </div>
       </div>
 
-      {/* Reaction tray — quick way to send a reaction without typing. */}
+      {/* Reaction tray */}
       <div
         className="flex items-center"
         style={{
@@ -406,6 +455,17 @@ export const ListenerChatColumn = forwardRef<
         ))}
       </div>
 
+      {/* GIF picker — slides open above the input */}
+      {gifPickerOpen && (
+        <div style={{ paddingInline: "var(--space-md)", paddingTop: "var(--space-xs)" }}>
+          <GifPicker
+            open={gifPickerOpen}
+            onClose={() => setGifPickerOpen(false)}
+            onSelect={handleGifSelect}
+          />
+        </div>
+      )}
+
       {/* Chat input */}
       <div
         style={{
@@ -415,6 +475,29 @@ export const ListenerChatColumn = forwardRef<
         }}
       >
         <div className="flex items-center gap-2">
+          {/* GIF button */}
+          <button
+            type="button"
+            onClick={() => setGifPickerOpen((v) => !v)}
+            disabled={!connected || !onSendMessage}
+            className="flex shrink-0 items-center justify-center rounded-md transition-colors hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-40"
+            style={{
+              height: "clamp(28px, 3.5vw, 34px)",
+              paddingInline: "6px",
+              fontSize: "10px",
+              fontWeight: 700,
+              letterSpacing: "0.04em",
+              background: gifPickerOpen ? "rgba(232,154,60,0.15)" : "rgba(255,255,255,0.04)",
+              border: gifPickerOpen
+                ? "0.5px solid rgba(232,154,60,0.4)"
+                : "0.5px solid rgba(255,255,255,0.08)",
+              color: gifPickerOpen ? "#e89a3c" : "rgba(232,230,234,0.5)",
+            }}
+            aria-label="GIF picker"
+          >
+            GIF
+          </button>
+
           <input
             type="text"
             value={input}

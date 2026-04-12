@@ -144,6 +144,8 @@ export interface APIChatMessage {
   message: string
   type: "message" | "request" | "announcement"
   timestamp: string
+  mediaUrl?: string
+  mediaType?: string
 }
 
 export interface PlaybackState {

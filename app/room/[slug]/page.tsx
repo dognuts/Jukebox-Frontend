@@ -380,6 +380,8 @@ export default function RoomPage() {
         message: m.message,
         timestamp: new Date(m.timestamp),
         type: m.type as "message" | "request" | "announcement",
+        mediaUrl: m.mediaUrl,
+        mediaType: m.mediaType,
       }))
     }
     return room?.chatMessages ?? []

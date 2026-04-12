@@ -398,7 +398,8 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
   }, [])
 
   const sendChat = useCallback(
-    (message: string) => send("send_chat", { message }),
+    (message: string, media?: { mediaUrl: string; mediaType: string }) =>
+      send("send_chat", { message, ...media }),
     [send]
   )
 

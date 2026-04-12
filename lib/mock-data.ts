@@ -21,6 +21,8 @@ export interface ChatMessage {
   message: string
   timestamp: Date
   type: ChatMessageType
+  mediaUrl?: string
+  mediaType?: string
 }
 
 export interface Room {
