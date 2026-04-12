@@ -39,6 +39,13 @@ export interface NeonTubeState {
   fillAmount: number
   fillTarget: number
   totalNeon: number
+  prestigeCount?: number
+}
+
+export interface RoomEffect {
+  type: "aurora" | "neon_rain" | "stardust"
+  expiresAt: string
+  activatedBy: string
 }
 
 export interface RoomWSState {
@@ -56,6 +63,8 @@ export interface RoomWSState {
   roomEndedReason: string
   tube: NeonTubeState | null
   lastPowerUp: { newLevel: number; color: string } | null
+  supernovaEvent: { prestigeCount: number; activatedBy: string } | null
+  activeRoomEffect: RoomEffect | null
   djMicActive: boolean
   djMicPauseMusic: boolean
 }
@@ -88,6 +97,8 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
     roomEndedReason: "",
     tube: null,
     lastPowerUp: null,
+    supernovaEvent: null,
+    activeRoomEffect: null,
     djMicActive: false,
     djMicPauseMusic: false,
   })
@@ -247,6 +258,15 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
           setState((s) => ({ ...s, lastPowerUp: msg.payload as { newLevel: number; color: string } }))
           // Clear after animation
           setTimeout(() => setState((s) => ({ ...s, lastPowerUp: null })), 4000)
+          break
+
+        case "supernova_complete":
+          setState((s) => ({ ...s, supernovaEvent: msg.payload as { prestigeCount: number; activatedBy: string } }))
+          setTimeout(() => setState((s) => ({ ...s, supernovaEvent: null })), 8000)
+          break
+
+        case "room_effect_update":
+          setState((s) => ({ ...s, activeRoomEffect: (msg.payload as RoomEffect) || null }))
           break
 
         case "neon_gift":

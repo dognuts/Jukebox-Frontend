@@ -13,6 +13,8 @@ import { ListenerQueue } from "@/components/room/listener-queue"
 import { ListenerChatColumn } from "@/components/room/listener-chat-column"
 import { DjDeck } from "@/components/room/dj-deck"
 import { NeonTube } from "@/components/room/neon-tube"
+import { SupernovaExplosion } from "@/components/effects/supernova-explosion"
+import { RoomEffectOverlay } from "@/components/effects/room-effect-overlay"
 import { type Room, type Track, type ChatMessage, getRoomBySlug, rooms } from "@/lib/mock-data"
 import { usePlayer } from "@/lib/player-context"
 import { usePlaylist } from "@/lib/playlist-context"
@@ -134,8 +136,10 @@ export default function RoomPage() {
   // Mock tube state for when backend is not connected (kept so Send Neon
   // can still give local feedback — tube visual is no longer rendered but
   // the state is still used by the Neon modal cascade.)
-  const [mockTube, setMockTube] = useState({ roomId: slug || "", level: 1, fillAmount: 0, fillTarget: 100, totalNeon: 0 })
+  const [mockTube, setMockTube] = useState({ roomId: slug || "", level: 1, fillAmount: 0, fillTarget: 100, totalNeon: 0, prestigeCount: 0 })
   const [mockPowerUp, setMockPowerUp] = useState<{ newLevel: number; color: string } | null>(null)
+  const [mockSupernovaEvent, setMockSupernovaEvent] = useState<{ prestigeCount: number; activatedBy: string } | null>(null)
+  const [mockRoomEffect, setMockRoomEffect] = useState<import("@/hooks/use-room-websocket").RoomEffect | null>(null)
 
   // Fetch real tube state on room load
   useEffect(() => {
@@ -152,13 +156,24 @@ export default function RoomPage() {
       setMockTube((prev) => {
         const newFill = prev.fillAmount + amount
         const newTotal = prev.totalNeon + amount
-        // Check if we level up (every 100 neon)
         if (newFill >= prev.fillTarget) {
-          const newLevel = Math.min(prev.level + 1, 4)
-          const colors = ["oklch(0.72 0.18 195)", "oklch(0.65 0.24 330)", "oklch(0.82 0.18 80)", "oklch(0.90 0.05 0)"]
+          if (prev.level >= 5) {
+            // Supernova maxed — prestige reset!
+            const newPrestige = (prev.prestigeCount ?? 0) + 1
+            setMockSupernovaEvent({ prestigeCount: newPrestige, activatedBy: "You" })
+            setTimeout(() => setMockSupernovaEvent(null), 8000)
+            // Unlock a random room effect for 30 minutes
+            const effects = ["aurora", "neon_rain", "stardust"] as const
+            const effect = effects[newPrestige % effects.length]
+            const expiry = new Date(Date.now() + 30 * 60 * 1000).toISOString()
+            setMockRoomEffect({ type: effect, expiresAt: expiry, activatedBy: "You" })
+            return { ...prev, level: 1, fillAmount: 0, fillTarget: 100, totalNeon: newTotal, prestigeCount: newPrestige }
+          }
+          const newLevel = Math.min(prev.level + 1, 5)
+          const colors = ["oklch(0.72 0.18 195)", "oklch(0.65 0.24 330)", "oklch(0.82 0.18 80)", "oklch(0.75 0.20 300)", "oklch(0.95 0.03 80)"]
           setMockPowerUp({ newLevel, color: colors[newLevel - 1] })
           setTimeout(() => setMockPowerUp(null), 4000)
-          return { level: newLevel, fillAmount: newFill - prev.fillTarget, fillTarget: 100, totalNeon: newTotal }
+          return { ...prev, level: newLevel, fillAmount: newFill - prev.fillTarget, fillTarget: 100, totalNeon: newTotal }
         }
         return { ...prev, fillAmount: newFill, totalNeon: newTotal }
       })
@@ -628,6 +643,15 @@ export default function RoomPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "#0d0b10", color: "#e8e6ea" }}>
+      {/* Supernova explosion — full-screen particle burst when level 5 maxes out */}
+      <SupernovaExplosion
+        active={!!(ws.connected ? ws.supernovaEvent : mockSupernovaEvent)}
+        activatedBy={(ws.connected ? ws.supernovaEvent : mockSupernovaEvent)?.activatedBy}
+      />
+
+      {/* Room effect overlay — persistent visual theme unlocked by Supernova */}
+      <RoomEffectOverlay effect={ws.connected ? ws.activeRoomEffect : mockRoomEffect} />
+
       {/* Audio engine mounts once per track so playback keeps running while
           the listener browses. For YouTube tracks, it portals the iframe
           into the album-art slot inside ListenerNowPlaying (via ytSlot) so

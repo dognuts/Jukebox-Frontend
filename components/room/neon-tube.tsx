@@ -68,9 +68,20 @@ export function NeonTube({ tube, powerUp, onSendNeon }: NeonTubeProps) {
   const fillTarget = tube?.fillTarget ?? 100
   const fillPct = Math.min(100, fillTarget > 0 ? (fillAmount / fillTarget) * 100 : 0)
   const totalNeon = tube?.totalNeon ?? 0
+  const prestigeCount = tube?.prestigeCount ?? 0
   const lv = LEVELS[level] ?? LEVELS[1]
   const isRainbow = level === 4
   const isSupernova = level === 5
+
+  // Prestige tier determines cap styling
+  const prestigeTier = prestigeCount >= 10 ? 3 : prestigeCount >= 5 ? 2 : prestigeCount >= 1 ? 1 : 0
+  const capStyle = prestigeTier >= 3
+    ? { bg: "linear-gradient(180deg, oklch(0.55 0.02 280), oklch(0.75 0.03 0), oklch(0.55 0.02 280))", border: "0.5px solid oklch(0.80 0.04 0 / 0.6)" }
+    : prestigeTier >= 2
+    ? { bg: "linear-gradient(180deg, oklch(0.50 0.10 80), oklch(0.35 0.08 80), oklch(0.50 0.10 80))", border: "0.5px solid oklch(0.70 0.15 80 / 0.6)", anim: "neon-tube-cap-shimmer 3s linear infinite" }
+    : prestigeTier >= 1
+    ? { bg: "linear-gradient(180deg, oklch(0.45 0.08 80), oklch(0.28 0.04 80), oklch(0.40 0.06 80))", border: "0.5px solid oklch(0.60 0.12 80 / 0.5)" }
+    : { bg: "linear-gradient(180deg, oklch(0.38 0.01 280), oklch(0.22 0.01 280) 40%, oklch(0.30 0.01 280) 80%, oklch(0.20 0.01 280))", border: "0.5px solid oklch(0.45 0.01 280 / 0.5)" }
 
   // Detect fill increase → splash effect
   useEffect(() => {
@@ -313,8 +324,10 @@ export function NeonTube({ tube, powerUp, onSendNeon }: NeonTubeProps) {
               width: `${TUBE_W + 6}px`,
               height: `${CAP_H}px`,
               borderRadius: "4px 4px 2px 2px",
-              background: "linear-gradient(180deg, oklch(0.38 0.01 280), oklch(0.22 0.01 280) 40%, oklch(0.30 0.01 280) 80%, oklch(0.20 0.01 280))",
-              border: "0.5px solid oklch(0.45 0.01 280 / 0.5)",
+              background: capStyle.bg,
+              border: capStyle.border,
+              animation: capStyle.anim,
+              backgroundSize: capStyle.anim ? "200% 100%" : undefined,
               position: "relative",
               zIndex: 3,
             }}
@@ -476,8 +489,10 @@ export function NeonTube({ tube, powerUp, onSendNeon }: NeonTubeProps) {
               width: `${TUBE_W + 6}px`,
               height: `${CAP_H}px`,
               borderRadius: "2px 2px 4px 4px",
-              background: "linear-gradient(180deg, oklch(0.20 0.01 280), oklch(0.30 0.01 280) 20%, oklch(0.22 0.01 280) 60%, oklch(0.38 0.01 280))",
-              border: "0.5px solid oklch(0.45 0.01 280 / 0.5)",
+              background: capStyle.bg,
+              border: capStyle.border,
+              animation: capStyle.anim,
+              backgroundSize: capStyle.anim ? "200% 100%" : undefined,
               position: "relative",
               zIndex: 3,
             }}
@@ -548,6 +563,35 @@ export function NeonTube({ tube, powerUp, onSendNeon }: NeonTubeProps) {
               </span>
             )}
           </div>
+
+          {/* Prestige stars */}
+          {prestigeCount > 0 && (
+            <div className="flex items-center" style={{ gap: "3px" }}>
+              {Array.from({ length: Math.min(prestigeCount, 10) }).map((_, i) => (
+                <span
+                  key={i}
+                  style={{
+                    fontSize: "10px",
+                    lineHeight: 1,
+                    filter: prestigeTier >= 3
+                      ? "drop-shadow(0 0 3px oklch(0.90 0.04 0 / 0.8))"
+                      : "drop-shadow(0 0 2px rgba(232,154,60,0.5))",
+                    animation: `neon-tube-star-pop 0.4s ease-out ${i * 0.06}s both`,
+                  }}
+                >
+                  {prestigeTier >= 3 ? "💎" : "⭐"}
+                </span>
+              ))}
+              {prestigeCount > 10 && (
+                <span
+                  className="tabular-nums font-bold"
+                  style={{ fontSize: "var(--fs-meta)", color: "rgba(232,154,60,0.6)" }}
+                >
+                  +{prestigeCount - 10}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Room energy label */}
           <div

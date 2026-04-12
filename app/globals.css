@@ -422,6 +422,35 @@
   100% { transform: scale(1); opacity: 1; }
 }
 
+/* Prestige cap holographic shimmer */
+@keyframes neon-tube-cap-shimmer {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Prestige star pop-in */
+@keyframes neon-tube-star-pop {
+  0% { transform: scale(0) rotate(-30deg); opacity: 0; }
+  60% { transform: scale(1.3) rotate(5deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* Supernova announcement text */
+@keyframes neon-tube-supernova-text {
+  0% { transform: scale(0.5); opacity: 0; }
+  15% { transform: scale(1.1); opacity: 1; }
+  30% { transform: scale(1); }
+  75% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-20px); }
+}
+
+/* Aurora room effect drift */
+@keyframes room-effect-aurora {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
 @keyframes sparkle {
   0% { transform: scale(0) rotate(0deg); opacity: 1; }
   50% { transform: scale(1.2) rotate(180deg); opacity: 0.8; }
