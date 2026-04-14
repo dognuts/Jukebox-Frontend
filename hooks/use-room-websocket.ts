@@ -82,6 +82,11 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
   const onReactionRef = useRef(onReaction)
   onReactionRef.current = onReaction
   const reconnectTimer = useRef<NodeJS.Timeout | null>(null)
+  // Drop playback_state broadcasts closer than this — the server can
+  // emit them at ~20Hz on drift correction, which creates needless
+  // re-render churn. The audio engine re-syncs on its own 10s timer
+  // anyway, so skipping sub-100ms duplicates is safe.
+  const lastPlaybackStateAt = useRef(0)
   const [state, setState] = useState<RoomWSState>({
     connected: false,
     listenerCount: 0,
@@ -181,9 +186,13 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
 
     function handleMessage(msg: WSMessage) {
       switch (msg.event) {
-        case "playback_state":
+        case "playback_state": {
+          const now = Date.now()
+          if (now - lastPlaybackStateAt.current < 100) break
+          lastPlaybackStateAt.current = now
           setState((s) => ({ ...s, playbackState: msg.payload as PlaybackState }))
           break
+        }
 
         case "track_changed":
           setState((s) => {
