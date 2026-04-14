@@ -62,7 +62,7 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
       }}
     >
       <div
-        className="flex flex-col md:flex-row"
+        className="flex flex-col items-center md:flex-row md:items-stretch"
         style={{
           padding: "var(--space-lg)",
           gap: "var(--space-lg)",
@@ -125,7 +125,7 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
         </div>
 
         {/* ─── Text column (right on md+, below cover on mobile) ─── */}
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 w-full flex-1 flex-col items-center text-center md:items-start md:text-left">
           {/* FEATURED badge */}
           <div className="flex items-center" style={{ gap: "var(--space-sm)" }}>
             <span
