@@ -17,6 +17,7 @@ export interface AudioPlayerHandle {
   setVolume: (volume: number) => void // 0-100
   getCurrentTime: () => number
   getDuration: () => number
+  isAdPlaying?: () => boolean
 }
 
 interface YouTubePlayerProps {
@@ -25,6 +26,7 @@ interface YouTubePlayerProps {
   onStateChange?: (state: "playing" | "paused" | "ended" | "buffering") => void
   onDuration?: (seconds: number) => void
   onTimeUpdate?: (seconds: number) => void
+  onAdStateChange?: (adPlaying: boolean) => void
 }
 
 let ytApiLoaded = false
@@ -52,11 +54,33 @@ function loadYTApi(): Promise<void> {
 }
 
 export const YouTubePlayer = forwardRef<AudioPlayerHandle, YouTubePlayerProps>(
-  function YouTubePlayer({ videoId, onReady, onStateChange, onDuration, onTimeUpdate }, ref) {
+  function YouTubePlayer({ videoId, onReady, onStateChange, onDuration, onTimeUpdate, onAdStateChange }, ref) {
     const containerRef = useRef<HTMLDivElement>(null)
     const playerRef = useRef<any>(null)
     const timerRef = useRef<NodeJS.Timeout | null>(null)
     const currentVideoId = useRef(videoId)
+    const adPlayingRef = useRef(false)
+
+    // Ad detection: YouTube's IFrame API doesn't fire explicit ad events,
+    // but during an ad `getVideoData().video_id` returns the ad's id
+    // rather than the requested track's id. Poll while playing.
+    const checkAdState = useCallback(() => {
+      const p = playerRef.current
+      if (!p?.getVideoData) return
+      let data: any
+      try {
+        data = p.getVideoData()
+      } catch {
+        return
+      }
+      const playingId = data?.video_id
+      if (!playingId) return
+      const isAd = playingId !== currentVideoId.current
+      if (isAd !== adPlayingRef.current) {
+        adPlayingRef.current = isAd
+        onAdStateChange?.(isAd)
+      }
+    }, [onAdStateChange])
 
     // Expose imperative handle
     useImperativeHandle(ref, () => ({
@@ -66,6 +90,7 @@ export const YouTubePlayer = forwardRef<AudioPlayerHandle, YouTubePlayerProps>(
       setVolume: (v: number) => playerRef.current?.setVolume?.(v),
       getCurrentTime: () => playerRef.current?.getCurrentTime?.() ?? 0,
       getDuration: () => playerRef.current?.getDuration?.() ?? 0,
+      isAdPlaying: () => adPlayingRef.current,
     }))
 
     const startTimeUpdates = useCallback(() => {
@@ -73,10 +98,15 @@ export const YouTubePlayer = forwardRef<AudioPlayerHandle, YouTubePlayerProps>(
       timerRef.current = setInterval(() => {
         const p = playerRef.current
         if (p && p.getCurrentTime) {
-          onTimeUpdate?.(p.getCurrentTime())
+          checkAdState()
+          // Suppress time updates during ads so the server's drift
+          // correction doesn't fire while an ad is playing.
+          if (!adPlayingRef.current) {
+            onTimeUpdate?.(p.getCurrentTime())
+          }
         }
       }, 500)
-    }, [onTimeUpdate])
+    }, [onTimeUpdate, checkAdState])
 
     const stopTimeUpdates = useCallback(() => {
       if (timerRef.current) {
@@ -131,12 +161,17 @@ export const YouTubePlayer = forwardRef<AudioPlayerHandle, YouTubePlayerProps>(
               }
               const state = stateMap[event.data]
               if (state) {
-                onStateChange?.(state)
                 if (state === "playing") {
+                  // Check ad state BEFORE propagating playback state so
+                  // the AudioEngine can suspend sync before its first
+                  // syncToServer fires.
+                  checkAdState()
+                  onStateChange?.(state)
                   startTimeUpdates()
                   const dur = playerRef.current?.getDuration?.() ?? 0
                   if (dur > 0) onDuration?.(dur)
                 } else {
+                  onStateChange?.(state)
                   stopTimeUpdates()
                 }
               }
@@ -157,6 +192,7 @@ export const YouTubePlayer = forwardRef<AudioPlayerHandle, YouTubePlayerProps>(
     useEffect(() => {
       if (videoId !== currentVideoId.current && playerRef.current?.loadVideoById) {
         currentVideoId.current = videoId
+        adPlayingRef.current = false
         playerRef.current.loadVideoById(videoId)
         // Explicitly play after loading — loadVideoById can be blocked by autoplay policies
         setTimeout(() => {
