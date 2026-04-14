@@ -8,3 +8,7 @@ node_modules/
 .next/
 .env*.local
 .DS_Store
+
+# Next.js / TS build artifacts
+next-env.d.ts
+tsconfig.tsbuildinfo
