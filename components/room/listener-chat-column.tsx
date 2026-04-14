@@ -64,7 +64,6 @@ export const ListenerChatColumn = forwardRef<
   },
   _ref
 ) {
-  const [input, setInput] = useState("")
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [gifPickerOpen, setGifPickerOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -147,23 +146,27 @@ export const ListenerChatColumn = forwardRef<
     }
   }, [fireReaction, overlayRef])
 
-  const handleSend = useCallback(() => {
-    const trimmed = input.trim()
-    if (!trimmed || !onSendMessage) return
-    onSendMessage(trimmed)
-    setInput("")
-  }, [input, onSendMessage])
+  // Composer lives in a child component that owns the input text state,
+  // so typing doesn't re-render this 500-line parent (which maps the
+  // whole message list on every render). We just hand the composer a
+  // send callback; it calls back with the trimmed message.
+  const handleSendText = useCallback(
+    (text: string) => {
+      if (!onSendMessage) return
+      const trimmed = text.trim()
+      if (!trimmed) return
+      onSendMessage(trimmed)
+    },
+    [onSendMessage]
+  )
 
   const handleGifSelect = useCallback(
-    (gifUrl: string) => {
+    (gifUrl: string, caption: string) => {
       if (!onSendMessage) return
-      // Send with optional caption text
-      const caption = input.trim()
-      onSendMessage(caption, { mediaUrl: gifUrl, mediaType: "gif" })
-      setInput("")
+      onSendMessage(caption.trim(), { mediaUrl: gifUrl, mediaType: "gif" })
       setGifPickerOpen(false)
     },
-    [input, onSendMessage]
+    [onSendMessage]
   )
 
   const handleReactionClick = useCallback(
@@ -430,18 +433,67 @@ export const ListenerChatColumn = forwardRef<
         ))}
       </div>
 
-      {/* GIF picker — slides open above the input */}
+      <ChatComposer
+        disabled={!connected || !onSendMessage}
+        gifPickerOpen={gifPickerOpen}
+        onToggleGifPicker={() => setGifPickerOpen((v) => !v)}
+        onCloseGifPicker={() => setGifPickerOpen(false)}
+        onSend={handleSendText}
+        onSendGif={handleGifSelect}
+      />
+    </div>
+  )
+})
+
+// Isolated composer — owns the input text state locally so keystrokes
+// don't re-render ListenerChatColumn (which otherwise re-maps the full
+// message list on every keystroke).
+interface ChatComposerProps {
+  disabled: boolean
+  gifPickerOpen: boolean
+  onToggleGifPicker: () => void
+  onCloseGifPicker: () => void
+  onSend: (text: string) => void
+  onSendGif: (gifUrl: string, caption: string) => void
+}
+
+function ChatComposer({
+  disabled,
+  gifPickerOpen,
+  onToggleGifPicker,
+  onCloseGifPicker,
+  onSend,
+  onSendGif,
+}: ChatComposerProps) {
+  const [input, setInput] = useState("")
+
+  const handleSend = useCallback(() => {
+    const trimmed = input.trim()
+    if (!trimmed) return
+    onSend(trimmed)
+    setInput("")
+  }, [input, onSend])
+
+  const handleGif = useCallback(
+    (gifUrl: string) => {
+      onSendGif(gifUrl, input)
+      setInput("")
+    },
+    [input, onSendGif]
+  )
+
+  return (
+    <>
       {gifPickerOpen && (
         <div style={{ paddingInline: "var(--space-md)", paddingTop: "var(--space-xs)" }}>
           <GifPicker
             open={gifPickerOpen}
-            onClose={() => setGifPickerOpen(false)}
-            onSelect={handleGifSelect}
+            onClose={onCloseGifPicker}
+            onSelect={handleGif}
           />
         </div>
       )}
 
-      {/* Chat input */}
       <div
         style={{
           paddingInline: "var(--space-md)",
@@ -450,11 +502,10 @@ export const ListenerChatColumn = forwardRef<
         }}
       >
         <div className="flex items-center gap-2">
-          {/* GIF button */}
           <button
             type="button"
-            onClick={() => setGifPickerOpen((v) => !v)}
-            disabled={!connected || !onSendMessage}
+            onClick={onToggleGifPicker}
+            disabled={disabled}
             className="flex shrink-0 items-center justify-center rounded-md transition-colors hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-40"
             style={{
               height: "clamp(28px, 3.5vw, 34px)",
@@ -484,7 +535,7 @@ export const ListenerChatColumn = forwardRef<
               }
             }}
             placeholder="Say something..."
-            disabled={!connected || !onSendMessage}
+            disabled={disabled}
             className="flex-1 rounded-full outline-none transition-colors placeholder:text-[rgba(232,230,234,0.25)] disabled:cursor-not-allowed disabled:opacity-60"
             style={{
               height: "clamp(34px, 4vw, 42px)",
@@ -497,6 +548,6 @@ export const ListenerChatColumn = forwardRef<
           />
         </div>
       </div>
-    </div>
+    </>
   )
-})
+}
