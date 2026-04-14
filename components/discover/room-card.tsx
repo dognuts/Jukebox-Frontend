@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useRef, useState, useCallback, useEffect } from "react"
+import { memo, useRef, useState, useCallback, useEffect } from "react"
 import { Headphones, Music, Bell, BellRing, Clock, Inbox, PauseCircle, XCircle, Heart } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { SoundWaveVisualizer } from "@/components/effects/sound-wave-visualizer"
@@ -39,7 +39,7 @@ function useCountdown(targetDate?: Date) {
   return timeLeft
 }
 
-export function RoomCard({ room }: { room: Room }) {
+function RoomCardImpl({ room }: { room: Room }) {
   const cardRef = useRef<HTMLDivElement>(null)
   const rafRef = useRef<number | null>(null)
   const rectRef = useRef<DOMRect | null>(null)
@@ -435,3 +435,25 @@ export function RoomCard({ room }: { room: Room }) {
     </Link>
   )
 }
+
+// Homepage polls every 30s and passes fresh Room objects to every card.
+// Most fields are identical across polls — memoize on the fields the card
+// actually reads so unchanged cards skip re-render.
+export const RoomCard = memo(RoomCardImpl, (prev, next) => {
+  const a = prev.room
+  const b = next.room
+  return (
+    a.id === b.id &&
+    a.name === b.name &&
+    a.djName === b.djName &&
+    a.genre === b.genre &&
+    a.isLive === b.isLive &&
+    a.listenerCount === b.listenerCount &&
+    a.isFeatured === b.isFeatured &&
+    a.isAutoplay === b.isAutoplay &&
+    a.isOfficial === b.isOfficial &&
+    a.coverArt === b.coverArt &&
+    a.coverGradient === b.coverGradient &&
+    a.nowPlaying?.id === b.nowPlaying?.id
+  )
+})
