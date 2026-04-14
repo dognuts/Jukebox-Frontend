@@ -2,6 +2,12 @@
 
 import { useEffect, useRef, useCallback, useState } from "react"
 import type { APITrack, APIChatMessage, APIQueueEntry, PlaybackState } from "@/lib/api"
+import {
+  chatMessagesSlice,
+  playbackStateSlice,
+  currentTrackSlice,
+  resetRoomSlices,
+} from "@/hooks/room-store"
 
 // Connect WebSocket directly to the Go backend.
 // Next.js rewrites don't properly handle persistent WebSocket connections,
@@ -52,10 +58,7 @@ export interface RoomWSState {
   connected: boolean
   listenerCount: number
   listeners: ListenerInfo[]
-  playbackState: PlaybackState | null
-  currentTrack: APITrack | null
   queue: APIQueueEntry[]
-  chatMessages: APIChatMessage[]
   requestPolicy: string
   pendingRequests: APIQueueEntry[]
   playedTracks: APITrack[]
@@ -82,14 +85,16 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
   const onReactionRef = useRef(onReaction)
   onReactionRef.current = onReaction
   const reconnectTimer = useRef<NodeJS.Timeout | null>(null)
+  // Drop playback_state broadcasts closer than this — the server can
+  // emit them at ~20Hz on drift correction, which creates needless
+  // re-render churn. The audio engine re-syncs on its own 10s timer
+  // anyway, so skipping sub-100ms duplicates is safe.
+  const lastPlaybackStateAt = useRef(0)
   const [state, setState] = useState<RoomWSState>({
     connected: false,
     listenerCount: 0,
     listeners: [],
-    playbackState: null,
-    currentTrack: null,
     queue: [],
-    chatMessages: [],
     requestPolicy: "open",
     pendingRequests: [],
     playedTracks: [],
@@ -102,6 +107,12 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
     djMicActive: false,
     djMicPauseMusic: false,
   })
+
+  // Reset the external store slices whenever the slug changes so a room
+  // transition doesn't flash the previous room's chat/playback.
+  useEffect(() => {
+    resetRoomSlices()
+  }, [slug])
 
   // Connect — wait until djKey is resolved (undefined = still loading)
   useEffect(() => {
@@ -138,16 +149,15 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
       ws.onopen = () => {
         if (!cancelled) {
           reconnectCount = 0
-          // On reconnect, clear playback state so stale data doesn't flash.
-          // The server will immediately send fresh state via sendInitialState.
+          // On reconnect, clear playback state + current track so stale
+          // data doesn't flash. The server immediately re-sends them via
+          // sendInitialState.
+          playbackStateSlice.set(null)
+          currentTrackSlice.set(null)
           setState((s) => ({
             ...s,
             connected: true,
-            // Keep chatMessages and playedTracks (don't want to lose chat history),
-            // but clear everything that gets re-sent on connect
             queue: [],
-            playbackState: null,
-            currentTrack: null,
             pendingRequests: [],
             listeners: [],
           }))
@@ -181,38 +191,40 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
 
     function handleMessage(msg: WSMessage) {
       switch (msg.event) {
-        case "playback_state":
-          setState((s) => ({ ...s, playbackState: msg.payload as PlaybackState }))
+        case "playback_state": {
+          const now = Date.now()
+          if (now - lastPlaybackStateAt.current < 100) break
+          lastPlaybackStateAt.current = now
+          playbackStateSlice.set(msg.payload as PlaybackState)
           break
+        }
 
-        case "track_changed":
-          setState((s) => {
-            const newTrack = msg.payload as APITrack | null
-            // Push the previous track into played history (if it existed)
-            const newPlayed = s.currentTrack && s.currentTrack.id !== "placeholder"
-              ? [s.currentTrack, ...s.playedTracks]
-              : s.playedTracks
-            return {
+        case "track_changed": {
+          const newTrack = msg.payload as APITrack | null
+          const prev = currentTrackSlice.get()
+          // Push previous track into played history (hook-level state
+          // because it's read alongside other slices on the page).
+          if (prev && prev.id !== "placeholder") {
+            setState((s) => ({
               ...s,
-              currentTrack: newTrack,
-              playedTracks: newPlayed.slice(0, 100), // cap at 100
-              // Clear playback state so the audio engine doesn't seek using the
-              // PREVIOUS track's startedAt. The server sends a new playback_state
-              // immediately after track_changed with the correct timestamp.
-              playbackState: null,
-            }
-          })
+              playedTracks: [prev, ...s.playedTracks].slice(0, 100),
+            }))
+          }
+          currentTrackSlice.set(newTrack)
+          // Clear playback state so the audio engine doesn't seek using
+          // the PREVIOUS track's startedAt. Server sends a fresh
+          // playback_state immediately after.
+          playbackStateSlice.set(null)
           break
+        }
 
         case "track_info_updated": {
-          // In-place patch of the currently playing track's info snippet —
-          // does NOT advance history or reset playback state.
           const patch = msg.payload as { id: string; infoSnippet: string } | null
           if (!patch) break
-          setState((s) => {
-            if (!s.currentTrack || s.currentTrack.id !== patch.id) return s
-            return { ...s, currentTrack: { ...s.currentTrack, infoSnippet: patch.infoSnippet } }
-          })
+          const cur = currentTrackSlice.get()
+          if (cur && cur.id === patch.id) {
+            currentTrackSlice.set({ ...cur, infoSnippet: patch.infoSnippet })
+          }
           break
         }
 
@@ -221,10 +233,7 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
           break
 
         case "chat_message":
-          setState((s) => ({
-            ...s,
-            chatMessages: [...s.chatMessages.slice(-100), msg.payload as APIChatMessage],
-          }))
+          chatMessagesSlice.update((prev) => [...prev.slice(-100), msg.payload as APIChatMessage])
           break
 
         case "reaction":
@@ -270,7 +279,6 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
           break
 
         case "neon_gift":
-          // Show as activity pill in chat
           if (msg.payload?.from && msg.payload?.amount) {
             const giftMsg: APIChatMessage = {
               id: `neon-${Date.now()}-${Math.random()}`,
@@ -281,10 +289,7 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
               type: "activity_tip" as any,
               timestamp: new Date().toISOString(),
             }
-            setState((s) => ({
-              ...s,
-              chatMessages: [...s.chatMessages.slice(-100), giftMsg],
-            }))
+            chatMessagesSlice.update((prev) => [...prev.slice(-100), giftMsg])
           }
           break
 
@@ -299,10 +304,7 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
               type: "activity_join" as any,
               timestamp: new Date().toISOString(),
             }
-            setState((s) => ({
-              ...s,
-              chatMessages: [...s.chatMessages.slice(-100), joinMsg],
-            }))
+            chatMessagesSlice.update((prev) => [...prev.slice(-100), joinMsg])
           }
           break
 
@@ -317,10 +319,7 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
               type: "activity_leave" as any,
               timestamp: new Date().toISOString(),
             }
-            setState((s) => ({
-              ...s,
-              chatMessages: [...s.chatMessages.slice(-100), leaveMsg],
-            }))
+            chatMessagesSlice.update((prev) => [...prev.slice(-100), leaveMsg])
           }
           break
 
@@ -332,7 +331,6 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
           break
 
         case "announcement":
-          // Announcements also show in chat
           if (msg.payload?.message) {
             const announcement: APIChatMessage = {
               id: `ann-${Date.now()}`,
@@ -343,10 +341,7 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
               type: "announcement",
               timestamp: new Date().toISOString(),
             }
-            setState((s) => ({
-              ...s,
-              chatMessages: [...s.chatMessages.slice(-100), announcement],
-            }))
+            chatMessagesSlice.update((prev) => [...prev.slice(-100), announcement])
           }
           break
 
@@ -368,12 +363,12 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
           break
 
         case "room_ended":
+          currentTrackSlice.set(null)
+          playbackStateSlice.set(null)
           setState((s) => ({
             ...s,
             roomEnded: true,
             roomEndedReason: msg.payload?.reason || "The session has ended",
-            currentTrack: null,
-            playbackState: null,
           }))
           break
       }

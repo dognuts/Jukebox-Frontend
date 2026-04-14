@@ -20,6 +20,11 @@ import { usePlayer } from "@/lib/player-context"
 import { usePlaylist } from "@/lib/playlist-context"
 import { getRoom, toFrontendRoom, type RoomDetail } from "@/lib/api"
 import { useRoomWebSocket } from "@/hooks/use-room-websocket"
+import {
+  useRoomChatMessages,
+  useRoomCurrentTrack,
+  useRoomPlaybackState,
+} from "@/hooks/room-store"
 import { AudioEngine, type AudioEngineTrack } from "@/components/player/audio-engine"
 import { parseTrackUrl } from "@/lib/track-utils"
 import { SendNeonModal } from "@/components/room/send-neon-modal"
@@ -93,6 +98,13 @@ export default function RoomPage() {
     onReaction: handleIncomingReaction,
   })
 
+  // The hottest three slices live in an external store so WS ticks that
+  // only touch these slices don't re-render the parts of this page that
+  // subscribe to the rest of `ws`.
+  const wsChatMessages = useRoomChatMessages()
+  const wsCurrentTrack = useRoomCurrentTrack()
+  const wsPlaybackState = useRoomPlaybackState()
+
   const isDJ = !!djKey
 
   const [requestModalOpen, setRequestModalOpen] = useState(false)
@@ -116,9 +128,9 @@ export default function RoomPage() {
   const prevChatCountRef = useRef(0)
   useEffect(() => {
     if (!isDJ || !ws.connected) return
-    const newCount = ws.chatMessages.length
+    const newCount = wsChatMessages.length
     if (newCount > prevChatCountRef.current) {
-      const newMessages = ws.chatMessages.slice(prevChatCountRef.current)
+      const newMessages = wsChatMessages.slice(prevChatCountRef.current)
       for (const msg of newMessages) {
         if ((msg.type as string) === "activity_tip") {
           hypeTracking.recordTip()
@@ -128,7 +140,7 @@ export default function RoomPage() {
       }
     }
     prevChatCountRef.current = newCount
-  }, [ws.chatMessages.length, ws.connected, isDJ]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [wsChatMessages.length, ws.connected, isDJ]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Track reactions via the onReaction callback
   hypeReactionRef.current = hypeTracking.recordReaction
@@ -216,25 +228,25 @@ export default function RoomPage() {
   // table row has the latest snippet, and it lets the periodic REST
   // refresh below populate fresher snippets as they land.
   const currentTrack: Track | null = useMemo(() => {
-    if (ws.connected && ws.currentTrack) {
+    if (ws.connected && wsCurrentTrack) {
       const restSnippet =
-        room?.nowPlaying && room.nowPlaying.id === ws.currentTrack.id
+        room?.nowPlaying && room.nowPlaying.id === wsCurrentTrack.id
           ? room.nowPlaying.infoSnippet
           : undefined
       return {
-        id: ws.currentTrack.id,
-        title: ws.currentTrack.title,
-        artist: ws.currentTrack.artist,
-        duration: ws.currentTrack.duration,
-        source: ws.currentTrack.source,
-        sourceUrl: ws.currentTrack.sourceUrl,
+        id: wsCurrentTrack.id,
+        title: wsCurrentTrack.title,
+        artist: wsCurrentTrack.artist,
+        duration: wsCurrentTrack.duration,
+        source: wsCurrentTrack.source,
+        sourceUrl: wsCurrentTrack.sourceUrl,
         submittedBy: "DJ",
-        albumGradient: ws.currentTrack.albumGradient || "linear-gradient(135deg, oklch(0.45 0.15 30), oklch(0.35 0.20 350))",
-        infoSnippet: ws.currentTrack.infoSnippet || restSnippet,
+        albumGradient: wsCurrentTrack.albumGradient || "linear-gradient(135deg, oklch(0.45 0.15 30), oklch(0.35 0.20 350))",
+        infoSnippet: wsCurrentTrack.infoSnippet || restSnippet,
       }
     }
     return room?.nowPlaying ?? null
-  }, [ws.connected, ws.currentTrack, room?.nowPlaying])
+  }, [ws.connected, wsCurrentTrack, room?.nowPlaying])
 
   // Periodic REST refresh of room.nowPlaying.infoSnippet. Runs every
   // 20 seconds as a safety net for snippet drift: if the backend
@@ -316,14 +328,14 @@ export default function RoomPage() {
         albumGradient: e.track.albumGradient || "linear-gradient(135deg, oklch(0.45 0.15 30), oklch(0.35 0.20 350))",
       }))
       // Filter out the currently playing track — it shouldn't appear in "Up Next"
-      const nowPlayingId = ws.currentTrack?.id || currentTrack?.id
+      const nowPlayingId = wsCurrentTrack?.id || currentTrack?.id
       if (nowPlayingId) {
         return mapped.filter((t) => t.id !== nowPlayingId)
       }
       return mapped
     }
     return room?.queue ?? []
-  }, [ws.connected, ws.queue, ws.currentTrack?.id, currentTrack?.id, room?.queue, room?.isAutoplay, autoplayTracks, autoplayIndex])
+  }, [ws.connected, ws.queue, wsCurrentTrack?.id, currentTrack?.id, room?.queue, room?.isAutoplay, autoplayTracks, autoplayIndex])
 
   // Played tracks — accumulated from WS + initial fetch from API
   const [fetchedHistory, setFetchedHistory] = useState<Track[]>([])
@@ -373,7 +385,7 @@ export default function RoomPage() {
 
   const chatMessages: ChatMessage[] = useMemo(() => {
     if (ws.connected) {
-      return ws.chatMessages.map((m) => ({
+      return wsChatMessages.map((m) => ({
         id: m.id,
         username: m.username,
         avatarColor: m.avatarColor,
@@ -385,7 +397,7 @@ export default function RoomPage() {
       }))
     }
     return room?.chatMessages ?? []
-  }, [ws.connected, ws.chatMessages, room?.chatMessages])
+  }, [ws.connected, wsChatMessages, room?.chatMessages])
 
   const listenerCount = ws.connected ? ws.listenerCount : (room?.listenerCount ?? 0)
   // Map server request policy to UI status
@@ -395,7 +407,7 @@ export default function RoomPage() {
   // Sync player context
   useEffect(() => {
     if (room && currentTrack) {
-      const startedAt = ws.playbackState?.startedAt ?? Date.now()
+      const startedAt = wsPlaybackState?.startedAt ?? Date.now()
       setPlayerRoom(room.slug, room.name, room.djName, currentTrack, startedAt)
     }
   }, [room?.slug, room?.name, room?.djName, currentTrack]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -408,10 +420,10 @@ export default function RoomPage() {
 
   // Keep playback time synced for mini player continuity
   useEffect(() => {
-    if (ws.playbackState?.startedAt) {
-      updatePlaybackTime(ws.playbackState.startedAt)
+    if (wsPlaybackState?.startedAt) {
+      updatePlaybackTime(wsPlaybackState.startedAt)
     }
-  }, [ws.playbackState?.startedAt, updatePlaybackTime])
+  }, [wsPlaybackState?.startedAt, updatePlaybackTime])
 
   // Close mini player when room ends
   useEffect(() => {
@@ -644,7 +656,7 @@ export default function RoomPage() {
   // Determine whether a real track is playing. This gates the listener
   // "waiting" fallback and the DJ "Go Live" prompt.
   const apiHasTrack = !!room.nowPlaying && room.nowPlaying.id !== "placeholder"
-  const hasRealPlayback = !!(ws.currentTrack || ws.playbackState || apiHasTrack)
+  const hasRealPlayback = !!(wsCurrentTrack || wsPlaybackState || apiHasTrack)
 
   // DJ view, idle — show the Go Live prompt instead of the now-playing hero.
   const showDjGoLive = !hasRealPlayback && isDJ
@@ -693,7 +705,7 @@ export default function RoomPage() {
       {audioTrack && (
         <AudioEngine
           track={audioTrack}
-          playbackState={ws.playbackState}
+          playbackState={wsPlaybackState}
           volume={roomVolume}
           muted={roomMuted}
           isDJ={isDJ}
