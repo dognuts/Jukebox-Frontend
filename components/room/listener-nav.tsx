@@ -37,7 +37,7 @@ export function ListenerNav({
         aria-label="Jukebox — home"
         className="pointer-events-auto absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 md:block"
       >
-        <NeonJukeboxLogo size="sm" staticRender />
+        <NeonJukeboxLogo size="sm" />
       </Link>
 
       {/* Left: back + room name + LIVE badge */}
