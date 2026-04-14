@@ -124,6 +124,7 @@ export interface APIRoom {
   isAutoplay?: boolean
   expiresAt?: string
   nowPlaying?: APITrack | null
+  recentChat?: APIChatMessage[]
 }
 
 export interface APIQueueEntry {

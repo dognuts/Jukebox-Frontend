@@ -51,7 +51,7 @@ export default function HomePage() {
       try {
         const apiRooms = await listRooms()
         if (!cancelled) {
-          setAllRooms(apiRooms.map((r) => toFrontendRoom(r, r.nowPlaying)))
+          setAllRooms(apiRooms.map((r) => toFrontendRoom(r, r.nowPlaying, undefined, r.recentChat)))
           setLoaded(true)
         }
       } catch {
