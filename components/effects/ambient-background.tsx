@@ -1,9 +1,16 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { usePathname } from "next/navigation"
 
 export function AmbientBackground() {
   const [reducedMotion, setReducedMotion] = useState(false)
+  const pathname = usePathname()
+  // On room pages the content covers the background and the full-viewport
+  // blurred gradient animations here measurably contend with input
+  // handling. Fall through to the static (reduced-motion) branch so the
+  // GPU isn't constantly re-blurring 40–60px filters.
+  const onRoomPage = pathname?.startsWith("/room/") ?? false
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)")
@@ -13,7 +20,7 @@ export function AmbientBackground() {
     return () => mq.removeEventListener("change", handler)
   }, [])
 
-  if (reducedMotion) {
+  if (reducedMotion || onRoomPage) {
     return (
       <div
         className="fixed inset-0 pointer-events-none"

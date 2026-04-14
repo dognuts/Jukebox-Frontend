@@ -4,6 +4,11 @@ import { useEffect, useRef } from 'react'
 
 interface NeonJukeboxLogoProps {
   size?: 'xs' | 'sm' | 'md' | 'lg'
+  // When true, skip the per-letter flicker scheduling and color-cycle
+  // rAF loop. The logo renders static. Use on pages where the logo is
+  // decorative rather than the main focal point (e.g., the room view)
+  // to free up the main thread for interactive work.
+  staticRender?: boolean
 }
 
 // Color A: warm orange (existing)
@@ -15,12 +20,13 @@ function lerp(a: number, b: number, t: number) {
   return Math.round(a + (b - a) * t)
 }
 
-export function NeonJukeboxLogo({ size = 'lg' }: NeonJukeboxLogoProps) {
+export function NeonJukeboxLogo({ size = 'lg', staticRender = false }: NeonJukeboxLogoProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const startTimeRef = useRef<number>(0)
 
   useEffect(() => {
+    if (staticRender) return
     if (!containerRef.current) return
 
     // Mobile Firefox/Chrome re-rasterize SVG drop-shadow filters every time
@@ -192,7 +198,7 @@ export function NeonJukeboxLogo({ size = 'lg' }: NeonJukeboxLogoProps) {
       cancelAnimationFrame(rafId)
       document.removeEventListener("visibilitychange", handleVisibility)
     }
-  }, [])
+  }, [staticRender])
 
   const sizeClass =
     size === 'xs'
