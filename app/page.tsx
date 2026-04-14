@@ -14,13 +14,12 @@ import { useAuth } from "@/lib/auth-context"
 
 import { ScrollReveal } from "@/components/effects/scroll-reveal"
 import { EmptyState } from "@/components/ui/empty-state"
-import { type Room, type ChatMessage } from "@/lib/mock-data"
+import { type Room } from "@/lib/mock-data"
 import {
   listRooms,
   toFrontendRoom,
   getSession,
   getSessionId,
-  getRoom,
 } from "@/lib/api"
 
 // Fallback to mock data if backend is unreachable
@@ -35,7 +34,6 @@ export default function HomePage() {
   const [allRooms, setAllRooms] = useState<Room[]>([])
   const [loaded, setLoaded] = useState(false)
   const [usingMock, setUsingMock] = useState(false)
-  const [featuredChat, setFeaturedChat] = useState<ChatMessage[]>([])
   const { registerShortcut } = useKeyboardShortcuts()
   const { isLoggedIn } = useAuth()
 
@@ -146,36 +144,6 @@ export default function HomePage() {
     )[0]
   }, [liveRooms])
 
-  // Fetch fresh chat for the featured room so the preview is real.
-  // Skipped when we're already on mock data (which carries its own chat).
-  useEffect(() => {
-    if (!featuredRoom || usingMock) {
-      setFeaturedChat([])
-      return
-    }
-    let cancelled = false
-    const slug = featuredRoom.slug
-    getRoom(slug)
-      .then((detail) => {
-        if (cancelled) return
-        const msgs: ChatMessage[] = (detail.recentChat || []).map((m) => ({
-          id: m.id,
-          username: m.username,
-          avatarColor: m.avatarColor,
-          message: m.message,
-          timestamp: new Date(m.timestamp),
-          type: m.type as ChatMessage["type"],
-        }))
-        setFeaturedChat(msgs)
-      })
-      .catch(() => {
-        if (!cancelled) setFeaturedChat([])
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [featuredRoom?.slug, usingMock])
-
   const filteredLiveRooms = useMemo(() => {
     if (!selectedGenre) return liveRooms
     return liveRooms.filter((r) => r.genre === selectedGenre)
@@ -222,10 +190,7 @@ export default function HomePage() {
           {loaded && !selectedGenre && featuredRoom && (
             <div style={{ marginBottom: "var(--space-2xl)" }}>
               <ScrollReveal>
-                <FeaturedRoomCard
-                  room={featuredRoom}
-                  chatPreview={featuredChat.length > 0 ? featuredChat : undefined}
-                />
+                <FeaturedRoomCard room={featuredRoom} />
               </ScrollReveal>
             </div>
           )}
