@@ -65,6 +65,8 @@ export function AudioEngine({
   const lastSyncRef = useRef(0)
   const syncTimeoutsRef = useRef<NodeJS.Timeout[]>([])
   const signaledEndRef = useRef("")  // trackID for which we've already signaled end
+  const [adPlaying, setAdPlaying] = useState(false)
+  const adJustEndedRef = useRef(false)
 
   // Store callbacks in refs so syncToServer doesn't recreate when they change.
   // This prevents the seek+play churn that was freezing YouTube in the mini-player.
@@ -191,13 +193,17 @@ export function AudioEngine({
   // Volume control — suppress volume until synced to prevent hearing audio at position 0
   useEffect(() => {
     if (ready && playerRef.current) {
-      if (!synced) {
+      // During an ad we DO want audio — the pre/mid-roll should be
+      // audible even though we aren't "synced" to the shared track
+      // position yet. Only the initial sync-to-server phase (pre-first-sync,
+      // no ad running) should mute to hide the seek jump.
+      if (!synced && !adPlaying) {
         playerRef.current.setVolume(0)
       } else {
         playerRef.current.setVolume(muted ? 0 : volume)
       }
     }
-  }, [volume, muted, ready, synced])
+  }, [volume, muted, ready, synced, adPlaying])
 
   // Sync to server playback state.
   // Uses refs for onTrackEnd/onPlayStateChange so this callback only
@@ -206,6 +212,8 @@ export function AudioEngine({
   const syncToServer = useCallback(() => {
     if (!playbackState || !ready || !playerRef.current) return
     if (forcePaused) return // DJ mic is active — don't resume
+    // Don't fight the ad — let YouTube play the pre-roll/mid-roll through.
+    if (playerRef.current.isAdPlaying?.()) return
 
     const now = Date.now()
     // Don't sync more than once per second
@@ -338,6 +346,13 @@ export function AudioEngine({
     } else if (state === "paused") {
       onPlayStateChangeRef.current?.(false)
     } else if (state === "ended") {
+      // Ignore "ended" fired by YouTube when an ad finishes — that's the
+      // ad's end-of-video, not the track's. The real track takes over
+      // immediately after, and handleAdStateChange re-syncs us then.
+      if (playerRef.current?.isAdPlaying?.() || adJustEndedRef.current) {
+        adJustEndedRef.current = false
+        return
+      }
       // Only trigger track end if the player has actually played something
       // YouTube IFrame API can fire "ended" (state 0) during initialization
       if (hasPlayedRef.current) {
@@ -345,6 +360,22 @@ export function AudioEngine({
       }
     }
   }, [])
+
+  // When YouTube transitions into or out of an ad, react:
+  //  - Into ad: clear "synced" so we'll re-sync once the real video starts.
+  //  - Out of ad: force the next syncToServer to run immediately.
+  const handleAdStateChange = useCallback((isAd: boolean) => {
+    setAdPlaying(isAd)
+    if (isAd) {
+      setSynced(false)
+    } else {
+      adJustEndedRef.current = true
+      lastSyncRef.current = 0
+      // Let the real video's metadata settle, then snap to the shared
+      // server position.
+      setTimeout(() => syncToServer(), 400)
+    }
+  }, [syncToServer])
 
   if (!track) return null
 
@@ -367,6 +398,7 @@ export function AudioEngine({
           onStateChange={handleStateChange}
           onDuration={onDuration}
           onTimeUpdate={onTimeUpdate}
+          onAdStateChange={handleAdStateChange}
         />,
         ytHost
       )
