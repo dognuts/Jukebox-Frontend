@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useCallback, useState } from "react"
+import { usePathname } from "next/navigation"
 import { useEasterEggs } from "@/hooks/use-easter-eggs"
 
 interface Bubble {
@@ -36,6 +37,14 @@ const MAX_BUBBLES = 7
 const SPAWN_INTERVAL = 200 // frames (~3.3s at 60fps)
 
 export function BubbleBackground() {
+  const pathname = usePathname()
+  // Skip the canvas animation on room pages entirely — the room view
+  // covers the viewport with its own visuals, and the per-frame
+  // radial-gradient work here was measurably contending with input
+  // handling (causing noticeable typing lag in chat on lower-end
+  // machines).
+  const skip = pathname?.startsWith("/room/") ?? false
+
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const bubblesRef = useRef<Bubble[]>([])
   const dropletsRef = useRef<PopDroplet[]>([])
@@ -92,6 +101,8 @@ export function BubbleBackground() {
   }, [])
 
   useEffect(() => {
+    if (skip) return
+
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)")
     setReducedMotion(mq.matches)
     if (mq.matches) return
@@ -310,7 +321,7 @@ export function BubbleBackground() {
       bubblesRef.current = []
       dropletsRef.current = []
     }
-  }, [spawnBubble, reducedMotion])
+  }, [spawnBubble, reducedMotion, skip])
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
@@ -332,7 +343,7 @@ export function BubbleBackground() {
     [popBubble]
   )
 
-  if (reducedMotion) return null
+  if (reducedMotion || skip) return null
 
   return (
     <canvas
