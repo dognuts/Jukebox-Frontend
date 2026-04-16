@@ -54,12 +54,15 @@ export function AmbientBackground() {
       style={{ zIndex: 0 }}
       aria-hidden="true"
     >
-      {/* Slow-moving gradient orbs — reduced blur for performance */}
+      {/* Slow-moving gradient orbs — use transform3d to promote to GPU layer
+          and avoid continuous main-thread repaints from blur filters */}
       <div
         className="absolute inset-0 animate-ambient-drift-1"
         style={{
           background: "radial-gradient(ellipse 80% 60% at 20% 30%, oklch(0.30 0.14 80 / 0.18), transparent)",
           filter: "blur(40px)",
+          transform: "translate3d(0,0,0)",
+          backfaceVisibility: "hidden",
         }}
       />
       <div
@@ -67,6 +70,8 @@ export function AmbientBackground() {
         style={{
           background: "radial-gradient(ellipse 60% 50% at 80% 70%, oklch(0.28 0.12 250 / 0.15), transparent)",
           filter: "blur(50px)",
+          transform: "translate3d(0,0,0)",
+          backfaceVisibility: "hidden",
         }}
       />
       <div
@@ -74,6 +79,8 @@ export function AmbientBackground() {
         style={{
           background: "radial-gradient(ellipse 50% 40% at 50% 50%, oklch(0.25 0.10 350 / 0.10), transparent)",
           filter: "blur(60px)",
+          transform: "translate3d(0,0,0)",
+          backfaceVisibility: "hidden",
         }}
       />
 

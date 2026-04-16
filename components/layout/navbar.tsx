@@ -32,29 +32,35 @@ export function Navbar() {
 
     const bindScroll = () => {
       const THRESHOLD = 15 // px of scroll in same direction before toggling
+      let ticking = false
       const onScroll = () => {
-        // Clamp to 0 so iOS rubber-band overscroll can't feed negative
-        // values into the direction/accumulator logic.
-        const y = Math.max(0, window.scrollY)
-        const delta = y - lastScrollY.current
-        const direction = delta > 0 ? "down" : "up"
+        if (ticking) return
+        ticking = true
+        requestAnimationFrame(() => {
+          ticking = false
+          // Clamp to 0 so iOS rubber-band overscroll can't feed negative
+          // values into the direction/accumulator logic.
+          const y = Math.max(0, window.scrollY)
+          const delta = y - lastScrollY.current
+          const direction = delta > 0 ? "down" : "up"
 
-        // Reset accumulator on direction change
-        if (direction !== lastDirection.current) {
-          scrollAccum.current = 0
-          lastDirection.current = direction
-        }
+          // Reset accumulator on direction change
+          if (direction !== lastDirection.current) {
+            scrollAccum.current = 0
+            lastDirection.current = direction
+          }
 
-        scrollAccum.current += Math.abs(delta)
-        lastScrollY.current = y
+          scrollAccum.current += Math.abs(delta)
+          lastScrollY.current = y
 
-        // Only toggle after accumulating enough scroll in one direction
-        if (y <= 32) {
-          setHidden(false)
-          scrollAccum.current = 0
-        } else if (scrollAccum.current > THRESHOLD) {
-          setHidden(direction === "down")
-        }
+          // Only toggle after accumulating enough scroll in one direction
+          if (y <= 32) {
+            setHidden(false)
+            scrollAccum.current = 0
+          } else if (scrollAccum.current > THRESHOLD) {
+            setHidden(direction === "down")
+          }
+        })
       }
       window.addEventListener("scroll", onScroll, { passive: true })
       unbindScroll = () => window.removeEventListener("scroll", onScroll)
@@ -105,7 +111,7 @@ export function Navbar() {
         backdropFilter: "blur(12px)",
         WebkitBackdropFilter: "blur(12px)",
         borderBottom: "0.5px solid rgba(255,255,255,0.06)",
-        willChange: "transform",
+        willChange: hidden ? "transform" : "auto",
       }}
     >
       <div className="shell flex h-14 items-center justify-between gap-4">

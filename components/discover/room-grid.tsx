@@ -40,11 +40,20 @@ export function RoomGrid({
     checkScroll()
     const el = scrollRef.current
     if (!el) return
-    el.addEventListener("scroll", checkScroll, { passive: true })
+    let ticking = false
+    const onScroll = () => {
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => {
+        ticking = false
+        checkScroll()
+      })
+    }
+    el.addEventListener("scroll", onScroll, { passive: true })
     const ro = new ResizeObserver(checkScroll)
     ro.observe(el)
     return () => {
-      el.removeEventListener("scroll", checkScroll)
+      el.removeEventListener("scroll", onScroll)
       ro.disconnect()
     }
   }, [checkScroll, rooms])

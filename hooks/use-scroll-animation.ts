@@ -11,7 +11,7 @@ interface UseScrollAnimationOptions {
 export function useScrollAnimation<T extends HTMLElement = HTMLDivElement>(
   options: UseScrollAnimationOptions = {}
 ) {
-  const { threshold = 0, rootMargin = "0px", triggerOnce = true } = options
+  const { threshold = 0, rootMargin = "0px 0px 80px 0px", triggerOnce = true } = options
   const ref = useRef<T>(null)
   const [isVisible, setIsVisible] = useState(false)
 
