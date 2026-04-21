@@ -37,9 +37,8 @@ export function PostLayout({
       {/* Title block */}
       <header className="mt-10 mb-10">
         {post.genre_room && (
-          <Link
-            href={`/room/${post.genre_room}`}
-            className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-widest no-underline"
+          <span
+            className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase"
             style={{
               background: "rgba(232,154,60,0.12)",
               border: "0.5px solid rgba(232,154,60,0.28)",
@@ -48,7 +47,7 @@ export function PostLayout({
             }}
           >
             {post.genre_room.replace(/-/g, " ")}
-          </Link>
+          </span>
         )}
         <h1
           className="mt-5 text-4xl font-bold tracking-tight sm:text-[42px] sm:leading-[1.1]"
