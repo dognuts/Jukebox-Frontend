@@ -1,921 +1,149 @@
-"use client"
+import type { Metadata } from "next"
+import { RoomClient } from "./room-client"
 
-import { useState, useCallback, useMemo, useEffect, useRef } from "react"
-import { useParams } from "next/navigation"
-import Link from "next/link"
-import { toast } from "sonner"
-import { Play, Radio } from "lucide-react"
-import { RequestModal } from "@/components/room/request-modal"
-import { ListenerNav } from "@/components/room/listener-nav"
-import { ListenerNowPlaying } from "@/components/room/listener-now-playing"
-import { ListenerDjContext } from "@/components/room/listener-dj-context"
-import { ListenerQueue } from "@/components/room/listener-queue"
-import { ListenerChatColumn } from "@/components/room/listener-chat-column"
-import { DjDeck } from "@/components/room/dj-deck"
-import { NeonTube } from "@/components/room/neon-tube"
-import { SupernovaExplosion } from "@/components/effects/supernova-explosion"
-import { RoomEffectOverlay } from "@/components/effects/room-effect-overlay"
-import { type Room, type Track, type ChatMessage, getRoomBySlug, rooms } from "@/lib/mock-data"
-import { usePlayer } from "@/lib/player-context"
-import { usePlaylist } from "@/lib/playlist-context"
-import { getRoom, toFrontendRoom, type RoomDetail } from "@/lib/api"
-import { useRoomWebSocket } from "@/hooks/use-room-websocket"
-import {
-  useRoomChatMessages,
-  useRoomCurrentTrack,
-  useRoomPlaybackState,
-} from "@/hooks/room-store"
-import { AudioEngine, type AudioEngineTrack } from "@/components/player/audio-engine"
-import { parseTrackUrl } from "@/lib/track-utils"
-import { SendNeonModal } from "@/components/room/send-neon-modal"
-import { useAuth } from "@/lib/auth-context"
-import { useHypeTracking } from "@/components/room/hype-meter"
-import { useLiveKitVoice } from "@/hooks/use-livekit-voice"
+const ROOM_SEO: Record<
+  string,
+  { title: string; description: string; keywords: string[] }
+> = {
+  "lo-fi": {
+    title: "Lo-fi Listening Room — Chill Beats to Study & Relax To",
+    description:
+      "Join a live lo-fi hip hop listening room. Study, relax, or work alongside others with chill beats in real time. Free, no account needed.",
+    keywords: [
+      "lo-fi listening room",
+      "lo-fi beats to study to",
+      "chill study music room",
+      "lo-fi hip hop room",
+    ],
+  },
+  "hip-hop": {
+    title: "Hip-Hop Listening Room — Discover & Vibe Together",
+    description:
+      "Live hip-hop listening room. Discover new tracks, share classics, and vibe with hip-hop heads in real time. Free to join.",
+    keywords: [
+      "hip hop listening room",
+      "hip hop music community",
+      "listen to hip hop together",
+    ],
+  },
+  jazz: {
+    title: "Jazz Listening Room — Smooth Jazz & Standards Live",
+    description:
+      "Step into a live jazz listening room. Enjoy smooth jazz, standards, and modern jazz with fellow jazz lovers in real time.",
+    keywords: [
+      "jazz listening room online",
+      "listen to jazz together",
+      "jazz music community",
+    ],
+  },
+  electronic: {
+    title: "Electronic Music Room — Live Beats & Energy",
+    description:
+      "Live electronic music room. From house to techno to ambient, ride the energy with electronic music fans in real time.",
+    keywords: [
+      "electronic music room",
+      "electronic listening room",
+      "edm community online",
+    ],
+  },
+  indie: {
+    title: "Indie Listening Room — Discover Underground Artists",
+    description:
+      "Live indie music listening room. Discover underground artists and deep cuts with fellow indie music lovers. Free.",
+    keywords: [
+      "indie music listening room",
+      "indie music community",
+      "discover indie music",
+    ],
+  },
+  soul: {
+    title: "Soul Music Room — Smooth Vibes & Timeless Grooves",
+    description:
+      "Live soul music listening room. Classic soul, neo-soul, and R&B — share the groove with soul music fans in real time.",
+    keywords: [
+      "soul music listening room",
+      "soul music community",
+      "listen to soul together",
+    ],
+  },
+}
 
-export default function RoomPage() {
-  const params = useParams()
-  const slug = params.slug as string
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}): Promise<Metadata> {
+  const { slug } = await params
+  const canonical = `https://jukebox-app.com/room/${slug}`
 
-  // DJ key from sessionStorage (set when creating a room)
-  const [djKey, setDjKey] = useState<string | null | undefined>(undefined) // undefined = not loaded yet
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const key = sessionStorage.getItem(`djKey:${slug}`)
-      setDjKey(key) // null if not found, string if found
-    }
-  }, [slug])
-
-  // Room data — try API first, fall back to mock
-  const [room, setRoom] = useState<Room | null>(null)
-  const [usingMock, setUsingMock] = useState(false)
-  const [notFound, setNotFound] = useState(false)
-  const { setRoom: setPlayerRoom, updateTrack, updatePlaybackTime, close: closePlayer } = usePlayer()
-  const { toggleLike, isLiked } = usePlaylist()
-
-  useEffect(() => {
-    let cancelled = false
-    async function load() {
-      try {
-        const detail = await getRoom(slug)
-        if (!cancelled) {
-          setRoom(toFrontendRoom(detail.room, detail.nowPlaying, detail.queue, detail.recentChat))
-        }
-      } catch {
-        if (!cancelled) {
-          setUsingMock(true)
-          const mock = getRoomBySlug(slug) || rooms[0]
-          if (!mock) {
-            setNotFound(true)
-            return
-          }
-          setRoom(mock)
-        }
-      }
-    }
-    load()
-    return () => { cancelled = true }
-  }, [slug]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Ref for chat panel reaction overlay (to fire incoming WS reactions)
-  const chatOverlayRef = useRef<HTMLDivElement>(null)
-
-  const hypeReactionRef = useRef<() => void>(() => {})
-
-  const handleIncomingReaction = useCallback((emoji: string) => {
-    const overlay = chatOverlayRef.current as any
-    if (overlay?._fireReaction) {
-      overlay._fireReaction(emoji)
-    }
-    hypeReactionRef.current()
-  }, [])
-
-  // WebSocket for real-time updates (only when not using mock)
-  const ws = useRoomWebSocket({
-    slug,
-    djKey,
-    disabled: notFound,
-    onError: (msg) => console.warn("[ws error]", msg),
-    onReaction: handleIncomingReaction,
-  })
-
-  // The hottest three slices live in an external store so WS ticks that
-  // only touch these slices don't re-render the parts of this page that
-  // subscribe to the rest of `ws`.
-  const wsChatMessages = useRoomChatMessages()
-  const wsCurrentTrack = useRoomCurrentTrack()
-  const wsPlaybackState = useRoomPlaybackState()
-
-  const isDJ = !!djKey
-
-  const [requestModalOpen, setRequestModalOpen] = useState(false)
-  const [sendNeonOpen, setSendNeonOpen] = useState(false)
-  const tubeBarRef = useRef<HTMLDivElement>(null)
-  const { user: authUser } = useAuth()
-  const [micActive, setMicActive] = useState(false)
-  const [micPausesMusic, setMicPausesMusic] = useState(true)
-
-  // LiveKit voice — DJ broadcasts mic, listeners receive DJ audio
-  const liveKit = useLiveKitVoice({
-    roomSlug: slug || "",
-    isDJ,
-    enabled: !!room && room.isLive && !room.isAutoplay,
-  })
-
-  // Hype tracking for DJ view only
-  const hypeTracking = useHypeTracking()
-
-  // Connect hype tracking to real WS events — only for DJs
-  const prevChatCountRef = useRef(0)
-  useEffect(() => {
-    if (!isDJ || !ws.connected) return
-    const newCount = wsChatMessages.length
-    if (newCount > prevChatCountRef.current) {
-      const newMessages = wsChatMessages.slice(prevChatCountRef.current)
-      for (const msg of newMessages) {
-        if ((msg.type as string) === "activity_tip") {
-          hypeTracking.recordTip()
-        } else if (msg.type === "message") {
-          hypeTracking.recordChat()
-        }
-      }
-    }
-    prevChatCountRef.current = newCount
-  }, [wsChatMessages.length, ws.connected, isDJ]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Track reactions via the onReaction callback
-  hypeReactionRef.current = hypeTracking.recordReaction
-
-  // Mock tube state for when backend is not connected (kept so Send Neon
-  // can still give local feedback — tube visual is no longer rendered but
-  // the state is still used by the Neon modal cascade.)
-  const [mockTube, setMockTube] = useState({ roomId: slug || "", level: 1, fillAmount: 0, fillTarget: 100, totalNeon: 0, prestigeCount: 0 })
-  const [mockPowerUp, setMockPowerUp] = useState<{ newLevel: number; color: string } | null>(null)
-  const [mockSupernovaEvent, setMockSupernovaEvent] = useState<{ prestigeCount: number; activatedBy: string } | null>(null)
-  const [mockRoomEffect, setMockRoomEffect] = useState<import("@/hooks/use-room-websocket").RoomEffect | null>(null)
-
-  // Track prestige locally — the backend doesn't support prestigeCount
-  // yet, so we detect Supernova resets by watching the tube level drop
-  // from 5 to a lower value and trigger effects on the frontend.
-  const [localPrestige, setLocalPrestige] = useState(0)
-  const [localSupernovaEvent, setLocalSupernovaEvent] = useState<{ prestigeCount: number; activatedBy: string } | null>(null)
-  const [localRoomEffect, setLocalRoomEffect] = useState<import("@/hooks/use-room-websocket").RoomEffect | null>(null)
-  const prevTubeLevelRef = useRef<number>(0)
-
-  useEffect(() => {
-    const tube = ws.connected ? ws.tube : mockTube
-    if (!tube) return
-    const prevLevel = prevTubeLevelRef.current
-    prevTubeLevelRef.current = tube.level
-
-    // Detect prestige: level was 5, now it's lower (backend reset)
-    if (prevLevel >= 5 && tube.level < prevLevel) {
-      setLocalPrestige((p) => {
-        const newP = p + 1
-        setLocalSupernovaEvent({ prestigeCount: newP, activatedBy: "A listener" })
-        setTimeout(() => setLocalSupernovaEvent(null), 8000)
-        const effects = ["aurora", "neon_rain", "stardust"] as const
-        const effect = effects[newP % effects.length]
-        const expiry = new Date(Date.now() + 30 * 60 * 1000).toISOString()
-        setLocalRoomEffect({ type: effect, expiresAt: expiry, activatedBy: "A listener" })
-        return newP
-      })
-    }
-  }, [ws.connected, ws.tube, ws.tube?.level, mockTube, mockTube.level]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Fetch real tube state on room load
-  useEffect(() => {
-    if (!room?.id) return
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/rooms/${room.id}/tube`, { credentials: "include" })
-      .then((res) => res.ok ? res.json() : null)
-      .then((data) => { if (data) setMockTube(data) })
-      .catch(() => {})
-  }, [room?.id])
-
-  // Handle neon sent - update tube locally in mock mode
-  const handleNeonSent = useCallback((amount: number) => {
-    if (!ws.connected) {
-      setMockTube((prev) => {
-        const newFill = prev.fillAmount + amount
-        const newTotal = prev.totalNeon + amount
-        if (newFill >= prev.fillTarget) {
-          if (prev.level >= 5) {
-            // Supernova maxed — prestige reset!
-            const newPrestige = (prev.prestigeCount ?? 0) + 1
-            setMockSupernovaEvent({ prestigeCount: newPrestige, activatedBy: "You" })
-            setTimeout(() => setMockSupernovaEvent(null), 8000)
-            // Unlock a random room effect for 30 minutes
-            const effects = ["aurora", "neon_rain", "stardust"] as const
-            const effect = effects[newPrestige % effects.length]
-            const expiry = new Date(Date.now() + 30 * 60 * 1000).toISOString()
-            setMockRoomEffect({ type: effect, expiresAt: expiry, activatedBy: "You" })
-            return { ...prev, level: 1, fillAmount: 0, fillTarget: 100, totalNeon: newTotal, prestigeCount: newPrestige }
-          }
-          const newLevel = Math.min(prev.level + 1, 5)
-          const colors = ["oklch(0.72 0.18 195)", "oklch(0.65 0.24 330)", "oklch(0.82 0.18 80)", "oklch(0.75 0.20 300)", "oklch(0.95 0.03 80)"]
-          setMockPowerUp({ newLevel, color: colors[newLevel - 1] })
-          setTimeout(() => setMockPowerUp(null), 4000)
-          return { ...prev, level: newLevel, fillAmount: newFill - prev.fillTarget, fillTarget: 100, totalNeon: newTotal }
-        }
-        return { ...prev, fillAmount: newFill, totalNeon: newTotal }
-      })
-    }
-  }, [ws.connected])
-
-  // Use WebSocket data when connected, otherwise room data from initial
-  // fetch. For the infoSnippet specifically, fall back to the REST
-  // room.nowPlaying value when the WS payload is missing it — this
-  // covers races where the track_changed event lands before the tracks
-  // table row has the latest snippet, and it lets the periodic REST
-  // refresh below populate fresher snippets as they land.
-  const currentTrack: Track | null = useMemo(() => {
-    if (ws.connected && wsCurrentTrack) {
-      const restSnippet =
-        room?.nowPlaying && room.nowPlaying.id === wsCurrentTrack.id
-          ? room.nowPlaying.infoSnippet
-          : undefined
-      return {
-        id: wsCurrentTrack.id,
-        title: wsCurrentTrack.title,
-        artist: wsCurrentTrack.artist,
-        duration: wsCurrentTrack.duration,
-        source: wsCurrentTrack.source,
-        sourceUrl: wsCurrentTrack.sourceUrl,
-        submittedBy: "DJ",
-        albumGradient: wsCurrentTrack.albumGradient || "linear-gradient(135deg, oklch(0.45 0.15 30), oklch(0.35 0.20 350))",
-        infoSnippet: wsCurrentTrack.infoSnippet || restSnippet,
-      }
-    }
-    return room?.nowPlaying ?? null
-  }, [ws.connected, wsCurrentTrack, room?.nowPlaying])
-
-  // Periodic REST refresh of room.nowPlaying.infoSnippet. Runs every
-  // 20 seconds as a safety net for snippet drift: if the backend
-  // updates a track's info_snippet after the room loaded or the WS
-  // connected, the next poll will pick it up and feed it into the
-  // currentTrack memo via the fallback path above. Only updates state
-  // when the snippet actually changed to avoid unnecessary re-renders.
-  useEffect(() => {
-    if (!slug || notFound) return
-    const id = setInterval(async () => {
-      try {
-        const detail = await getRoom(slug)
-        const fresh = detail.nowPlaying
-        if (!fresh) return
-        setRoom((prev) => {
-          if (!prev || !prev.nowPlaying) return prev
-          if (prev.nowPlaying.id !== fresh.id) return prev
-          if (prev.nowPlaying.infoSnippet === fresh.infoSnippet) return prev
-          return {
-            ...prev,
-            nowPlaying: {
-              ...prev.nowPlaying,
-              infoSnippet: fresh.infoSnippet,
-            },
-          }
-        })
-      } catch {
-        // Swallow — next tick will try again.
-      }
-    }, 20000)
-    return () => clearInterval(id)
-  }, [slug, notFound])
-
-  // Autoplay playlist tracks — fetch for autoplay rooms
-  const [autoplayTracks, setAutoplayTracks] = useState<Track[]>([])
-  const [autoplayIndex, setAutoplayIndex] = useState(0)
-  useEffect(() => {
-    if (!slug || !room?.isAutoplay) return
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/rooms/${slug}/autoplay-tracks`, { credentials: "include" })
-      .then((res) => res.ok ? res.json() : { tracks: [], currentIndex: 0 })
-      .then((data: any) => {
-        if (Array.isArray(data.tracks)) {
-          setAutoplayTracks(data.tracks.map((t: any, i: number) => ({
-            id: `autoplay-${i}`,
-            title: t.title || "",
-            artist: t.artist || "",
-            duration: t.duration || 0,
-            source: t.source || "youtube",
-            sourceUrl: t.sourceUrl || "",
-            albumGradient: t.albumGradient || "linear-gradient(135deg, oklch(0.35 0.10 280), oklch(0.25 0.10 280))",
-          })))
-          setAutoplayIndex(data.currentIndex || 0)
-        }
-      })
-      .catch(() => {})
-  }, [slug, room?.isAutoplay])
-
-  const queueTracks: Track[] = useMemo(() => {
-    // For autoplay rooms, show upcoming tracks from the playlist
-    if (room?.isAutoplay && autoplayTracks.length > 0) {
-      const upcoming: Track[] = []
-      for (let i = 0; i < autoplayTracks.length; i++) {
-        const idx = (autoplayIndex + i) % autoplayTracks.length
-        upcoming.push(autoplayTracks[idx])
-      }
-      return upcoming
-    }
-    // When WebSocket is connected, always use its queue data (even if empty).
-    // Falling back to room?.queue would show stale data from the initial REST fetch.
-    if (ws.connected) {
-      const mapped = ws.queue.map((e) => ({
-        id: e.track.id,
-        title: e.track.title,
-        artist: e.track.artist,
-        duration: e.track.duration,
-        source: e.track.source,
-        sourceUrl: e.track.sourceUrl,
-        submittedBy: e.submittedBy,
-        albumGradient: e.track.albumGradient || "linear-gradient(135deg, oklch(0.45 0.15 30), oklch(0.35 0.20 350))",
-      }))
-      // Filter out the currently playing track — it shouldn't appear in "Up Next"
-      const nowPlayingId = wsCurrentTrack?.id || currentTrack?.id
-      if (nowPlayingId) {
-        return mapped.filter((t) => t.id !== nowPlayingId)
-      }
-      return mapped
-    }
-    return room?.queue ?? []
-  }, [ws.connected, ws.queue, wsCurrentTrack?.id, currentTrack?.id, room?.queue, room?.isAutoplay, autoplayTracks, autoplayIndex])
-
-  // Played tracks — accumulated from WS + initial fetch from API
-  const [fetchedHistory, setFetchedHistory] = useState<Track[]>([])
-  useEffect(() => {
-    if (!slug) return
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/rooms/${slug}/history`, { credentials: "include" })
-      .then((res) => res.ok ? res.json() : [])
-      .then((entries: any[]) => {
-        if (Array.isArray(entries)) {
-          setFetchedHistory(entries.map((e: any) => ({
-            id: e.track?.id || e.id,
-            title: e.track?.title || e.title || "",
-            artist: e.track?.artist || e.artist || "",
-            duration: e.track?.duration || e.duration || 0,
-            source: e.track?.source || e.source || "mp3",
-            sourceUrl: e.track?.sourceUrl || e.sourceUrl || "",
-            submittedBy: e.submittedBy || "",
-            albumGradient: e.track?.albumGradient || e.albumGradient || "linear-gradient(135deg, oklch(0.35 0.10 280), oklch(0.25 0.10 280))",
-          })))
-        }
-      })
-      .catch(() => {})
-  }, [slug])
-
-  const playedTracks: Track[] = useMemo(() => {
-    // WS-tracked played tracks (most recent first) + fetched history, deduplicated
-    const wsPlayed: Track[] = ws.playedTracks.map((t) => ({
-      id: t.id,
-      title: t.title,
-      artist: t.artist,
-      duration: t.duration,
-      source: t.source,
-      sourceUrl: t.sourceUrl,
-      submittedBy: "",
-      albumGradient: t.albumGradient || "linear-gradient(135deg, oklch(0.35 0.10 280), oklch(0.25 0.10 280))",
-    }))
-    const seen = new Set(wsPlayed.map((t) => t.id))
-    const merged = [...wsPlayed]
-    for (const t of fetchedHistory) {
-      if (!seen.has(t.id)) {
-        seen.add(t.id)
-        merged.push(t)
-      }
-    }
-    return merged
-  }, [ws.playedTracks, fetchedHistory])
-
-  const chatMessages: ChatMessage[] = useMemo(() => {
-    if (ws.connected) {
-      return wsChatMessages.map((m) => ({
-        id: m.id,
-        username: m.username,
-        avatarColor: m.avatarColor,
-        message: m.message,
-        timestamp: new Date(m.timestamp),
-        type: m.type as "message" | "request" | "announcement",
-        mediaUrl: m.mediaUrl,
-        mediaType: m.mediaType,
-      }))
-    }
-    return room?.chatMessages ?? []
-  }, [ws.connected, wsChatMessages, room?.chatMessages])
-
-  const listenerCount = ws.connected ? ws.listenerCount : (room?.listenerCount ?? 0)
-  // Map server request policy to UI status
-  const serverPolicy = ws.connected ? ws.requestPolicy : (room?.requestPolicy ?? "open")
-  const requestStatus = serverPolicy === "approval" ? "paused" : serverPolicy as "open" | "closed"
-
-  // Sync player context
-  useEffect(() => {
-    if (room && currentTrack) {
-      const startedAt = wsPlaybackState?.startedAt ?? Date.now()
-      setPlayerRoom(room.slug, room.name, room.djName, currentTrack, startedAt)
-    }
-  }, [room?.slug, room?.name, room?.djName, currentTrack]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (currentTrack) {
-      updateTrack(currentTrack)
-    }
-  }, [currentTrack, updateTrack])
-
-  // Keep playback time synced for mini player continuity
-  useEffect(() => {
-    if (wsPlaybackState?.startedAt) {
-      updatePlaybackTime(wsPlaybackState.startedAt)
-    }
-  }, [wsPlaybackState?.startedAt, updatePlaybackTime])
-
-  // Close mini player when room ends
-  useEffect(() => {
-    if (ws.roomEnded) {
-      closePlayer()
-    }
-  }, [ws.roomEnded, closePlayer])
-
-  const handleMicChange = useCallback((active: boolean, pauseMusic: boolean, deviceId?: string) => {
-    setMicActive(active)
-    setMicPausesMusic(pauseMusic)
-    // Broadcast mic state to all listeners via WebSocket
-    if (ws.connected && isDJ) {
-      ws.djSetMic(active, pauseMusic)
-    }
-    if (active) {
-      liveKit.startBroadcasting(deviceId)
-    } else {
-      liveKit.stopBroadcasting()
-    }
-  }, [liveKit, ws.connected, isDJ]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Audio engine state
-  const [audioCurrentTime, setAudioCurrentTime] = useState(0)
-  const [audioPlaying, setAudioPlaying] = useState(false)
-  const [audioDuration, setAudioDuration] = useState(0)
-  const [audioArtwork, setAudioArtwork] = useState<string | null>(null)
-  const [roomVolume, setRoomVolume] = useState(75)
-  const [roomMuted, setRoomMuted] = useState(false)
-  // Portal target for the YouTube iframe. ListenerNowPlaying renders
-  // a 16:9 div in its album-art slot when the current track is YouTube
-  // and forwards the ref up via the ytSlotRef callback prop. AudioEngine
-  // then uses createPortal to mount the YouTubePlayer into that element.
-  const [ytSlot, setYtSlot] = useState<HTMLDivElement | null>(null)
-
-  // Report track duration to server for autoplay rooms
-  const lastReportedDuration = useRef("")
-  const handleDuration = useCallback((seconds: number) => {
-    setAudioDuration(seconds)
-    // Report real duration to server so it can reschedule the advance timer
-    if (room?.isAutoplay && ws.connected && currentTrack && seconds > 0) {
-      const key = `${currentTrack.id}-${seconds}`
-      if (key !== lastReportedDuration.current) {
-        lastReportedDuration.current = key
-        ws.reportDuration(currentTrack.id, Math.round(seconds))
-      }
-    }
-  }, [room?.isAutoplay, ws.connected, currentTrack])
-
-  // Prepare audio engine track from current track
-  const audioTrack: AudioEngineTrack | null = useMemo(() => {
-    const track = currentTrack ?? room?.nowPlaying
-    if (!track) return null
-    const parsed = parseTrackUrl(track.sourceUrl)
+  const seo = ROOM_SEO[slug]
+  if (seo) {
     return {
-      id: track.id,
-      source: (track.source || parsed?.source || "mp3") as "youtube" | "soundcloud" | "mp3",
-      sourceUrl: track.sourceUrl,
-      videoId: parsed?.videoId,
+      title: seo.title,
+      description: seo.description,
+      keywords: seo.keywords,
+      openGraph: {
+        title: seo.title,
+        description: seo.description,
+        url: canonical,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: seo.title,
+        description: seo.description,
+      },
+      alternates: { canonical },
     }
-  }, [currentTrack, room?.nowPlaying])
-
-  // Track when the current track started playing locally (for autoplay debounce)
-  const trackStartTimeRef = useRef(0)
-  useEffect(() => {
-    if (currentTrack?.id) {
-      trackStartTimeRef.current = Date.now()
-    }
-  }, [currentTrack?.id])
-
-  const handleTrackEnd = useCallback(() => {
-    // DJ's client triggers auto-advance (debounced to prevent double-advance)
-    if (isDJ && ws.connected) {
-      const now = Date.now()
-      if (now - lastSkipRef.current < 2000) return
-      lastSkipRef.current = now
-      ws.djSkip()
-    }
-    // For autoplay rooms, any listener reports track ended
-    // But only if we've been playing for at least 15 seconds to prevent seek-past-end loops
-    if (room?.isAutoplay && ws.connected) {
-      const playedFor = Date.now() - trackStartTimeRef.current
-      if (playedFor > 15000) {
-        ws.sendAutoplayEnd()
-      }
-    }
-  }, [isDJ, ws, room?.isAutoplay])
-
-  const handleSubmitTrack = useCallback(async (track: { title: string; artist: string; duration: number; source: string; sourceUrl: string }) => {
-    if (ws.connected) {
-      ws.submitTrack(track)
-    } else {
-      // Fallback to REST API
-      try {
-        const { submitTrack: submitTrackAPI } = await import("@/lib/api")
-        await submitTrackAPI(slug, track, djKey ?? undefined)
-        // Refresh room data to get updated queue
-        const detail = await getRoom(slug)
-        setRoom(toFrontendRoom(detail.room, detail.nowPlaying, detail.queue, detail.recentChat))
-      } catch (err) {
-        console.error("[submit-track] REST fallback failed:", err)
-      }
-    }
-  }, [ws, slug, djKey])
-
-  const handleDJTogglePlay = useCallback(() => {
-    if (!isDJ || !ws.connected) return
-    if (audioPlaying) {
-      ws.djPause()
-    } else {
-      ws.djResume()
-    }
-  }, [isDJ, ws, audioPlaying])
-
-  const lastSkipRef = useRef(0)
-  const handleSkip = useCallback(() => {
-    if (isDJ && ws.connected) {
-      const now = Date.now()
-      if (now - lastSkipRef.current < 2000) return // debounce 2s
-      lastSkipRef.current = now
-      ws.djSkip()
-    }
-  }, [isDJ, ws])
-
-  const handleGoLive = useCallback(async () => {
-    if (!isDJ || queueTracks.length === 0 || !djKey) return
-    if (ws.connected) {
-      ws.djGoLive()
-    } else {
-      // Fallback to REST API
-      try {
-        const { goLive: goLiveAPI } = await import("@/lib/api")
-        const firstTrack = queueTracks[0]
-        await goLiveAPI(slug, djKey, {
-          trackTitle: firstTrack.title,
-          trackArtist: firstTrack.artist,
-          trackDuration: firstTrack.duration,
-          trackSource: firstTrack.source,
-          trackSourceUrl: firstTrack.sourceUrl,
-        })
-        // Refresh room data to pick up the new playback state
-        const detail = await getRoom(slug)
-        setRoom(toFrontendRoom(detail.room, detail.nowPlaying, detail.queue, detail.recentChat))
-      } catch (err) {
-        console.error("[go-live] failed:", err)
-      }
-    }
-  }, [isDJ, ws, djKey, slug, queueTracks])
-
-  // ─── Error / loading states ───────────────────────────────────────────────
-  // Restyled to match the redesigned palette. No global navbar — the
-  // in-room nav replaces it; these error states render only a back link.
-
-  const errorShell = (title: string, body: string) => (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ background: "#0d0b10", color: "#e8e6ea" }}
-    >
-      <div className="flex flex-col items-center gap-3 px-6 text-center">
-        <div
-          className="flex h-14 w-14 items-center justify-center rounded-full"
-          style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }}
-        >
-          <Radio className="h-6 w-6" style={{ color: "#e89a3c" }} />
-        </div>
-        <p className="text-base font-semibold">{title}</p>
-        <p className="max-w-sm text-sm" style={{ color: "rgba(232,230,234,0.5)" }}>
-          {body}
-        </p>
-        <Link
-          href="/"
-          className="mt-2 rounded-full px-5 py-2 text-sm font-semibold"
-          style={{ background: "#e89a3c", color: "#0d0b10" }}
-        >
-          Back to Discover
-        </Link>
-      </div>
-    </div>
-  )
-
-  if (notFound) {
-    return errorShell(
-      "Room not found",
-      "This room may have been deleted or the link is invalid."
-    )
   }
 
-  if (ws.roomEnded) {
-    return errorShell(
-      "Session ended",
-      ws.roomEndedReason || "The DJ has ended this session."
-    )
-  }
-
-  if (!room) {
-    return (
-      <div
-        className="flex min-h-screen items-center justify-center"
-        style={{ background: "#0d0b10", color: "rgba(232,230,234,0.6)" }}
-      >
-        <p className="text-sm">Loading room...</p>
-      </div>
-    )
-  }
-
-  // ─── Derived render data ──────────────────────────────────────────────────
-
-  const displayTrack = currentTrack ?? room.nowPlaying
-  const djInitials = (room.djName || "DJ").slice(0, 2).toUpperCase()
-
-  // DJ commentary body: prefer the admin-authored info snippet on the
-  // current track, fall back to the most recent DJ announcement chat.
-  const djAnnouncement = [...chatMessages]
-    .reverse()
-    .find((m) => m.type === "announcement" && m.username === room.djName)
-  const djContextBody = displayTrack?.infoSnippet || djAnnouncement?.message || ""
-
-  // Subtitle shown under the DJ name: genre + (optional) description.
-  const djSubtitle = [room.genre, room.description]
-    .filter(Boolean)
-    .join(" · ")
-
-  const handleSave = () => {
-    if (!displayTrack) return
-    const wasLiked = isLiked(displayTrack.id)
-    toggleLike(displayTrack)
-    toast.success(wasLiked ? "Removed from Liked" : "Saved to Liked")
-  }
-
-  // Determine whether a real track is playing. This gates the listener
-  // "waiting" fallback and the DJ "Go Live" prompt.
-  const apiHasTrack = !!room.nowPlaying && room.nowPlaying.id !== "placeholder"
-  const hasRealPlayback = !!(wsCurrentTrack || wsPlaybackState || apiHasTrack)
-
-  // DJ view, idle — show the Go Live prompt instead of the now-playing hero.
-  const showDjGoLive = !hasRealPlayback && isDJ
-
-  // Listener view, idle — show a muted waiting message instead.
-  const showWaiting = !hasRealPlayback && !isDJ
-
-  // Whether the listener should see the "DJ is speaking" chip inline.
-  const djSpeaking = !isDJ && (ws.djMicActive || liveKit.djSpeaking)
-
-  // Choose the effective audio artwork: SoundCloud-derived first, then
-  // whatever the engine has already emitted.
-  const effectiveAlbumArt = audioArtwork || null
-
-  // Derive a compact hype summary for the DJ deck.
-  const djHypeScore = (() => {
-    const raw =
-      hypeTracking.recentTips * 2 +
-      hypeTracking.recentChats * 0.5 +
-      hypeTracking.recentReactions * 1
-    return Math.min(100, Math.round((raw / 50) * 100))
-  })()
-  const djHypeLabel =
-    djHypeScore >= 80 ? "On fire" : djHypeScore >= 50 ? "Hyped" : djHypeScore >= 25 ? "Warming" : "Chill"
-  const djHypeColor =
-    djHypeScore >= 80 ? "#ff5a3a" : djHypeScore >= 50 ? "#e89a3c" : djHypeScore >= 25 ? "#4a8fe8" : "#8a8a9a"
-
-  return (
-    <div className="min-h-screen" style={{ background: "#0d0b10", color: "#e8e6ea" }}>
-      {/* Supernova explosion — full-screen particle burst when level 5 maxes out.
-          Uses backend event when available, falls back to local detection. */}
-      <SupernovaExplosion
-        active={!!(ws.supernovaEvent || localSupernovaEvent || mockSupernovaEvent)}
-        activatedBy={(ws.supernovaEvent || localSupernovaEvent || mockSupernovaEvent)?.activatedBy}
-      />
-
-      {/* Room effect overlay — persistent visual theme unlocked by Supernova.
-          Uses backend event when available, falls back to local state. */}
-      <RoomEffectOverlay effect={ws.activeRoomEffect || localRoomEffect || mockRoomEffect} />
-
-      {/* Audio engine mounts once per track so playback keeps running while
-          the listener browses. For YouTube tracks, it portals the iframe
-          into the album-art slot inside ListenerNowPlaying (via ytSlot) so
-          the video is the primary visual instead of a hidden corner
-          fallback. Non-YouTube tracks don't use the slot. */}
-      {audioTrack && (
-        <AudioEngine
-          track={audioTrack}
-          playbackState={wsPlaybackState}
-          volume={roomVolume}
-          muted={roomMuted}
-          isDJ={isDJ}
-          visible={false}
-          inlineTarget={ytSlot}
-          forcePaused={isDJ ? (micActive && micPausesMusic) : (ws.djMicActive && ws.djMicPauseMusic)}
-          onTimeUpdate={setAudioCurrentTime}
-          onDuration={handleDuration}
-          onTrackEnd={handleTrackEnd}
-          onPlayStateChange={setAudioPlaying}
-          onArtwork={setAudioArtwork}
-        />
-      )}
-
-      {/* Compact in-room nav */}
-      <ListenerNav
-        roomName={room.name}
-        isLive={room.isLive}
-        listenerCount={listenerCount}
-      />
-
-      {/* Main grid — 2 columns for listeners, 3 columns for DJs.
-          The DJ third column ("deck") holds all host controls. On
-          narrow viewports it stacks vertically below chat. */}
-      <div
-        className={
-          isDJ
-            ? "shell-narrow flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_clamp(240px,20vw,320px)_clamp(260px,20vw,320px)]"
-            : "shell-narrow flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_clamp(260px,22vw,360px)]"
+  // For user-created rooms, try fetching room data from the Go backend.
+  // The endpoint returns RoomDetail: { room, nowPlaying, queue, recentChat, playbackState }
+  try {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || ""
+    if (apiBase) {
+      const res = await fetch(`${apiBase}/api/rooms/${slug}`, {
+        next: { revalidate: 60 },
+      })
+      if (res.ok) {
+        const data = (await res.json()) as {
+          room?: { name?: string; genre?: string; description?: string }
         }
-        style={{
-          minHeight: "calc(100vh - 56px)",
-        }}
-      >
-        {/* Left: now playing + DJ context + queue */}
-        <div className="flex flex-col md:border-r md:border-white/[0.06]">
-          {showDjGoLive ? (
-            <div className="flex flex-col items-center gap-4 py-16 text-center">
-              <div
-                className="flex h-20 w-20 items-center justify-center rounded-full"
-                style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(232,154,60,0.3)",
-                }}
-              >
-                <Play className="h-8 w-8" style={{ color: "#e89a3c" }} />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold" style={{ color: "#e8e6ea" }}>
-                  Ready to go live
-                </h3>
-                <p className="mt-1 text-sm" style={{ color: "rgba(232,230,234,0.5)" }}>
-                  {queueTracks.length > 0
-                    ? `${queueTracks.length} track${queueTracks.length !== 1 ? "s" : ""} in queue — hit play to start`
-                    : "Add tracks to the queue, then start playing"}
-                </p>
-              </div>
-              {queueTracks.length > 0 && (
-                <button
-                  type="button"
-                  onClick={handleGoLive}
-                  className="flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90"
-                  style={{ background: "#e89a3c", color: "#0d0b10" }}
-                >
-                  <Play className="h-4 w-4" />
-                  Go live
-                </button>
-              )}
-            </div>
-          ) : showWaiting ? (
-            <div className="flex flex-col items-center gap-3 py-20 text-center">
-              <div
-                className="h-14 w-14 rounded-full"
-                style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "0.5px solid rgba(255,255,255,0.08)",
-                }}
-              />
-              <p className="text-sm" style={{ color: "rgba(232,230,234,0.5)" }}>
-                Waiting for the DJ to start playing...
-              </p>
-            </div>
-          ) : (
-            <>
-              <ListenerNowPlaying
-                djName={room.djName}
-                djSubtitle={djSubtitle}
-                djInitials={djInitials}
-                trackTitle={displayTrack.title || "Untitled"}
-                trackArtist={displayTrack.artist || "Unknown artist"}
-                currentTime={ws.connected ? audioCurrentTime : 0}
-                duration={
-                  audioDuration > 0
-                    ? audioDuration
-                    : displayTrack.duration || 0
-                }
-                isPlaying={audioPlaying}
-                djSpeaking={djSpeaking}
-                onSave={handleSave}
-                onRequest={() => setRequestModalOpen(true)}
-                requestDisabled={serverPolicy === "closed"}
-                albumArtUrl={effectiveAlbumArt}
-                albumGradient={displayTrack.albumGradient}
-                soundCloudUrl={
-                  audioTrack?.source === "soundcloud"
-                    ? audioTrack.sourceUrl
-                    : undefined
-                }
-                isYouTube={audioTrack?.source === "youtube"}
-                ytSlotRef={setYtSlot}
-              />
+        const room = data?.room
+        if (room?.name) {
+          const title = `${room.name} — Live Listening Room`
+          const description = room.description
+            ? `${room.description} Join ${room.name} on Jukebox and listen to ${room.genre || "music"} together in real time.`
+            : `Join ${room.name} on Jukebox. Listen to ${room.genre || "music"} together in real time.`
+          return {
+            title,
+            description,
+            openGraph: {
+              title: `${room.name} — Jukebox`,
+              description: `Live ${room.genre || "music"} room on Jukebox`,
+              url: canonical,
+            },
+            alternates: { canonical },
+          }
+        }
+      }
+    }
+  } catch {
+    // Backend unreachable at build/SSR time — fall through to generic.
+  }
 
-              <ListenerDjContext
-                djName={room.djName}
-                djInitials={djInitials}
-                body={djContextBody}
-              />
-            </>
-          )}
+  return {
+    title: `${slug} — Live Listening Room`,
+    description:
+      "Join this live listening room on Jukebox. Listen together in real time. Free.",
+    alternates: { canonical },
+  }
+}
 
-          {/* Neon tube — visible to listeners only. Shows the room's
-              energy level powered by neon donations. Clicking opens
-              the send-neon modal. */}
-          {!isDJ && (() => {
-            const tubeState = ws.connected ? ws.tube : mockTube
-            // Merge local prestige count until backend supports it
-            const tubeWithPrestige = tubeState
-              ? { ...tubeState, prestigeCount: tubeState.prestigeCount || localPrestige || mockTube.prestigeCount }
-              : null
-            return (
-              <NeonTube
-                tube={tubeWithPrestige}
-                powerUp={ws.connected ? ws.lastPowerUp : mockPowerUp}
-                onSendNeon={() => setSendNeonOpen(true)}
-              />
-            )
-          })()}
-
-          {/* Queue — always render, even in idle state, so DJs can see
-              what's lined up. */}
-          <ListenerQueue tracks={queueTracks} />
-
-          {/* DJ controls live in the DjDeck third column (added below
-              after the chat column when isDJ). */}
-        </div>
-
-        {/* Right: chat column */}
-        <ListenerChatColumn
-          messages={chatMessages}
-          listeners={ws.listeners}
-          listenerCount={listenerCount}
-          onSendMessage={ws.connected ? ws.sendChat : undefined}
-          onSendReaction={ws.connected ? ws.sendReaction : undefined}
-          connected={ws.connected}
-          djName={room.djName}
-          overlayRef={chatOverlayRef}
-        />
-
-        {/* Third column — DJ deck with all host controls. Only
-            renders when the user is a DJ; pushes the grid from
-            2 columns to 3. */}
-        {isDJ && (
-          <DjDeck
-            djName={room.djName}
-            djInitials={djInitials}
-            requestStatus={requestStatus as "open" | "paused" | "closed"}
-            onRequestStatusChange={(status) => {
-              if (ws.connected) {
-                const policyMap: Record<string, string> = {
-                  open: "open",
-                  paused: "approval",
-                  closed: "closed",
-                }
-                ws.djSetPolicy(policyMap[status] || "closed")
-              }
-            }}
-            audioPlaying={audioPlaying}
-            onTogglePlay={handleDJTogglePlay}
-            onSkip={handleSkip}
-            onMicChange={handleMicChange}
-            onSubmitTrack={handleSubmitTrack}
-            onEndRoom={ws.connected ? ws.djEndRoom : undefined}
-            listenerCount={listenerCount}
-            pendingRequests={ws.pendingRequests}
-            onApprove={ws.djApprove}
-            onReject={ws.djReject}
-            hypeScore={djHypeScore}
-            hypeLabel={djHypeLabel}
-            hypeColor={djHypeColor}
-            recentTips={hypeTracking.recentTips}
-            recentChats={hypeTracking.recentChats}
-            recentReactions={hypeTracking.recentReactions}
-          />
-        )}
-      </div>
-
-      {/* Modals */}
-      <RequestModal
-        open={requestModalOpen}
-        onClose={() => setRequestModalOpen(false)}
-        isDJ={isDJ}
-        onSubmitTrack={handleSubmitTrack}
-      />
-      <SendNeonModal
-        open={sendNeonOpen}
-        onClose={() => setSendNeonOpen(false)}
-        roomId={room?.id ?? ""}
-        neonBalance={(authUser as any)?.neonBalance ?? 0}
-        onNeonSent={handleNeonSent}
-      />
-    </div>
-  )
+export default async function RoomPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
+  const { slug } = await params
+  return <RoomClient slug={slug} />
 }

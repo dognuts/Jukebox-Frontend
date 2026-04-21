@@ -1,5 +1,12 @@
+import type { Metadata } from "next"
 import { Mail, MessageCircle } from "lucide-react"
 import { FAQItem } from "@/components/support/faq-item"
+
+export const metadata: Metadata = {
+  title: "Support",
+  description: "Get help with Jukebox. Contact support or browse FAQs.",
+  alternates: { canonical: "https://jukebox-app.com/support" },
+}
 
 const faqs = [
   {

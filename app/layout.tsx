@@ -25,9 +25,32 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Jukebox - Listen Together",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://jukebox-app.com",
+  ),
+  title: {
+    default: "Jukebox — Listen to Music Together in Live Rooms",
+    template: "%s | Jukebox",
+  },
   description:
-    "Built by music heads for music heads to find, discuss, and listen to music together.",
+    "Join live music rooms and listen together in real time. Hip-Hop, Lo-fi, Jazz, Electronic, Indie, Soul — pick a vibe and share the experience. Free, no account needed.",
+  openGraph: {
+    type: "website",
+    siteName: "Jukebox",
+    title: "Jukebox — Listen to Music Together",
+    description:
+      "Join live music rooms and listen together in real time. Pick a genre, jump in, share the vibe.",
+    url: "https://jukebox-app.com",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Jukebox — Listen to Music Together",
+    description:
+      "Live music rooms by genre. Listen together in real time. Free.",
+  },
+  alternates: {
+    canonical: "https://jukebox-app.com",
+  },
   icons: {
     icon: [
       {

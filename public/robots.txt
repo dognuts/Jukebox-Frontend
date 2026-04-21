@@ -1,3 +1,5 @@
+Sitemap: https://jukebox-app.com/sitemap.xml
+
 # Allow search engines
 User-agent: Googlebot
 Allow: /

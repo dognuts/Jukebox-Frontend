@@ -1,4 +1,11 @@
+import type { Metadata } from "next"
 import Link from "next/link"
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description: "Jukebox privacy policy.",
+  alternates: { canonical: "https://jukebox-app.com/privacy" },
+}
 
 export default function PrivacyPage() {
   return (

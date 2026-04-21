@@ -136,6 +136,15 @@ export function Navbar() {
 
         {/* Right cluster: search, create, messages, user menu */}
         <div className="flex shrink-0 items-center gap-3 sm:gap-4">
+          {/* Blog link — desktop only, muted */}
+          <Link
+            href="/blog"
+            className="hidden text-[13px] font-medium transition-opacity hover:opacity-80 sm:block"
+            style={{ color: "rgba(232,230,234,0.6)" }}
+          >
+            Blog
+          </Link>
+
           {/* Search pill — matches mockup: 180×30, rounded-full */}
           <div
             className="hidden h-[30px] w-[180px] items-center rounded-full px-3 sm:flex"

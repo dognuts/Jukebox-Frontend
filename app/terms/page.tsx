@@ -1,4 +1,11 @@
+import type { Metadata } from "next"
 import Link from "next/link"
+
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description: "Jukebox terms of service.",
+  alternates: { canonical: "https://jukebox-app.com/terms" },
+}
 
 export default function TermsPage() {
   return (
