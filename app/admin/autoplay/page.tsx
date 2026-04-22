@@ -12,7 +12,9 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Navbar } from "@/components/layout/navbar"
 import { useAuth } from "@/lib/auth-context"
-import { authRequest } from "@/lib/api"
+import { authRequest, type TrackCandidate } from "@/lib/api"
+import { BulkAddPanel } from "./bulk-add-panel"
+import { BulkActionButton, BulkAltsPanel } from "./track-row-extras"
 
 interface AutoplayTrack {
   title: string
@@ -22,6 +24,56 @@ interface AutoplayTrack {
   sourceUrl: string
   albumGradient?: string
   infoSnippet?: string
+  // Client-only fields set by Bulk mode — never persist these.
+  // Stripped in handleSave / handleSaveLiveTracks before PUT.
+  _searchAlternatives?: TrackCandidate[]
+  _searchQuery?: string
+}
+
+// Persisted AutoplayTrack shape (strips client-only bulk-search fields).
+type PersistedTrack = Omit<AutoplayTrack, "_searchAlternatives" | "_searchQuery">
+function stripClientFields(tracks: AutoplayTrack[]): PersistedTrack[] {
+  return tracks.map(({ _searchAlternatives, _searchQuery, ...rest }) => rest)
+}
+
+// Gradient preset for visual distinction when no album art is available.
+function randomGradient(): string {
+  const l1 = 0.3 + Math.random() * 0.2
+  const c1 = 0.1 + Math.random() * 0.1
+  const h1 = Math.floor(Math.random() * 360)
+  const l2 = 0.2 + Math.random() * 0.15
+  const c2 = 0.1 + Math.random() * 0.1
+  const h2 = Math.floor(Math.random() * 360)
+  return `linear-gradient(135deg, oklch(${l1} ${c1} ${h1}), oklch(${l2} ${c2} ${h2}))`
+}
+
+function buildSearchTrack(
+  candidate: TrackCandidate,
+  query: string,
+  alternatives: TrackCandidate[],
+): AutoplayTrack {
+  return {
+    title: candidate.title,
+    artist: candidate.artist,
+    duration: candidate.duration,
+    source: candidate.source,
+    sourceUrl: candidate.sourceUrl,
+    albumGradient: randomGradient(),
+    _searchAlternatives: alternatives,
+    _searchQuery: query,
+  }
+}
+
+function buildFailedTrack(query: string, reason: string): AutoplayTrack {
+  return {
+    title: query,
+    artist: `(not found: ${reason})`,
+    duration: 0,
+    source: "youtube",
+    sourceUrl: "",
+    albumGradient: "linear-gradient(135deg, oklch(0.25 0.1 20), oklch(0.15 0.08 10))",
+    _searchQuery: query,
+  }
 }
 
 interface AutoplayPlaylist {
@@ -85,8 +137,6 @@ export default function AdminAutoplayPage() {
   // replace URL, reorder, snippet). Saved via the live/tracks endpoint.
   const [liveTracks, setLiveTracks] = useState<AutoplayTrack[]>([])
   const [savingLiveTracks, setSavingLiveTracks] = useState(false)
-  const [liveTrackUrl, setLiveTrackUrl] = useState("")
-  const [addingLiveTrack, setAddingLiveTrack] = useState(false)
   const [replacingLiveIdx, setReplacingLiveIdx] = useState<number | null>(null)
   const [replaceLiveUrl, setReplaceLiveUrl] = useState("")
   const [resolvingReplace, setResolvingReplace] = useState(false)
@@ -94,10 +144,13 @@ export default function AdminAutoplayPage() {
   // Staged playlist editor
   const [stagedName, setStagedName] = useState("")
   const [stagedTracks, setStagedTracks] = useState<AutoplayTrack[]>([])
-  const [trackUrl, setTrackUrl] = useState("")
-  const [addingTrack, setAddingTrack] = useState(false)
   const [saving, setSaving] = useState(false)
   const [activating, setActivating] = useState(false)
+
+  // Which row's alternatives expander is open (Bulk-mode tracks only).
+  // Null means no expander open in that panel.
+  const [expandedLiveIdx, setExpandedLiveIdx] = useState<number | null>(null)
+  const [expandedStagedIdx, setExpandedStagedIdx] = useState<number | null>(null)
 
   // Load autoplay rooms
   const loadRooms = useCallback(async () => {
@@ -240,17 +293,6 @@ export default function AdminAutoplayPage() {
     }
   }
 
-  // Add track to STAGED playlist by URL
-  const handleAddTrack = async () => {
-    if (!trackUrl.trim()) return
-    setAddingTrack(true)
-    try {
-      const track = await resolveTrack(trackUrl)
-      setStagedTracks((prev) => [...prev, track])
-      setTrackUrl("")
-    } catch {}
-    setAddingTrack(false)
-  }
 
   const removeTrack = (index: number) => {
     setStagedTracks((prev) => prev.filter((_, i) => i !== index))
@@ -268,17 +310,6 @@ export default function AdminAutoplayPage() {
 
   // ─── LIVE playlist in-place editing ───────────────────────────────────────
 
-  // Add a track to the LIVE playlist (queued in local state until Save)
-  const handleAddLiveTrack = async () => {
-    if (!liveTrackUrl.trim()) return
-    setAddingLiveTrack(true)
-    try {
-      const track = await resolveTrack(liveTrackUrl)
-      setLiveTracks((prev) => [...prev, track])
-      setLiveTrackUrl("")
-    } catch {}
-    setAddingLiveTrack(false)
-  }
 
   const removeLiveTrack = (index: number) => {
     setLiveTracks((prev) => prev.filter((_, i) => i !== index))
@@ -334,7 +365,7 @@ export default function AdminAutoplayPage() {
     try {
       await authRequest(`/api/admin/autoplay/rooms/${selectedRoom.id}/live/tracks`, {
         method: "PUT",
-        body: JSON.stringify({ tracks: liveTracks }),
+        body: JSON.stringify({ tracks: stripClientFields(liveTracks) }),
       })
       await loadPlaylists(selectedRoom.id)
     } catch (err) {
@@ -351,7 +382,7 @@ export default function AdminAutoplayPage() {
     try {
       await authRequest(`/api/admin/autoplay/rooms/${selectedRoom.id}/staged`, {
         method: "PUT",
-        body: JSON.stringify({ name: stagedName, tracks: stagedTracks }),
+        body: JSON.stringify({ name: stagedName, tracks: stripClientFields(stagedTracks) }),
       })
       await loadPlaylists(selectedRoom.id)
     } catch { alert("Failed to save") }
@@ -680,21 +711,14 @@ export default function AdminAutoplayPage() {
                     Add, remove, or swap a song's URL on the live playlist. The currently-playing track keeps playing — your changes take effect on the next track advance.
                   </p>
 
-                  {/* Add a track to live */}
-                  <div className="flex gap-2 mb-3">
-                    <Input
-                      value={liveTrackUrl}
-                      onChange={(e) => setLiveTrackUrl(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleAddLiveTrack()}
-                      placeholder="Paste YouTube, SoundCloud, or audio URL..."
-                      className="flex-1 rounded-lg bg-muted/20 text-sm"
-                      disabled={addingLiveTrack}
-                    />
-                    <Button size="sm" onClick={handleAddLiveTrack} disabled={addingLiveTrack || !liveTrackUrl.trim()} className="rounded-lg gap-1.5">
-                      {addingLiveTrack ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                      Add
-                    </Button>
-                  </div>
+                  {/* Add a track to live — URL or Bulk mode */}
+                  <BulkAddPanel
+                    onAddTracks={(tracks) => setLiveTracks((prev) => [...prev, ...tracks])}
+                    resolveUrl={resolveTrack}
+                    buildSearchTrack={buildSearchTrack}
+                    buildFailedTrack={buildFailedTrack}
+                    outerDisabled={!selectedRoom}
+                  />
 
                   {/* Live track list */}
                   <div className="space-y-1 mb-3 max-h-[28rem] overflow-y-auto pr-1">
@@ -706,13 +730,23 @@ export default function AdminAutoplayPage() {
                       liveTracks.map((track, i) => {
                         const isCurrent = i === (livePlaylist.currentIndex % Math.max(liveTracks.length, 1))
                         const isReplacing = replacingLiveIdx === i
+                        const isFailed = !track.sourceUrl && !!track._searchQuery
+                        const isAltsOpen = expandedLiveIdx === i
                         return (
                           <div
                             key={i}
                             className="rounded-lg px-2 py-1.5 group hover:bg-muted/10"
                             style={{
-                              background: isCurrent ? "oklch(0.16 0.04 150 / 0.25)" : undefined,
-                              border: isCurrent ? "1px solid oklch(0.55 0.15 150 / 0.4)" : "1px solid transparent",
+                              background: isCurrent
+                                ? "oklch(0.16 0.04 150 / 0.25)"
+                                : isFailed
+                                ? "oklch(0.15 0.05 25 / 0.20)"
+                                : undefined,
+                              border: isCurrent
+                                ? "1px solid oklch(0.55 0.15 150 / 0.4)"
+                                : isFailed
+                                ? "1px solid oklch(0.55 0.18 25 / 0.4)"
+                                : "1px solid transparent",
                             }}
                           >
                             <div className="flex items-center gap-2">
@@ -747,6 +781,12 @@ export default function AdminAutoplayPage() {
                                 </span>
                               )}
                               <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <BulkActionButton
+                                  track={track}
+                                  isExpanded={isAltsOpen}
+                                  onToggleExpand={() => setExpandedLiveIdx(isAltsOpen ? null : i)}
+                                  onReplace={(next) => setLiveTracks((prev) => prev.map((t, j) => (j === i ? next : t)))}
+                                />
                                 <button onClick={() => beginReplaceLiveUrl(i)} className="p-1 rounded hover:bg-muted/20" title="Replace URL">
                                   <LinkIcon className="h-3 w-3 text-muted-foreground" />
                                 </button>
@@ -784,6 +824,15 @@ export default function AdminAutoplayPage() {
                                   Cancel
                                 </Button>
                               </div>
+                            )}
+
+                            {/* Bulk-mode alternatives expander */}
+                            {isAltsOpen && (
+                              <BulkAltsPanel
+                                track={track}
+                                onReplace={(next) => setLiveTracks((prev) => prev.map((t, j) => (j === i ? next : t)))}
+                                onClose={() => setExpandedLiveIdx(null)}
+                              />
                             )}
 
                             {/* Snippet textarea */}
@@ -827,21 +876,14 @@ export default function AdminAutoplayPage() {
                   className="mb-3 rounded-lg bg-muted/20 text-sm"
                 />
 
-                {/* Add track */}
-                <div className="flex gap-2 mb-3">
-                  <Input
-                    value={trackUrl}
-                    onChange={(e) => setTrackUrl(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleAddTrack()}
-                    placeholder="Paste YouTube, SoundCloud, or audio URL..."
-                    className="flex-1 rounded-lg bg-muted/20 text-sm"
-                    disabled={addingTrack}
-                  />
-                  <Button size="sm" onClick={handleAddTrack} disabled={addingTrack || !trackUrl.trim()} className="rounded-lg gap-1.5">
-                    {addingTrack ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                    Add
-                  </Button>
-                </div>
+                {/* Add track — URL or Bulk mode */}
+                <BulkAddPanel
+                  onAddTracks={(tracks) => setStagedTracks((prev) => [...prev, ...tracks])}
+                  resolveUrl={resolveTrack}
+                  buildSearchTrack={buildSearchTrack}
+                  buildFailedTrack={buildFailedTrack}
+                  outerDisabled={!selectedRoom}
+                />
 
                 {/* Track list */}
                 <div className="space-y-1 mb-4 max-h-96 overflow-y-auto">
@@ -850,8 +892,18 @@ export default function AdminAutoplayPage() {
                       No tracks yet — paste URLs above to build your playlist
                     </p>
                   ) : (
-                    stagedTracks.map((track, i) => (
-                      <div key={i} className="rounded-lg px-2 py-1.5 group hover:bg-muted/10">
+                    stagedTracks.map((track, i) => {
+                      const isFailed = !track.sourceUrl && !!track._searchQuery
+                      const isAltsOpen = expandedStagedIdx === i
+                      return (
+                      <div
+                        key={i}
+                        className="rounded-lg px-2 py-1.5 group hover:bg-muted/10"
+                        style={{
+                          background: isFailed ? "oklch(0.15 0.05 25 / 0.20)" : undefined,
+                          border: isFailed ? "1px solid oklch(0.55 0.18 25 / 0.4)" : "1px solid transparent",
+                        }}
+                      >
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-[10px] text-muted-foreground/50 w-5 text-right">{i + 1}</span>
                           <div
@@ -879,6 +931,12 @@ export default function AdminAutoplayPage() {
                             title="Duration in seconds"
                           />
                           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <BulkActionButton
+                              track={track}
+                              isExpanded={isAltsOpen}
+                              onToggleExpand={() => setExpandedStagedIdx(isAltsOpen ? null : i)}
+                              onReplace={(next) => setStagedTracks((prev) => prev.map((t, j) => (j === i ? next : t)))}
+                            />
                             <button onClick={() => moveTrack(i, -1)} disabled={i === 0} className="p-1 rounded hover:bg-muted/20 disabled:opacity-20">
                               <ArrowUp className="h-3 w-3 text-muted-foreground" />
                             </button>
@@ -890,6 +948,14 @@ export default function AdminAutoplayPage() {
                             </button>
                           </div>
                         </div>
+                        {/* Bulk-mode alternatives expander */}
+                        {isAltsOpen && (
+                          <BulkAltsPanel
+                            track={track}
+                            onReplace={(next) => setStagedTracks((prev) => prev.map((t, j) => (j === i ? next : t)))}
+                            onClose={() => setExpandedStagedIdx(null)}
+                          />
+                        )}
                         {/* Info snippet — shown to listeners while this track plays */}
                         <textarea
                           value={track.infoSnippet || ""}
@@ -900,7 +966,8 @@ export default function AdminAutoplayPage() {
                           className="mt-1.5 ml-7 w-[calc(100%-1.75rem)] resize-y rounded-md bg-muted/15 px-2 py-1.5 font-sans text-[11px] text-muted-foreground outline-none focus:bg-muted/25 focus:text-foreground border border-transparent focus:border-border/40"
                         />
                       </div>
-                    ))
+                      )
+                    })
                   )}
                 </div>
 

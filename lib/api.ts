@@ -64,6 +64,71 @@ export async function authRequest<T>(path: string, options?: RequestInit): Promi
   })
 }
 
+// ---------- Admin: bulk track search ----------
+
+export interface TrackCandidate {
+  title: string
+  artist: string
+  duration: number
+  source: string
+  sourceUrl: string
+  thumbnail: string
+  channel: string
+}
+
+export type AdminSearchTrackResult =
+  | { ok: true; primary: TrackCandidate; alternatives: TrackCandidate[] }
+  | {
+      ok: false
+      reason: "no_results" | "quota" | "not_configured" | "error"
+      message?: string
+    }
+
+/**
+ * GET /api/admin/search-track?q=... — admin-only endpoint that resolves a
+ * free-form query to a YouTube Data API match + alternatives.
+ * Returns a discriminated union so callers can handle 204 (no results),
+ * 429 (quota), 503 (not configured), and generic errors distinctly without
+ * the throw-on-non-2xx behavior of authRequest.
+ */
+export async function adminSearchTrack(query: string): Promise<AdminSearchTrackResult> {
+  const token = getToken()
+  const sessionId = getSessionId()
+  const res = await fetch(
+    `${API_BASE}/api/admin/search-track?q=${encodeURIComponent(query)}`,
+    {
+      credentials: "include",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(sessionId ? { "X-Session-ID": sessionId } : {}),
+      },
+    },
+  )
+  if (res.status === 204) return { ok: false, reason: "no_results" }
+  if (res.status === 429) {
+    return { ok: false, reason: "quota", message: await res.text().catch(() => "") }
+  }
+  if (res.status === 503) {
+    return {
+      ok: false,
+      reason: "not_configured",
+      message: await res.text().catch(() => ""),
+    }
+  }
+  if (!res.ok) {
+    return {
+      ok: false,
+      reason: "error",
+      message: `${res.status}: ${await res.text().catch(() => res.statusText)}`,
+    }
+  }
+  const data = (await res.json()) as {
+    primary: TrackCandidate
+    alternatives: TrackCandidate[]
+  }
+  return { ok: true, primary: data.primary, alternatives: data.alternatives }
+}
+
 // ---------- Session ----------
 
 export interface Session {
