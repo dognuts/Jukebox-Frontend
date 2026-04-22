@@ -12,3 +12,8 @@ node_modules/
 # Next.js / TS build artifacts
 next-env.d.ts
 tsconfig.tsbuildinfo
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
