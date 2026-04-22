@@ -158,6 +158,84 @@ test("bulk mode: unmatched query renders as a failed-state row", async ({ page }
   await expect(page.locator("input[value^='(not found']")).toBeVisible()
 })
 
+test("authRequest transparently refreshes on 401 and retries", async ({ page }) => {
+  // First call to search-track returns 401 (simulating an expired JWT).
+  // Second call returns the real response. authRequest should:
+  //   1) See the 401
+  //   2) Call /api/auth/refresh (default fixture mock returns a fresh token)
+  //   3) Retry the original search-track request
+  //   4) Succeed
+  // Net effect: the user never sees the 401, the track just lands.
+  let searchTrackCallCount = 0
+  let refreshCalled = false
+
+  await page.route("**/api/admin/search-track*", (route) => {
+    searchTrackCallCount++
+    if (searchTrackCallCount === 1) {
+      route.fulfill({ status: 401, body: "token expired" })
+      return
+    }
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        primary: {
+          title: "Apache",
+          artist: "Incredible Bongo Band",
+          duration: 284,
+          source: "youtube",
+          sourceUrl: "https://www.youtube.com/watch?v=apache-id",
+          thumbnail: "https://img/apache.jpg",
+          channel: "Dusty Fingers",
+        },
+        alternatives: [],
+      }),
+    })
+  })
+
+  // Override the default refresh mock to track calls
+  await page.route("**/api/auth/refresh", (route) => {
+    refreshCalled = true
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        accessToken: "refreshed-admin-token",
+        refreshToken: "refreshed-refresh-token",
+        user: {
+          id: "admin-test-1",
+          email: "admin@test.local",
+          emailVerified: true,
+          displayName: "Admin Test",
+          avatarColor: "#e89a3c",
+          bio: "",
+          favoriteGenres: [],
+          createdAt: "2026-01-01T00:00:00Z",
+          updatedAt: "2026-01-01T00:00:00Z",
+          isAdmin: true,
+        },
+      }),
+    })
+  })
+
+  await page.goto("/admin/autoplay")
+  await page.getByText("B-Side").click()
+
+  const bulkButtons = page.getByRole("button", { name: /Bulk/ })
+  await bulkButtons.last().click()
+
+  const textarea = page.getByPlaceholder(/Paste one song per line/).last()
+  await textarea.fill("apache incredible bongo band")
+  await page.getByRole("button", { name: "Find on YouTube" }).last().click()
+
+  // The track should have landed despite the 401 on the first attempt
+  await expect(page.locator("input[value='Apache']")).toBeVisible()
+
+  // And we should see exactly: one failed call, one refresh, one successful retry
+  expect(searchTrackCallCount).toBe(2)
+  expect(refreshCalled).toBe(true)
+})
+
 test("bulk mode: picking an alternative replaces the row atomically", async ({ page }) => {
   await page.goto("/admin/autoplay")
   await page.getByText("B-Side").click()

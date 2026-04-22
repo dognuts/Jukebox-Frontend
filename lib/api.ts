@@ -6,10 +6,81 @@
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || ""
 
+const TOKEN_KEY = "jukebox_access_token"
+const REFRESH_KEY = "jukebox_refresh_token"
+
+// Name of the window event fired when api.ts force-clears auth tokens.
+// AuthProvider listens for this to sync React state (setUser(null), etc).
+export const AUTH_LOGOUT_EVENT = "jukebox:auth-logout"
+
 function getToken(): string | null {
   return typeof window !== "undefined"
-    ? localStorage.getItem("jukebox_access_token")
+    ? localStorage.getItem(TOKEN_KEY)
     : null
+}
+
+function clearAuthTokens() {
+  if (typeof window === "undefined") return
+  localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(REFRESH_KEY)
+  window.dispatchEvent(new CustomEvent(AUTH_LOGOUT_EVENT))
+}
+
+// Deduplicates concurrent refresh attempts. When many authRequests hit 401
+// simultaneously, only the first fires a refresh; the rest await the same
+// promise. Otherwise we'd blow through refresh tokens (each rotation revokes
+// the previous) and log the user out under normal conditions.
+let refreshInFlight: Promise<boolean> | null = null
+
+/**
+ * refreshTokens exchanges the stored refresh token for a new access + refresh
+ * pair, writing them to localStorage. Returns true on success.
+ *
+ * On ANY failure — HTTP error, network error, missing refresh token — clears
+ * localStorage and fires AUTH_LOGOUT_EVENT so listeners can update state.
+ * (Previously the network-error case was silently swallowed, which left the
+ * client with a stale access token that appeared valid until expiry — the
+ * cause of the expired-session save failures seen on 2026-04-22.)
+ */
+export async function refreshTokens(): Promise<boolean> {
+  if (typeof window === "undefined") return false
+  if (refreshInFlight) return refreshInFlight
+
+  refreshInFlight = (async () => {
+    const refreshToken = localStorage.getItem(REFRESH_KEY)
+    if (!refreshToken) {
+      clearAuthTokens()
+      return false
+    }
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      })
+      if (!res.ok) {
+        clearAuthTokens()
+        return false
+      }
+      const data = (await res.json()) as { accessToken: string; refreshToken: string }
+      localStorage.setItem(TOKEN_KEY, data.accessToken)
+      localStorage.setItem(REFRESH_KEY, data.refreshToken)
+      return true
+    } catch {
+      // Network error — previously swallowed silently. Treat as a logout
+      // so the UI reflects the broken session instead of limping along
+      // with expired credentials.
+      clearAuthTokens()
+      return false
+    }
+  })()
+
+  try {
+    return await refreshInFlight
+  } finally {
+    refreshInFlight = null
+  }
 }
 
 /** Get stored session ID (persists across browser backgrounding on mobile) */
@@ -52,16 +123,48 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json()
 }
 
-/** Authenticated request — includes JWT Bearer token. */
+/**
+ * Authenticated request — includes JWT Bearer token. On 401 (expired or
+ * missing user in server context), attempts one refresh and retries the
+ * request. If the refresh fails, throws the original 401 and fires
+ * AUTH_LOGOUT_EVENT via refreshTokens().
+ */
 export async function authRequest<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = getToken()
-  return request<T>(path, {
-    ...options,
-    headers: {
+  const doFetch = async (): Promise<Response> => {
+    const token = getToken()
+    const sessionId = getSessionId()
+    const mergedHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options?.headers,
-    },
-  })
+      ...(sessionId ? { "X-Session-ID": sessionId } : {}),
+      ...((options?.headers as Record<string, string>) ?? {}),
+    }
+    const { headers: _dropHeaders, ...restOptions } = options ?? {}
+    return fetch(`${API_BASE}${path}`, {
+      credentials: "include",
+      ...restOptions,
+      headers: mergedHeaders,
+    })
+  }
+
+  let res = await doFetch()
+  if (res.status === 401) {
+    // The access token is expired or no longer recognized server-side.
+    // Try one refresh and replay. refreshTokens() dedupes concurrent calls,
+    // so a page full of authRequests hitting 401 at once only triggers one
+    // /api/auth/refresh round trip.
+    const refreshed = await refreshTokens()
+    if (refreshed) {
+      res = await doFetch()
+    }
+  }
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText)
+    throw new Error(`API ${res.status}: ${text}`)
+  }
+
+  return res.json()
 }
 
 // ---------- Admin: bulk track search ----------
@@ -92,18 +195,32 @@ export type AdminSearchTrackResult =
  * the throw-on-non-2xx behavior of authRequest.
  */
 export async function adminSearchTrack(query: string): Promise<AdminSearchTrackResult> {
-  const token = getToken()
-  const sessionId = getSessionId()
-  const res = await fetch(
-    `${API_BASE}/api/admin/search-track?q=${encodeURIComponent(query)}`,
-    {
-      credentials: "include",
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(sessionId ? { "X-Session-ID": sessionId } : {}),
+  const doFetch = async (): Promise<Response> => {
+    const token = getToken()
+    const sessionId = getSessionId()
+    return fetch(
+      `${API_BASE}/api/admin/search-track?q=${encodeURIComponent(query)}`,
+      {
+        credentials: "include",
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(sessionId ? { "X-Session-ID": sessionId } : {}),
+        },
       },
-    },
-  )
+    )
+  }
+
+  let res = await doFetch()
+  // Same refresh-then-retry pattern as authRequest. Without this, a 40-track
+  // bulk import started near token expiry would lose every row that landed
+  // post-expiry to a 401 that the batch treats as a generic error.
+  if (res.status === 401) {
+    const refreshed = await refreshTokens()
+    if (refreshed) {
+      res = await doFetch()
+    }
+  }
+
   if (res.status === 204) return { ok: false, reason: "no_results" }
   if (res.status === 429) {
     return { ok: false, reason: "quota", message: await res.text().catch(() => "") }

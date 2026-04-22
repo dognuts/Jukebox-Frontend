@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react"
+import { refreshTokens as apiRefreshTokens, AUTH_LOGOUT_EVENT } from "./api"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || ""
 
@@ -83,41 +84,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
-  // Try to refresh tokens and load user on mount
+  // Refresh tokens and reload user profile. Delegates token-rotation work
+  // to lib/api.ts so authRequest() can share the same dedupe + logout-event
+  // pipeline. A transient network error inside apiRefreshTokens now clears
+  // the session (it used to be swallowed silently, leaving the UI believing
+  // the user was still logged in while the access token ticked toward
+  // expiry — cause of the admin save failures observed 2026-04-22).
   const refreshAuth = useCallback(async () => {
-    const refreshToken = getStored(REFRESH_KEY)
-    if (!refreshToken) {
+    const ok = await apiRefreshTokens()
+    if (!ok) {
+      setUser(null)
+      setAccessToken(null)
       setLoading(false)
       return
     }
-
-    try {
-      const res = await fetch(`${API_BASE}/api/auth/refresh`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ refreshToken }),
-      })
-
-      if (!res.ok) {
-        clearStored(TOKEN_KEY)
-        clearStored(REFRESH_KEY)
-        setUser(null)
-        setAccessToken(null)
-        setLoading(false)
-        return
-      }
-
-      const data = await res.json()
-      setStored(TOKEN_KEY, data.accessToken)
-      setStored(REFRESH_KEY, data.refreshToken)
-      setAccessToken(data.accessToken)
-      setUser(data.user)
-    } catch {
-      // Backend unreachable
-    } finally {
+    const token = getStored(TOKEN_KEY)
+    setAccessToken(token)
+    // Re-pull the user profile so React state matches the freshly-rotated
+    // token. An extra round trip every 12 minutes, but it lets us keep the
+    // api.ts boundary simple (opaque token rotation) rather than leaking
+    // the AuthUser type down into lib/api.ts.
+    if (!token) {
       setLoading(false)
+      return
     }
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      })
+      if (res.ok) {
+        const userData = (await res.json()) as AuthUser
+        setUser(userData)
+      }
+    } catch {
+      // Network error on /me is fine — tokens are still valid, next
+      // interval will retry. Don't clear state on a transient blip.
+    }
+    setLoading(false)
+  }, [])
+
+  // When lib/api.ts force-clears auth tokens (e.g. a retried authRequest
+  // still fails after a refresh attempt), sync React state so the UI stops
+  // rendering admin chrome on a dead session.
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const handleLogout = () => {
+      setUser(null)
+      setAccessToken(null)
+    }
+    window.addEventListener(AUTH_LOGOUT_EVENT, handleLogout)
+    return () => window.removeEventListener(AUTH_LOGOUT_EVENT, handleLogout)
   }, [])
 
   useEffect(() => {

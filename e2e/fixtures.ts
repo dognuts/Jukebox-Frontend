@@ -25,6 +25,7 @@ export const FAKE_ADMIN_USER = {
 export async function seedAdminSession(page: Page) {
   await page.addInitScript(() => {
     window.localStorage.setItem("jukebox_access_token", "fake-admin-token")
+    window.localStorage.setItem("jukebox_refresh_token", "fake-refresh-token")
     window.localStorage.setItem("jukebox_session_id", "fake-session-id")
   })
 }
@@ -40,6 +41,19 @@ export async function mockAdminAuth(page: Page) {
       status: 200,
       contentType: "application/json",
       body: JSON.stringify(FAKE_ADMIN_USER),
+    })
+  })
+  // Default refresh mock: returns a new token pair whenever asked. Tests
+  // that need to verify refresh-failure behavior should override this route.
+  await page.route("**/api/auth/refresh", (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        accessToken: "refreshed-admin-token",
+        refreshToken: "refreshed-refresh-token",
+        user: FAKE_ADMIN_USER,
+      }),
     })
   })
   // Session endpoint is hit by getSession() elsewhere — keep it benign.
