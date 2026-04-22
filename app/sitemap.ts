@@ -38,20 +38,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }))
 
-  const genreRooms: MetadataRoute.Sitemap = [
-    "lo-fi",
-    "hip-hop",
-    "jazz",
-    "electronic",
-    "indie",
-    "soul",
-  ].map((genre) => ({
-    url: `${BASE_URL}/room/${genre}`,
-    lastModified: now,
-    changeFrequency: "daily" as const,
-    priority: 0.9,
-  }))
-
   // Pull live user-created rooms from the backend at build/revalidate time.
   // Backend returns APIRoom[]: { slug, lastActive?, createdAt, isLive, ... }
   let userRooms: MetadataRoute.Sitemap = []
@@ -88,7 +74,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     ...staticPages,
-    ...genreRooms,
     ...blogIndex,
     ...blogPosts,
     ...userRooms,

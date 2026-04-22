@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Create a Room",
+  title: "Create a Jukebox",
   description:
-    "Create your own live listening room on Jukebox. Pick a genre, invite friends, listen together.",
+    "Become a DJ. Build a tracklist, name your Jukebox, go live. Let listeners suggest tracks or lock it down — your room, your rules. Free.",
   alternates: { canonical: "https://jukebox-app.com/create" },
 }
 

@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og"
 
-export const alt = "Jukebox — Listen to Music Together"
+export const alt = "Jukebox — Where Music Heads Listen Together"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
@@ -30,7 +30,7 @@ export default async function Image() {
           JUKEBOX
         </div>
         <div style={{ fontSize: 36, color: "#e89a3c", marginTop: 8 }}>
-          Listen Together
+          Where Music Heads Listen Together
         </div>
         <div
           style={{
@@ -40,7 +40,7 @@ export default async function Image() {
             letterSpacing: "0.04em",
           }}
         >
-          Hip-Hop · Lo-fi · Jazz · Electronic · Indie · Soul
+          Deep Cuts · Rare Tracks · Samples · DJ Your Own Room
         </div>
       </div>
     ),

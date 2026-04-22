@@ -6,12 +6,17 @@ export function SEOContent() {
       style={{ marginTop: "var(--space-2xl)" }}
     >
       <div>
-        <h2 className="mb-3 text-2xl font-bold text-foreground">What is Jukebox?</h2>
+        <h2 className="mb-3 text-2xl font-bold text-foreground">
+          Music, the Way It Was Meant to Be Heard
+        </h2>
         <p>
-          Jukebox is a free social music app where you join live listening rooms organized by
-          genre — Hip-Hop, Lo-fi, Jazz, Electronic, Indie, and Soul. Instead of listening alone,
-          you share the experience with other music lovers in real time. No downloads, no
-          subscriptions, just pick a room and press play.
+          Jukebox is a free listening app for people who actually care about
+          music. Join a live Jukebox and hear the same music at the same time
+          as everyone else in the room — deep cuts, rare tracks, sample
+          breakdowns — while talking about it in a live chat. Official
+          Jukeboxes are curated by the Jukebox team around specific themes. Or
+          become a DJ — create your own Jukebox, build a tracklist, and host a
+          live listening session for others to join.
         </p>
       </div>
 
@@ -19,56 +24,81 @@ export function SEOContent() {
         <h2 className="mb-3 text-2xl font-bold text-foreground">How It Works</h2>
         <ol className="list-inside list-decimal space-y-3">
           <li>
-            <strong>Pick a genre</strong> — Choose from Hip-Hop, Lo-fi, Jazz, Electronic, Indie,
-            or Soul.
+            <strong>Join a Jukebox</strong> — Browse live rooms. Official
+            Jukeboxes are always running with curated tracklists. User-hosted
+            Jukeboxes go live when a DJ starts a session.
           </li>
           <li>
-            <strong>Join a live room</strong> — Jump into an active room with other listeners, or
-            start your own.
+            <strong>Listen together</strong> — Everyone in the room hears the
+            same track at the same moment. React, discuss, and share the
+            experience in the live chat.
           </li>
           <li>
-            <strong>Listen together</strong> — Everyone hears the same music at the same time.
-            Chat, react, discover.
+            <strong>Become a DJ</strong> — Create your own Jukebox, name it,
+            build a tracklist, and go live. You can even let listeners submit
+            songs by dropping YouTube or SoundCloud links.
           </li>
         </ol>
       </div>
 
       <div>
-        <h2 className="mb-3 text-2xl font-bold text-foreground">Frequently Asked Questions</h2>
+        <h2 className="mb-3 text-2xl font-bold text-foreground">
+          Frequently Asked Questions
+        </h2>
         <dl className="space-y-4">
           <div>
             <dt className="font-semibold text-foreground">Is Jukebox free?</dt>
             <dd>
-              Yes. Jukebox is completely free to use. Join any room, listen as long as you want,
-              no credit card required.
+              Yes. Completely free. No subscriptions, no ads, no credit card.
+              Just music.
             </dd>
           </div>
           <div>
             <dt className="font-semibold text-foreground">Do I need an account?</dt>
             <dd>
-              No. You can jump into any room without creating an account. Sign up if you want to
-              save favorites, create rooms, or customize your DJ profile.
+              Not to listen. Jump into any live Jukebox without signing up.
+              Create a free account to DJ your own room or save your favorites.
             </dd>
           </div>
           <div>
-            <dt className="font-semibold text-foreground">What genres are available?</dt>
+            <dt className="font-semibold text-foreground">
+              What are Official Jukeboxes?
+            </dt>
             <dd>
-              We currently have six genre rooms: Hip-Hop, Lo-fi, Jazz, Electronic, Indie, and
-              Soul. Users can also create custom rooms.
+              Official Jukeboxes are curated by the Jukebox team around
+              specific themes — like old school hip-hop deep cuts or
+              sample-original pairings. They loop a hand-picked tracklist and
+              stay live until the team rotates them out, usually monthly.
             </dd>
           </div>
           <div>
-            <dt className="font-semibold text-foreground">How does real-time listening work?</dt>
+            <dt className="font-semibold text-foreground">
+              Can I DJ my own Jukebox?
+            </dt>
             <dd>
-              When a DJ plays a track, every listener in the room hears it simultaneously. The
-              music syncs in real time over the web — no special software or plugins needed.
+              Yes. Sign up, build a tracklist, and go live. You control what
+              plays. If you want, you can let listeners suggest songs by
+              pasting YouTube or SoundCloud links. Your Jukebox stays live as
+              long as you're hosting.
             </dd>
           </div>
           <div>
-            <dt className="font-semibold text-foreground">Can I create my own room?</dt>
+            <dt className="font-semibold text-foreground">
+              How is this different from Spotify or Apple Music?
+            </dt>
             <dd>
-              Yes. Sign up for a free account and you can create your own listening room with any
-              theme or genre you want.
+              Spotify gives you a playlist you listen to alone. Jukebox gives
+              you a room — everyone hears the same music at the same time and
+              talks about it in a live chat. It's a shared experience, not a
+              solo one.
+            </dd>
+          </div>
+          <div>
+            <dt className="font-semibold text-foreground">Can I request songs?</dt>
+            <dd>
+              In user-created Jukeboxes, DJs can allow listeners to submit song
+              suggestions via YouTube or SoundCloud links. Official Jukeboxes
+              have locked tracklists curated by the Jukebox team.
             </dd>
           </div>
         </dl>
@@ -88,7 +118,7 @@ export function HomeStructuredData() {
         acceptedAnswer: {
           "@type": "Answer",
           text:
-            "Yes. Jukebox is completely free to use. Join any room, listen as long as you want, no credit card required.",
+            "Yes. Completely free. No subscriptions, no ads, no credit card. Just music.",
         },
       },
       {
@@ -97,25 +127,43 @@ export function HomeStructuredData() {
         acceptedAnswer: {
           "@type": "Answer",
           text:
-            "No. You can jump into any room without creating an account. Sign up to save favorites, create rooms, or customize your DJ profile.",
+            "Not to listen. Jump into any live Jukebox without signing up. Create a free account to DJ your own room or save your favorites.",
         },
       },
       {
         "@type": "Question",
-        name: "What genres are available?",
+        name: "What are Official Jukeboxes?",
         acceptedAnswer: {
           "@type": "Answer",
           text:
-            "Six genre rooms: Hip-Hop, Lo-fi, Jazz, Electronic, Indie, and Soul. Users can also create custom rooms.",
+            "Official Jukeboxes are curated by the Jukebox team around specific themes — like old school hip-hop deep cuts or sample-original pairings. They loop a hand-picked tracklist and stay live until the team rotates them out, usually monthly.",
         },
       },
       {
         "@type": "Question",
-        name: "How does real-time listening work?",
+        name: "Can I DJ my own Jukebox?",
         acceptedAnswer: {
           "@type": "Answer",
           text:
-            "When a DJ plays a track, every listener in the room hears it simultaneously. The music syncs in real time over the web.",
+            "Yes. Sign up, build a tracklist, and go live. You control what plays. If you want, you can let listeners suggest songs by pasting YouTube or SoundCloud links. Your Jukebox stays live as long as you're hosting.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "How is this different from Spotify or Apple Music?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text:
+            "Spotify gives you a playlist you listen to alone. Jukebox gives you a room — everyone hears the same music at the same time and talks about it in a live chat. It's a shared experience, not a solo one.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Can I request songs?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text:
+            "In user-created Jukeboxes, DJs can allow listeners to submit song suggestions via YouTube or SoundCloud links. Official Jukeboxes have locked tracklists curated by the Jukebox team.",
         },
       },
     ],
@@ -127,7 +175,7 @@ export function HomeStructuredData() {
     name: "Jukebox",
     url: "https://jukebox-app.com",
     description:
-      "A free social music listening app with live genre rooms. Listen together in real time.",
+      "A free listening app for music heads. Curated official Jukeboxes and user-hosted DJ sessions with synced listening and live chat. Deep cuts, rare tracks, sample breakdowns.",
     applicationCategory: "MultimediaApplication",
     operatingSystem: "Web",
     offers: {
@@ -135,6 +183,14 @@ export function HomeStructuredData() {
       price: "0",
       priceCurrency: "USD",
     },
+    featureList: [
+      "Synced listening rooms",
+      "Live chat",
+      "Curated official Jukeboxes",
+      "DJ your own Jukebox",
+      "Listener song submissions via YouTube and SoundCloud",
+      "No account required to listen",
+    ],
   }
 
   return (

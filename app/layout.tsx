@@ -29,24 +29,24 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://jukebox-app.com",
   ),
   title: {
-    default: "Jukebox — Listen to Music Together in Live Rooms",
+    default: "Jukebox — Where Music Heads Listen Together",
     template: "%s | Jukebox",
   },
   description:
-    "Join live music rooms and listen together in real time. Hip-Hop, Lo-fi, Jazz, Electronic, Indie, Soul — pick a vibe and share the experience. Free, no account needed.",
+    "Synced listening rooms for music heads. Join curated Jukeboxes or DJ your own — deep cuts, rare tracks, sample breakdowns, live chat. Free.",
   openGraph: {
     type: "website",
     siteName: "Jukebox",
-    title: "Jukebox — Listen to Music Together",
+    title: "Jukebox — Where Music Heads Listen Together",
     description:
-      "Join live music rooms and listen together in real time. Pick a genre, jump in, share the vibe.",
+      "Synced listening rooms with live chat. Curated official Jukeboxes and user-hosted DJ sessions for people who actually care about music.",
     url: "https://jukebox-app.com",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Jukebox — Listen to Music Together",
+    title: "Jukebox — Where Music Heads Listen Together",
     description:
-      "Live music rooms by genre. Listen together in real time. Free.",
+      "Synced listening rooms with live chat. Curated Jukeboxes or DJ your own. Free.",
   },
   alternates: {
     canonical: "https://jukebox-app.com",
