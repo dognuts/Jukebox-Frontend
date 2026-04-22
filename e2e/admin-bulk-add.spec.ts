@@ -97,6 +97,62 @@ test.beforeEach(async ({ page }) => {
   })
 })
 
+test("live playlist highlights the currently-playing track (currentIndex = index of playing track)", async ({ page }) => {
+  // The admin UI highlights row `i` as "On Air" when i === livePlaylist.currentIndex.
+  // Backend semantics: current_index IS the index of the currently-playing
+  // track (not "next to play"). This test asserts the contract end-to-end
+  // so a future refactor that flips the semantics back is caught immediately.
+  await page.route(
+    "**/api/admin/autoplay/rooms/room-1/playlists",
+    (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          {
+            id: "pl-1",
+            roomId: "room-1",
+            status: "live",
+            name: "Test Playlist",
+            tracks: [
+              { title: "Track A", artist: "Art", duration: 180, source: "youtube", sourceUrl: "https://y/a" },
+              { title: "Track B", artist: "Art", duration: 180, source: "youtube", sourceUrl: "https://y/b" },
+              { title: "Track C", artist: "Art", duration: 180, source: "youtube", sourceUrl: "https://y/c" },
+              { title: "Track D", artist: "Art", duration: 180, source: "youtube", sourceUrl: "https://y/d" },
+              { title: "Track E", artist: "Art", duration: 180, source: "youtube", sourceUrl: "https://y/e" },
+            ],
+            currentIndex: 2, // Track C is currently playing
+            createdAt: "2026-04-22T00:00:00Z",
+            activatedAt: "2026-04-22T00:00:00Z",
+          },
+        ]),
+      })
+    },
+  )
+
+  await page.goto("/admin/autoplay")
+  await page.getByText("B-Side").click()
+
+  // Scope the search to the row that contains the "Track C" title input
+  const trackCRow = page
+    .locator("input[value='Track C']")
+    .locator("xpath=ancestor::div[contains(@class, 'group')]")
+  await expect(trackCRow.getByText("On Air", { exact: true })).toBeVisible()
+
+  // And the OTHER rows must not be marked On Air
+  const trackARow = page
+    .locator("input[value='Track A']")
+    .locator("xpath=ancestor::div[contains(@class, 'group')]")
+  await expect(trackARow.getByText("On Air", { exact: true })).toHaveCount(0)
+  const trackERow = page
+    .locator("input[value='Track E']")
+    .locator("xpath=ancestor::div[contains(@class, 'group')]")
+  await expect(trackERow.getByText("On Air", { exact: true })).toHaveCount(0)
+
+  // And the position readout reflects 1-based "3 of 5"
+  await expect(page.getByText("Position 3/5")).toBeVisible()
+})
+
 test("admin autoplay page loads with bulk-add panel visible", async ({ page }) => {
   await page.goto("/admin/autoplay")
   // Wait for the admin room to appear in the sidebar, which confirms the
