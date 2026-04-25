@@ -859,6 +859,7 @@ export function RoomClient({ slug }: { slug: string }) {
               <Link
                 href={`/help/listening?${new URLSearchParams({
                   room: slug,
+                  ...(room?.name ? { roomName: room.name } : {}),
                   ...(currentTrack?.id ? { track: currentTrack.id } : {}),
                   ...(currentTrack?.title ? { trackTitle: currentTrack.title } : {}),
                   ...(currentTrack?.artist ? { trackArtist: currentTrack.artist } : {}),

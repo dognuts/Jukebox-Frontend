@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { MessageCircle } from "lucide-react"
+import { ArrowLeft, MessageCircle } from "lucide-react"
 import { TroubleshooterRow } from "@/components/help/troubleshooter-row"
 import { ContactSupportForm } from "@/components/help/contact-support-form"
 
@@ -75,6 +75,7 @@ function ListeningTroubleshooter() {
   }, [])
 
   const roomSlug = params.get("room") || ""
+  const roomName = params.get("roomName") || ""
   const trackId = params.get("track") || ""
   const trackTitle = params.get("trackTitle") || ""
   const trackArtist = params.get("trackArtist") || ""
@@ -87,6 +88,16 @@ function ListeningTroubleshooter() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 lg:px-6">
+      {roomSlug && (
+        <Link
+          href={`/room/${roomSlug}`}
+          className="mb-6 inline-flex items-center gap-1 font-sans text-sm transition-colors hover:text-foreground"
+          style={{ color: "rgba(232,230,234,0.6)" }}
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to {roomName || "room"}
+        </Link>
+      )}
       <h1 className="font-sans text-3xl font-bold text-foreground mb-2">Trouble listening?</h1>
       <p className="font-sans text-sm text-muted-foreground mb-10">
         Pick the issue you're seeing — most things have a quick fix.
