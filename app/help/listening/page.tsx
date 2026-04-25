@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { MessageCircle } from "lucide-react"
@@ -59,7 +59,7 @@ const ROWS: Array<{ id: RowId; title: string; render: () => React.ReactNode }> =
   },
 ]
 
-export default function ListeningTroubleshooterPage() {
+function ListeningTroubleshooter() {
   const params = useSearchParams()
   const [openId, setOpenId] = useState<RowId | "still-stuck" | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
@@ -137,5 +137,13 @@ export default function ListeningTroubleshooterPage() {
         playbackPositionSec={playbackPositionSec}
       />
     </div>
+  )
+}
+
+export default function ListeningTroubleshooterPage() {
+  return (
+    <Suspense fallback={null}>
+      <ListeningTroubleshooter />
+    </Suspense>
   )
 }
