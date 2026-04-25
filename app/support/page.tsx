@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import Link from "next/link"
 import { Mail, MessageCircle } from "lucide-react"
 import { FAQItem } from "@/components/support/faq-item"
 
@@ -54,6 +55,16 @@ export default function SupportPage() {
       <p className="font-sans text-sm text-muted-foreground mb-10">
         Find answers to common questions or get in touch with our team.
       </p>
+
+      <div
+        className="mb-10 rounded-xl border border-border/40 px-4 py-3 flex items-center justify-between"
+        style={{ background: "oklch(0.14 0.01 280 / 0.5)" }}
+      >
+        <span className="font-sans text-sm text-muted-foreground">Playback or audio problem? Check the listening troubleshooter.</span>
+        <Link href="/help/listening" className="font-sans text-sm font-semibold underline underline-offset-2" style={{ color: "#e89a2e" }}>
+          Trouble listening? →
+        </Link>
+      </div>
 
       {/* FAQ Section */}
       <div className="mb-12">
