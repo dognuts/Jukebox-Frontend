@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { MessageCircle } from "lucide-react"
 import { TroubleshooterRow } from "@/components/help/troubleshooter-row"
+import { ContactSupportForm } from "@/components/help/contact-support-form"
 
 type RowId = "gated" | "no-audio" | "out-of-sync" | "unavailable"
 
@@ -61,6 +62,7 @@ const ROWS: Array<{ id: RowId; title: string; render: () => React.ReactNode }> =
 export default function ListeningTroubleshooterPage() {
   const params = useSearchParams()
   const [openId, setOpenId] = useState<RowId | "still-stuck" | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
 
   // Deep-link support: #gated / #no-audio / #out-of-sync / #unavailable / #still-stuck
   useEffect(() => {
@@ -78,10 +80,10 @@ export default function ListeningTroubleshooterPage() {
   const trackArtist = params.get("trackArtist") || ""
   const playbackPositionSec = Number(params.get("pos") || 0)
 
-  const handleContactClick = () => {
-    // Wired in Task 10 to open the ContactSupportForm modal.
-    console.log("[help/listening] contact support clicked", { roomSlug, trackId, trackTitle, trackArtist, playbackPositionSec })
-  }
+  const defaultCategory: "gated" | "no-audio" | "out-of-sync" | "other" =
+    openId === "gated" || openId === "no-audio" || openId === "out-of-sync" ? openId : "other"
+
+  const handleContactClick = () => setModalOpen(true)
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 lg:px-6">
@@ -123,6 +125,17 @@ export default function ListeningTroubleshooterPage() {
       <p className="font-sans text-xs text-muted-foreground">
         Looking for general account, billing, or room help? Visit the <Link href="/support" className="underline">support page</Link>.
       </p>
+
+      <ContactSupportForm
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        defaultCategory={defaultCategory}
+        roomSlug={roomSlug}
+        trackId={trackId}
+        trackTitle={trackTitle}
+        trackArtist={trackArtist}
+        playbackPositionSec={playbackPositionSec}
+      />
     </div>
   )
 }
