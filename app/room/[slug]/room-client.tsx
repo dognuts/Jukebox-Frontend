@@ -628,6 +628,15 @@ export function RoomClient({ slug }: { slug: string }) {
   // ─── Derived render data ──────────────────────────────────────────────────
 
   const displayTrack = currentTrack ?? room.nowPlaying
+
+  // Playback position for the "Trouble listening?" help link (listener view only)
+  let rawPos = 0
+  if (wsPlaybackState) {
+    rawPos = wsPlaybackState.isPlaying && wsPlaybackState.startedAt > 0
+      ? Math.max(0, (Date.now() - wsPlaybackState.startedAt) / 1000)
+      : wsPlaybackState.pausePosition
+  }
+  const playbackPos = Math.round(rawPos * 10) / 10
   const djInitials = (room.djName || "DJ").slice(0, 2).toUpperCase()
 
   // DJ commentary body: prefer the admin-authored info snippet on the
@@ -843,6 +852,25 @@ export function RoomClient({ slug }: { slug: string }) {
           {/* Queue — always render, even in idle state, so DJs can see
               what's lined up. */}
           <ListenerQueue tracks={queueTracks} />
+
+          {/* "Trouble listening?" — listener-only footer link to help page */}
+          {!isDJ && (
+            <div className="flex justify-center py-4">
+              <Link
+                href={`/help/listening?${new URLSearchParams({
+                  room: slug,
+                  ...(currentTrack?.id ? { track: currentTrack.id } : {}),
+                  ...(currentTrack?.title ? { trackTitle: currentTrack.title } : {}),
+                  ...(currentTrack?.artist ? { trackArtist: currentTrack.artist } : {}),
+                  ...(playbackPos ? { pos: String(playbackPos) } : {}),
+                }).toString()}`}
+                className="font-sans text-xs underline underline-offset-2"
+                style={{ color: "rgba(232,230,234,0.4)" }}
+              >
+                Trouble listening?
+              </Link>
+            </div>
+          )}
 
           {/* DJ controls live in the DjDeck third column (added below
               after the chat column when isDJ). */}
