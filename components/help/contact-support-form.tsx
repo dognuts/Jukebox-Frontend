@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react"
 import { X } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || ""
+
 interface ContactSupportFormProps {
   open: boolean
   onClose: () => void
@@ -87,7 +89,7 @@ export function ContactSupportForm({
     }
 
     try {
-      const res = await fetch("/api/support/listener-report", {
+      const res = await fetch(`${API_BASE}/api/support/listener-report`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
