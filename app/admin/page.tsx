@@ -44,8 +44,8 @@ export default function AdminPage() {
 
   const fetchRooms = useCallback(async () => {
     try {
-      const data = await authRequest("/api/admin/rooms")
-      setRooms(data)
+      const data = await authRequest<AdminRoom[] | null>("/api/admin/rooms")
+      setRooms(data ?? [])
       setError(null)
     } catch (err: any) {
       setError(err.message?.includes("403") ? "Admin access required" : "Failed to load rooms")

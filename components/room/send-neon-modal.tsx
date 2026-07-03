@@ -204,8 +204,8 @@ export function SendNeonModal({ open, onClose, roomId, neonBalance: initialBalan
                         color: tooExpensive
                           ? "oklch(0.45 0.03 280)"
                           : amount === amt ? "oklch(0.72 0.18 195)" : "oklch(0.65 0.03 280)",
-                        ringColor: "oklch(0.72 0.18 195 / 0.5)",
-                      }}
+                        "--tw-ring-color": "oklch(0.72 0.18 195 / 0.5)",
+                      } as React.CSSProperties}
                     >
                       {amt}
                       {tooExpensive && (

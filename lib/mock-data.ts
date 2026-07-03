@@ -1,6 +1,6 @@
 export type TrackSource = "youtube" | "soundcloud" | "mp3"
 export type RequestPolicy = "closed" | "open" | "approval"
-export type ChatMessageType = "message" | "request" | "announcement" | "activity_join" | "activity_tip"
+export type ChatMessageType = "message" | "request" | "announcement" | "activity_join" | "activity_tip" | "activity_leave"
 
 export interface Track {
   id: string

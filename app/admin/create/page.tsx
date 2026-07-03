@@ -7,6 +7,7 @@ import { ArrowLeft, Shield, Radio } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Navbar } from "@/components/layout/navbar"
+import { BubbleBackground } from "@/components/effects/bubble-background"
 
 import { useAuth } from "@/lib/auth-context"
 
@@ -50,7 +51,7 @@ export default function AdminCreatePage() {
     setCreating(true)
     setError(null)
     try {
-      const data = await authRequest("/api/admin/rooms", {
+      const data = await authRequest<{ djKey: string }>("/api/admin/rooms", {
         method: "POST",
         body: JSON.stringify({
           name: name.trim(),

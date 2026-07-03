@@ -290,7 +290,7 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
     // Try to find the liked playlist — if missing, fetch/ensure it
     let liked = playlists.find((p) => p.isLiked)
     if (!liked) {
-      liked = await ensureLikedPlaylist()
+      liked = (await ensureLikedPlaylist()) ?? undefined
       if (!liked) {
         toast.error("Something went wrong — please try again")
         return
