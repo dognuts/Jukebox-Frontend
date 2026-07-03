@@ -173,7 +173,7 @@ export function GifPicker({ open, onClose, onSelect }: GifPickerProps) {
           borderBottom: "0.5px solid rgba(255,255,255,0.06)",
         }}
       >
-        <div className="flex flex-1 items-center gap-2 rounded-full"
+        <div className="neon-focus flex flex-1 items-center gap-2 rounded-full"
           style={{
             height: "32px",
             paddingInline: "var(--space-sm)",
@@ -181,13 +181,14 @@ export function GifPicker({ open, onClose, onSelect }: GifPickerProps) {
             border: "0.5px solid rgba(255,255,255,0.08)",
           }}
         >
-          <Search className="h-3.5 w-3.5 shrink-0" style={{ color: "rgba(232,230,234,0.3)" }} />
+          <Search className="h-3.5 w-3.5 shrink-0" style={{ color: "rgba(232,230,234,0.3)" }} aria-hidden="true" />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search GIFs..."
-            className="flex-1 bg-transparent text-xs outline-none placeholder:text-[rgba(232,230,234,0.25)]"
+            aria-label="Search GIFs"
+            className="flex-1 bg-transparent text-xs outline-none placeholder:text-[rgba(232,230,234,0.55)]"
             style={{ color: "#e8e6ea" }}
             autoFocus
           />
@@ -198,7 +199,7 @@ export function GifPicker({ open, onClose, onSelect }: GifPickerProps) {
           className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/[0.06]"
           aria-label="Close GIF picker"
         >
-          <X className="h-3.5 w-3.5" style={{ color: "rgba(232,230,234,0.5)" }} />
+          <X className="h-3.5 w-3.5" style={{ color: "rgba(232,230,234,0.7)" }} />
         </button>
       </div>
 
@@ -212,7 +213,7 @@ export function GifPicker({ open, onClose, onSelect }: GifPickerProps) {
         {gifs.length === 0 && !loading && (
           <div
             className="flex h-full items-center justify-center"
-            style={{ color: "rgba(232,230,234,0.3)", fontSize: "var(--fs-small)" }}
+            style={{ color: "rgba(232,230,234,0.55)", fontSize: "var(--fs-small)" }}
           >
             {query ? "No GIFs found" : "Loading..."}
           </div>
@@ -271,7 +272,7 @@ export function GifPicker({ open, onClose, onSelect }: GifPickerProps) {
         {loading && (
           <div
             className="flex items-center justify-center py-3"
-            style={{ color: "rgba(232,230,234,0.3)", fontSize: "var(--fs-meta)" }}
+            style={{ color: "rgba(232,230,234,0.55)", fontSize: "var(--fs-meta)" }}
           >
             Loading...
           </div>
@@ -291,7 +292,7 @@ export function GifPicker({ open, onClose, onSelect }: GifPickerProps) {
             fontSize: "9px",
             fontWeight: 600,
             letterSpacing: "0.05em",
-            color: "rgba(232,230,234,0.35)",
+            color: "rgba(232,230,234,0.55)",
             textTransform: "uppercase",
           }}
         >

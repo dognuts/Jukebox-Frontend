@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { memo, useState, useCallback, useEffect, useRef } from "react"
 import {
   Mic,
   MicOff,
@@ -58,7 +58,9 @@ function formatMicTime(s: number): string {
 // stays on the left). Contains every host-side control: DJ header,
 // transport, mic, policy, add track, hype meter + activity breakdown,
 // pending requests list, and end set button.
-export function DjDeck({
+// Memoized: all props are primitives, room-page state, or stable
+// callbacks, so unrelated page re-renders bail out here.
+export const DjDeck = memo(function DjDeck({
   djName,
   djInitials,
   requestStatus,
@@ -153,8 +155,12 @@ export function DjDeck({
   const HypeIcon = hypeScore >= 80 ? Flame : hypeScore >= 50 ? TrendingUp : Zap
 
   return (
+    // Mobile: the deck pane of the room's tabbed shell — flex-1/min-h-0
+    // fills the fixed-height shell so the body scrolls internally and
+    // "End set" stays pinned at the bottom. md+: the third grid column,
+    // unchanged.
     <div
-      className="flex flex-col border-t border-white/[0.06] md:border-t-0 md:border-l"
+      className="flex min-h-0 flex-1 flex-col md:min-h-[auto] md:flex-initial md:border-l"
       style={{
         background: "rgba(255,255,255,0.012)",
         borderColor: "rgba(255,255,255,0.06)",
@@ -260,7 +266,7 @@ export function DjDeck({
               className="ml-auto tabular-nums"
               style={{
                 fontSize: "var(--fs-small)",
-                color: "rgba(232,230,234,0.5)",
+                color: "rgba(232,230,234,0.6)",
               }}
             >
               {audioPlaying ? "Playing" : "Paused"}
@@ -289,7 +295,7 @@ export function DjDeck({
               <>
                 <span className="relative flex h-2 w-2">
                   <span
-                    className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
+                    className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 motion-reduce:animate-none"
                     style={{ background: "#ff5a3a" }}
                   />
                   <span
@@ -363,7 +369,8 @@ export function DjDeck({
                 if (e.key === "Enter") handleAddTrack()
               }}
               placeholder="Paste URL..."
-              className="rounded-lg outline-none placeholder:text-[rgba(232,230,234,0.3)]"
+              aria-label="Track URL"
+              className="neon-focus rounded-lg placeholder:text-[rgba(232,230,234,0.55)]"
               style={{
                 paddingInline: "var(--space-sm)",
                 paddingBlock: "var(--space-sm)",
@@ -431,7 +438,7 @@ export function DjDeck({
               className="mt-2 flex justify-between"
               style={{
                 fontSize: "var(--fs-meta)",
-                color: "rgba(232,230,234,0.5)",
+                color: "rgba(232,230,234,0.6)",
               }}
             >
               <span className="flex items-center gap-1">
@@ -457,7 +464,7 @@ export function DjDeck({
               style={{
                 background: "rgba(255,255,255,0.02)",
                 border: "0.5px dashed rgba(255,255,255,0.1)",
-                color: "rgba(232,230,234,0.4)",
+                color: "rgba(232,230,234,0.55)",
                 fontSize: "var(--fs-small)",
               }}
             >
@@ -496,7 +503,7 @@ export function DjDeck({
                     <div
                       className="truncate"
                       style={{
-                        color: "rgba(232,230,234,0.5)",
+                        color: "rgba(232,230,234,0.6)",
                         fontSize: "var(--fs-meta)",
                       }}
                     >
@@ -618,7 +625,7 @@ export function DjDeck({
       )}
     </div>
   )
-}
+})
 
 function Section({
   label,
@@ -629,15 +636,18 @@ function Section({
 }) {
   return (
     <div className="flex flex-col" style={{ gap: "var(--space-sm)" }}>
-      <div
+      {/* h2 for the screen-reader outline — Tailwind's preflight
+          neutralizes heading defaults, so this renders identically
+          to the previous div. */}
+      <h2
         className="uppercase tracking-[0.16em]"
         style={{
           fontSize: "var(--fs-meta)",
-          color: "rgba(232,230,234,0.4)",
+          color: "rgba(232,230,234,0.55)",
         }}
       >
         {label}
-      </div>
+      </h2>
       {children}
     </div>
   )

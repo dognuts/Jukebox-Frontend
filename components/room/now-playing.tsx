@@ -258,7 +258,7 @@ export function NowPlaying({
             >
               <span className="relative flex h-2 w-2 shrink-0">
                 <span
-                  className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
+                  className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 motion-reduce:animate-none"
                   style={{ background: "oklch(0.58 0.26 30)" }}
                 />
                 <span

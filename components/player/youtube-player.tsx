@@ -18,10 +18,22 @@ export interface AudioPlayerHandle {
   getCurrentTime: () => number
   getDuration: () => number
   isAdPlaying?: () => boolean
+  // True while the player is still in a pre-playback initialization
+  // state (YouTube: unstarted/cued — the states its state map doesn't
+  // propagate; SoundCloud: before the current track's first PLAY
+  // event). Lets the AudioEngine's autoplay watchdog grant slow loads
+  // extra grace before declaring an autoplay-policy block.
+  isInitializing?: () => boolean
 }
 
 interface YouTubePlayerProps {
   videoId: string
+  // Consulted before the track-change self-play (loadVideoById and its
+  // timed playVideo retries). When it returns false the new video is
+  // cued instead of played, so a pause the AudioEngine is honoring
+  // (media key, headphone unplug, DJ mic) survives the track advance —
+  // the engine starts playback itself once the pause is over.
+  shouldAutoplay?: () => boolean
   onReady?: () => void
   onStateChange?: (state: "playing" | "paused" | "ended" | "buffering") => void
   onDuration?: (seconds: number) => void
@@ -54,7 +66,7 @@ function loadYTApi(): Promise<void> {
 }
 
 export const YouTubePlayer = forwardRef<AudioPlayerHandle, YouTubePlayerProps>(
-  function YouTubePlayer({ videoId, onReady, onStateChange, onDuration, onTimeUpdate, onAdStateChange }, ref) {
+  function YouTubePlayer({ videoId, shouldAutoplay, onReady, onStateChange, onDuration, onTimeUpdate, onAdStateChange }, ref) {
     const containerRef = useRef<HTMLDivElement>(null)
     const playerRef = useRef<any>(null)
     const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -91,6 +103,12 @@ export const YouTubePlayer = forwardRef<AudioPlayerHandle, YouTubePlayerProps>(
       getCurrentTime: () => playerRef.current?.getCurrentTime?.() ?? 0,
       getDuration: () => playerRef.current?.getDuration?.() ?? 0,
       isAdPlaying: () => adPlayingRef.current,
+      isInitializing: () => {
+        // -1 = unstarted, 5 = cued — where a still-loading video sits
+        // before its first buffering/playing transition.
+        const s = playerRef.current?.getPlayerState?.()
+        return s === -1 || s === 5
+      },
     }))
 
     const startTimeUpdates = useCallback(() => {
@@ -193,10 +211,20 @@ export const YouTubePlayer = forwardRef<AudioPlayerHandle, YouTubePlayerProps>(
       if (videoId !== currentVideoId.current && playerRef.current?.loadVideoById) {
         currentVideoId.current = videoId
         adPlayingRef.current = false
-        playerRef.current.loadVideoById(videoId)
-        // Explicitly play after loading — loadVideoById can be blocked by autoplay policies
+        if (shouldAutoplay?.() ?? true) {
+          playerRef.current.loadVideoById(videoId)
+        } else {
+          // The engine is honoring a user/mic pause — cue the new video
+          // without playing so the pause survives the track advance.
+          // syncToServer (or a media-key "play") starts it once the
+          // pause is actually over.
+          playerRef.current.cueVideoById?.(videoId)
+        }
+        // Explicitly play after loading — loadVideoById can be blocked
+        // by autoplay policies. Re-checked at fire time so a pause
+        // registered in the meantime isn't steamrolled by a stale retry.
         setTimeout(() => {
-          playerRef.current?.playVideo?.()
+          if (shouldAutoplay?.() ?? true) playerRef.current?.playVideo?.()
         }, 300)
         // Re-fire onReady since the player is already initialized but has a new video
         setTimeout(() => {
@@ -207,12 +235,12 @@ export const YouTubePlayer = forwardRef<AudioPlayerHandle, YouTubePlayerProps>(
         }, 800)
         // Retry play and duration report
         setTimeout(() => {
-          playerRef.current?.playVideo?.()
+          if (shouldAutoplay?.() ?? true) playerRef.current?.playVideo?.()
           const dur = playerRef.current?.getDuration?.() ?? 0
           if (dur > 0) onDuration?.(dur)
         }, 2000)
       }
-    }, [videoId, onReady, onDuration])
+    }, [videoId, onReady, onDuration, shouldAutoplay])
 
     return (
       <div ref={containerRef} className="yt-embed-container w-full aspect-video rounded-xl overflow-hidden" aria-label="YouTube player" />

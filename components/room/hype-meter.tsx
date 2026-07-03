@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import { Flame, TrendingUp, Zap } from "lucide-react"
 
 interface HypeMeterProps {
@@ -47,7 +47,7 @@ export function HypeMeter({ recentTips, recentChats, recentReactions }: HypeMete
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-1.5">
           {hypeScore >= 80 ? (
-            <Flame className="h-3.5 w-3.5 animate-pulse" style={{ color: hypeLevel.color }} />
+            <Flame className="h-3.5 w-3.5 animate-pulse motion-reduce:animate-none" style={{ color: hypeLevel.color }} />
           ) : hypeScore >= 50 ? (
             <TrendingUp className="h-3.5 w-3.5" style={{ color: hypeLevel.color }} />
           ) : (
@@ -101,32 +101,79 @@ export function HypeMeter({ recentTips, recentChats, recentReactions }: HypeMete
   )
 }
 
-// Hook to track activity over a rolling window
-export function useHypeTracking() {
-  const [tips, setTips] = useState<number[]>([])
-  const [chats, setChats] = useState<number[]>([])
-  const [reactions, setReactions] = useState<number[]>([])
+// Rolling activity window in ms.
+const HYPE_WINDOW_MS = 60000
 
-  // Clean up old entries every second
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now()
-      const cutoff = now - 60000 // 60 second window
-      setTips((prev) => prev.filter((t) => t > cutoff))
-      setChats((prev) => prev.filter((t) => t > cutoff))
-      setReactions((prev) => prev.filter((t) => t > cutoff))
-    }, 1000)
-    return () => clearInterval(interval)
+// Drop timestamps that have aged out of the window. Entries are pushed
+// in order, so trimming from the front is enough.
+function pruneWindow(arr: number[], cutoff: number) {
+  while (arr.length > 0 && arr[0] <= cutoff) arr.shift()
+}
+
+// Hook to track activity over a rolling window.
+//
+// Bookkeeping lives in refs — timestamps are pushed/pruned without any
+// React state — and counts are published via a single setState that
+// returns the previous object when nothing changed, so React bails out.
+// The old implementation called three filter()-based setStates every
+// second, which re-rendered every subscriber (the whole room page) at
+// 1Hz forever, even for idle listeners.
+//
+// `enabled` gates the pruning interval and count publishing entirely:
+// only the DJ view consumes these counts, so listeners pass false and
+// do zero per-second work.
+export function useHypeTracking(enabled = true) {
+  const tipsRef = useRef<number[]>([])
+  const chatsRef = useRef<number[]>([])
+  const reactionsRef = useRef<number[]>([])
+  const enabledRef = useRef(enabled)
+  enabledRef.current = enabled
+
+  const [counts, setCounts] = useState({ tips: 0, chats: 0, reactions: 0 })
+
+  const publish = useCallback(() => {
+    const cutoff = Date.now() - HYPE_WINDOW_MS
+    pruneWindow(tipsRef.current, cutoff)
+    pruneWindow(chatsRef.current, cutoff)
+    pruneWindow(reactionsRef.current, cutoff)
+    const tips = tipsRef.current.length
+    const chats = chatsRef.current.length
+    const reactions = reactionsRef.current.length
+    setCounts((prev) =>
+      prev.tips === tips && prev.chats === chats && prev.reactions === reactions
+        ? prev
+        : { tips, chats, reactions }
+    )
   }, [])
 
-  const recordTip = () => setTips((prev) => [...prev, Date.now()])
-  const recordChat = () => setChats((prev) => [...prev, Date.now()])
-  const recordReaction = () => setReactions((prev) => [...prev, Date.now()])
+  // Prune + republish once a second — but only while enabled, and the
+  // bail-out above means an idle room still never re-renders.
+  useEffect(() => {
+    if (!enabled) return
+    publish()
+    const interval = setInterval(publish, 1000)
+    return () => clearInterval(interval)
+  }, [enabled, publish])
+
+  const record = useCallback(
+    (arr: number[]) => {
+      // Prune on write too so a disabled (listener) hook can't grow
+      // its arrays unboundedly over a long session.
+      pruneWindow(arr, Date.now() - HYPE_WINDOW_MS)
+      arr.push(Date.now())
+      if (enabledRef.current) publish()
+    },
+    [publish]
+  )
+
+  const recordTip = useCallback(() => record(tipsRef.current), [record])
+  const recordChat = useCallback(() => record(chatsRef.current), [record])
+  const recordReaction = useCallback(() => record(reactionsRef.current), [record])
 
   return {
-    recentTips: tips.length,
-    recentChats: chats.length,
-    recentReactions: reactions.length,
+    recentTips: counts.tips,
+    recentChats: counts.chats,
+    recentReactions: counts.reactions,
     recordTip,
     recordChat,
     recordReaction,

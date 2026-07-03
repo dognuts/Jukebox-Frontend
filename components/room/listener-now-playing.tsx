@@ -1,8 +1,11 @@
 "use client"
 
+import { memo } from "react"
 import Link from "next/link"
 import { Heart, Plus, Mic } from "lucide-react"
 import { soundcloudProfileUrl } from "@/lib/track-utils"
+import { useRoomPlaybackPosition } from "@/hooks/room-store"
+import { usePrefersReducedMotion } from "@/components/room/use-prefers-reduced-motion"
 
 interface ListenerNowPlayingProps {
   djName: string
@@ -10,7 +13,9 @@ interface ListenerNowPlayingProps {
   djInitials: string
   trackTitle: string
   trackArtist: string
-  currentTime: number
+  // When false (pre-WS fallback data), the progress display pins to 0
+  // instead of showing the audio engine's position.
+  progressEnabled: boolean
   duration: number
   isPlaying: boolean
   djSpeaking?: boolean
@@ -40,13 +45,60 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`
 }
 
-export function ListenerNowPlaying({
+// Progress display leaf — the ONLY subscriber to the playback-position
+// slice. The audio engine writes the position 2-4x per second while
+// playing; keeping the subscription down here means each tick
+// re-renders just this bar and its two time labels, not the room page.
+function TrackProgress({
+  duration,
+  enabled,
+}: {
+  duration: number
+  enabled: boolean
+}) {
+  const position = useRoomPlaybackPosition()
+  const currentTime = enabled ? position : 0
+  const pct =
+    duration > 0
+      ? Math.min(100, Math.max(0, (currentTime / duration) * 100))
+      : 0
+
+  return (
+    <div className="mt-4">
+      <div
+        className="relative h-[3px] overflow-hidden rounded"
+        style={{ background: "rgba(255,255,255,0.06)" }}
+      >
+        <div
+          className="absolute inset-y-0 left-0 rounded transition-[width] duration-500 ease-linear"
+          style={{ width: `${pct}%`, background: "#e89a3c" }}
+        />
+      </div>
+      <div className="mt-1 flex justify-between">
+        <span
+          className="text-[10px] tabular-nums"
+          style={{ color: "rgba(232,230,234,0.55)" }}
+        >
+          {formatTime(currentTime)}
+        </span>
+        <span
+          className="text-[10px] tabular-nums"
+          style={{ color: "rgba(232,230,234,0.55)" }}
+        >
+          {duration > 0 ? formatTime(duration) : "—:—"}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+export const ListenerNowPlaying = memo(function ListenerNowPlaying({
   djName,
   djSubtitle,
   djInitials,
   trackTitle,
   trackArtist,
-  currentTime,
+  progressEnabled,
   duration,
   isPlaying,
   djSpeaking = false,
@@ -59,17 +111,17 @@ export function ListenerNowPlaying({
   isYouTube = false,
   ytSlotRef,
 }: ListenerNowPlayingProps) {
-  const pct =
-    duration > 0
-      ? Math.min(100, Math.max(0, (currentTime / duration) * 100))
-      : 0
-
   // SoundCloud attribution: link the title to the track URL and the
   // artist name to the uploader's profile URL, both required by the
   // SoundCloud API Terms of Use when displaying track metadata.
   const scProfileUrl = soundCloudUrl
     ? soundcloudProfileUrl(soundCloudUrl)
     : null
+
+  // The EQ bars and "On mic" pulse animate via inline style values,
+  // which the global reduced-motion CSS block can't reach — gate them
+  // here instead.
+  const prefersReducedMotion = usePrefersReducedMotion()
 
   return (
     <div
@@ -108,7 +160,7 @@ export function ListenerNowPlaying({
             </div>
             <div
               className="truncate text-[10px]"
-              style={{ color: "rgba(232,230,234,0.35)" }}
+              style={{ color: "rgba(232,230,234,0.55)" }}
             >
               {djSubtitle}
             </div>
@@ -120,7 +172,9 @@ export function ListenerNowPlaying({
                 background: "rgba(232,115,74,0.12)",
                 border: "0.5px solid rgba(232,115,74,0.3)",
                 color: "#e8734a",
-                animation: "listener-reaction-pulse 2s ease-in-out infinite",
+                animation: prefersReducedMotion
+                  ? undefined
+                  : "listener-reaction-pulse 2s ease-in-out infinite",
               }}
             >
               <Mic className="h-3 w-3" />
@@ -185,7 +239,7 @@ export function ListenerNowPlaying({
               style={{
                 marginBottom: "var(--space-2xs)",
                 fontSize: "var(--fs-meta)",
-                color: "rgba(232,230,234,0.35)",
+                color: "rgba(232,230,234,0.55)",
               }}
             >
               Now playing
@@ -217,7 +271,7 @@ export function ListenerNowPlaying({
               style={{
                 marginBottom: "var(--space-sm)",
                 fontSize: "var(--fs-body)",
-                color: "rgba(232,230,234,0.5)",
+                color: "rgba(232,230,234,0.6)",
               }}
             >
               {scProfileUrl ? (
@@ -253,7 +307,7 @@ export function ListenerNowPlaying({
                   className="inline-block w-[3px] rounded-sm"
                   style={{
                     background: "#e89a3c",
-                    animation: isPlaying
+                    animation: isPlaying && !prefersReducedMotion
                       ? `${bar.anim} ease-in-out infinite ${bar.delay}`
                       : "none",
                     height: "8px",
@@ -264,32 +318,9 @@ export function ListenerNowPlaying({
           </div>
         </div>
 
-        {/* Progress bar */}
-        <div className="mt-4">
-          <div
-            className="relative h-[3px] overflow-hidden rounded"
-            style={{ background: "rgba(255,255,255,0.06)" }}
-          >
-            <div
-              className="absolute inset-y-0 left-0 rounded transition-[width] duration-500 ease-linear"
-              style={{ width: `${pct}%`, background: "#e89a3c" }}
-            />
-          </div>
-          <div className="mt-1 flex justify-between">
-            <span
-              className="text-[10px] tabular-nums"
-              style={{ color: "rgba(232,230,234,0.3)" }}
-            >
-              {formatTime(currentTime)}
-            </span>
-            <span
-              className="text-[10px] tabular-nums"
-              style={{ color: "rgba(232,230,234,0.3)" }}
-            >
-              {duration > 0 ? formatTime(duration) : "—:—"}
-            </span>
-          </div>
-        </div>
+        {/* Progress bar — isolated leaf so per-tick position updates
+            don't re-render the rest of the hero */}
+        <TrackProgress duration={duration} enabled={progressEnabled} />
 
         {/* Action buttons */}
         <div className="mt-3.5 flex flex-wrap items-center gap-2">
@@ -352,4 +383,4 @@ export function ListenerNowPlaying({
       </div>
     </div>
   )
-}
+})

@@ -21,7 +21,7 @@ export function ListenerNav({
 
   return (
     <div
-      className="relative flex h-14 items-center justify-between px-5"
+      className="relative flex h-14 shrink-0 items-center justify-between px-5"
       style={{
         background: "rgba(13,11,16,0.95)",
         borderBottom: "0.5px solid rgba(255,255,255,0.06)",
@@ -49,7 +49,7 @@ export function ListenerNav({
           href="/"
           className="flex shrink-0 items-center gap-1 transition-colors hover:text-white/60"
           style={{
-            color: "rgba(232,230,234,0.4)",
+            color: "rgba(232,230,234,0.55)",
             fontSize: "var(--fs-small)",
           }}
         >
@@ -60,7 +60,10 @@ export function ListenerNav({
           className="h-[14px] w-px shrink-0"
           style={{ background: "rgba(255,255,255,0.08)" }}
         />
-        <div
+        {/* h1 for the screen-reader outline — Tailwind's preflight
+            neutralizes heading defaults, so this renders identically
+            to the previous div. */}
+        <h1
           className="truncate font-semibold"
           style={{
             color: "#e8e6ea",
@@ -68,7 +71,7 @@ export function ListenerNav({
           }}
         >
           {roomName}
-        </div>
+        </h1>
         {isLive && (
           <div
             className="shrink-0 rounded-lg font-bold tracking-[0.08em]"
@@ -93,15 +96,19 @@ export function ListenerNav({
         <div
           className="flex items-center gap-1"
           style={{
-            color: "rgba(232,230,234,0.4)",
+            color: "rgba(232,230,234,0.55)",
             fontSize: "var(--fs-small)",
           }}
         >
           <span
+            aria-hidden="true"
             className="h-[5px] w-[5px] rounded-full"
             style={{ background: "#5dca87" }}
           />
           {listenerCount}
+          <span className="sr-only">
+            {listenerCount === 1 ? "listener" : "listeners"}
+          </span>
         </div>
 
         {/* Messages — matches global Navbar treatment */}

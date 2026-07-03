@@ -1,10 +1,12 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback, forwardRef } from "react"
+import { useState, useRef, useEffect, useCallback, useMemo, forwardRef, memo } from "react"
 import { type ChatMessage } from "@/lib/mock-data"
 import { type ListenerInfo } from "@/hooks/use-room-websocket"
+import { useRoomChatMessages } from "@/hooks/room-store"
 import { GifPicker } from "@/components/room/gif-picker"
 import { ChatMediaInline } from "@/components/room/chat-media-inline"
+import { usePrefersReducedMotion } from "@/components/room/use-prefers-reduced-motion"
 
 // Per-user colour palette. Hash username → fixed slot so the same name is
 // always the same colour.
@@ -37,8 +39,16 @@ function relativeTime(then: Date): string {
 
 const REACTION_EMOJIS = ["🔥", "🎵", "💯", "❤️", "😎"] as const
 
+// A scroll position within this many px of the bottom counts as
+// "pinned" — new messages auto-scroll. Further up, the view stays put
+// and a "N new messages" pill appears instead.
+const NEAR_BOTTOM_PX = 80
+
 interface ListenerChatColumnProps {
-  messages: ChatMessage[]
+  // REST-snapshot messages shown until the WebSocket has connected.
+  fallbackMessages: ChatMessage[]
+  // Once true, render live messages from the chat slice instead.
+  useWsData: boolean
   listeners: ListenerInfo[]
   listenerCount: number
   onSendMessage?: (message: string, media?: { mediaUrl: string; mediaType: string }) => void
@@ -48,12 +58,16 @@ interface ListenerChatColumnProps {
   overlayRef?: React.RefObject<HTMLDivElement | null>
 }
 
-export const ListenerChatColumn = forwardRef<
+// Memoized — this column subscribes to the chat slice itself, so chat
+// traffic re-renders only this component, and the memo keeps the rest
+// of the room page's re-renders (queue, tube, presence) out of here.
+export const ListenerChatColumn = memo(forwardRef<
   HTMLDivElement,
   ListenerChatColumnProps
 >(function ListenerChatColumn(
   {
-    messages,
+    fallbackMessages,
+    useWsData,
     listeners,
     listenerCount,
     onSendMessage,
@@ -68,16 +82,70 @@ export const ListenerChatColumn = forwardRef<
   const [gifPickerOpen, setGifPickerOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const overlayElRef = useRef<HTMLDivElement>(null)
+  const prefersReducedMotion = usePrefersReducedMotion()
 
-  // Auto-scroll to the bottom when new messages arrive.
-  useEffect(() => {
+  // Live chat from the external store — subscribed HERE (not in the
+  // room page) so each incoming message reconciles just this column.
+  const wsMessages = useRoomChatMessages()
+  const messages: ChatMessage[] = useMemo(() => {
+    if (useWsData) {
+      return wsMessages.map((m) => ({
+        id: m.id,
+        username: m.username,
+        avatarColor: m.avatarColor,
+        message: m.message,
+        timestamp: new Date(m.timestamp),
+        type: m.type as "message" | "request" | "announcement",
+        mediaUrl: m.mediaUrl,
+        mediaType: m.mediaType,
+      }))
+    }
+    return fallbackMessages
+  }, [useWsData, wsMessages, fallbackMessages])
+
+  // Guarded auto-scroll: only stick to the bottom while the reader is
+  // already there. Scrolled up to read history? The view stays put and
+  // a "N new messages" pill offers the way back down.
+  const nearBottomRef = useRef(true)
+  const [newCount, setNewCount] = useState(0)
+  const prevTailIdRef = useRef<string | null>(null)
+  // The reader's last real scroll position, plus whether the pane is
+  // currently display:none'd by the mobile pane switcher. display:none
+  // discards scrollTop (resets to 0), so the saved value is what lets
+  // a reader who was up in history be put back where they were when
+  // the pane is shown again (see the ResizeObserver below).
+  const savedScrollTopRef = useRef(0)
+  const paneHiddenRef = useRef(false)
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    // Ignore scroll noise while the pane is display:none'd (geometry
+    // reads 0) or in the gap before the ResizeObserver restores the
+    // position — either would clobber the saved reading position and
+    // mis-set the pinned flag.
+    if (paneHiddenRef.current || el.clientHeight === 0) return
+    savedScrollTopRef.current = el.scrollTop
+    const near =
+      el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM_PX
+    nearBottomRef.current = near
+    if (near) setNewCount((c) => (c === 0 ? c : 0))
+  }, [])
+
+  const scrollToBottom = useCallback(() => {
     const el = scrollRef.current
     if (!el) return
     el.scrollTop = el.scrollHeight
-  }, [messages.length])
+    nearBottomRef.current = true
+    setNewCount((c) => (c === 0 ? c : 0))
+  }, [])
 
-  // Spawn a floating emoji in the overlay layer
+  // Spawn a floating emoji in the overlay layer. The float uses the Web
+  // Animations API, which the global reduced-motion CSS can't reach —
+  // skip it entirely when the user prefers reduced motion (the reaction
+  // counter pill still updates).
   const spawnEmoji = useCallback((emoji: string) => {
+    if (prefersReducedMotion) return
     const container = overlayElRef.current
     if (!container) return
 
@@ -125,7 +193,7 @@ export const ListenerChatColumn = forwardRef<
     )
 
     setTimeout(() => el.remove(), dur + 50)
-  }, [])
+  }, [prefersReducedMotion])
 
   const fireReaction = useCallback(
     (emoji: string) => {
@@ -185,27 +253,100 @@ export const ListenerChatColumn = forwardRef<
 
   // Filtered and displayed messages — exclude system activity events from
   // the feed but keep chat/announcements/requests.
-  const displayed = messages.filter(
-    (m) => m.type === "message" || m.type === "announcement" || m.type === "request"
+  const displayed = useMemo(
+    () =>
+      messages.filter(
+        (m) =>
+          m.type === "message" || m.type === "announcement" || m.type === "request"
+      ),
+    [messages]
   )
 
+  // Auto-scroll on new displayed messages — but only when pinned near
+  // the bottom. Keyed on the tail message id, NOT the array length: the
+  // chat slice is capped, so in a busy room the length plateaus while
+  // ids keep changing. New arrivals are counted by walking ids past the
+  // previously seen tail; if that tail has already been pruned off the
+  // top, everything displayed counts as new (bounded by the cap).
+  const tailId = displayed.length > 0 ? displayed[displayed.length - 1].id : null
+
+  useEffect(() => {
+    const prevTailId = prevTailIdRef.current
+    prevTailIdRef.current = tailId
+    let delta = 0
+    if (tailId !== null && tailId !== prevTailId) {
+      delta = displayed.length
+      if (prevTailId !== null) {
+        const idx = displayed.findIndex((m) => m.id === prevTailId)
+        if (idx !== -1) delta = displayed.length - 1 - idx
+      }
+    }
+    const el = scrollRef.current
+    if (!el) return
+    if (nearBottomRef.current) {
+      el.scrollTop = el.scrollHeight
+    } else if (delta > 0) {
+      setNewCount((c) => c + delta)
+    }
+  }, [tailId, displayed])
+
+  // React to the scroll viewport itself hiding/showing/resizing:
+  // - The mobile pane switcher hides this column with display:none,
+  //   which discards the scroll position (resets to 0). On re-show,
+  //   pinned readers snap back to the bottom and readers who were up
+  //   in history are restored to their saved position.
+  // - The on-screen keyboard resizes the visible pane; pinned readers
+  //   are re-pinned so they aren't stranded mid-history until the
+  //   next message (unpinned readers keep their place natively).
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => {
+      if (el.clientHeight === 0) {
+        // Hidden (display:none) — freeze the saved position until the
+        // pane is shown again.
+        paneHiddenRef.current = true
+        return
+      }
+      if (nearBottomRef.current) {
+        el.scrollTop = el.scrollHeight
+      } else if (paneHiddenRef.current) {
+        el.scrollTop = savedScrollTopRef.current
+      }
+      paneHiddenRef.current = false
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   return (
-    <div
-      className="flex flex-col border-t border-white/[0.06] md:border-t-0 md:sticky md:top-[56px] md:self-start"
+    // Mobile: the chat pane of the room's tabbed shell — flex-1/min-h-0
+    // fills the fixed-height shell exactly so the composer is always on
+    // screen. md+: the sticky sidebar column, height capped to the
+    // viewport below the 56px nav (the md:max-h replaces the old
+    // all-breakpoints inline maxHeight — same computed value).
+    <aside
+      aria-label="Chat"
+      className="flex min-h-0 flex-1 flex-col md:min-h-[auto] md:flex-initial md:max-h-[calc(100vh-56px)] md:sticky md:top-[56px] md:self-start"
       style={{
         background: "rgba(255,255,255,0.01)",
-        maxHeight: "calc(100vh - 56px)",
       }}
     >
-      {/* Header */}
+      {/* Header — shrink-0 (like the other fixed rows below) so a
+          short landscape viewport squeezes the message log, never the
+          fixed-height rows; md:shrink restores the desktop default. */}
       <div
+        className="shrink-0 md:shrink"
         style={{
           paddingInline: "var(--space-md)",
           paddingBlock: "var(--space-sm)",
           borderBottom: "0.5px solid rgba(255,255,255,0.06)",
         }}
       >
-        <div
+        {/* h2 for the screen-reader outline — Tailwind's preflight
+            neutralizes heading defaults, so this renders identically
+            to the previous div. */}
+        <h2
           className="font-semibold"
           style={{
             color: "#e8e6ea",
@@ -213,19 +354,159 @@ export const ListenerChatColumn = forwardRef<
           }}
         >
           Chat
-        </div>
+        </h2>
       </div>
 
-      {/* Messages */}
-      <div
-        ref={scrollRef}
-        className="relative flex flex-1 flex-col overflow-y-auto"
-        style={{
-          gap: "var(--space-sm)",
-          paddingInline: "var(--space-md)",
-          paddingBlock: "var(--space-sm)",
-        }}
-      >
+      {/* Messages viewport — relative wrapper hosts the scroll area,
+          the floating-emoji overlay (pinned to the visible box rather
+          than the scrolled content) and the new-messages pill. */}
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          role="log"
+          aria-live="polite"
+          aria-atomic="false"
+          aria-label="Chat messages"
+          className="flex flex-1 flex-col overflow-y-auto"
+          style={{
+            gap: "var(--space-sm)",
+            paddingInline: "var(--space-md)",
+            paddingBlock: "var(--space-sm)",
+          }}
+        >
+          {displayed.length === 0 && (
+            <div
+              className="text-center"
+              style={{
+                color: "rgba(232,230,234,0.55)",
+                fontSize: "var(--fs-small)",
+              }}
+            >
+              {connected ? "Say something to start the chat" : "Connecting..."}
+            </div>
+          )}
+
+          {displayed.map((msg) => {
+            const color = colorFor(msg.username)
+            const isDjMsg = msg.username === djName || msg.type === "announcement"
+            const mediaUrl = msg.mediaUrl
+            const mediaType = msg.mediaType
+            const hasMedia = !!mediaUrl
+
+            return (
+              <div key={msg.id}>
+                <div
+                  className="flex items-center gap-1.5"
+                  style={{ marginBottom: "var(--space-2xs)" }}
+                >
+                  <div
+                    className="shrink-0 rounded-full"
+                    style={{
+                      width: "clamp(14px, 1.4vw, 18px)",
+                      height: "clamp(14px, 1.4vw, 18px)",
+                      background: color,
+                    }}
+                  />
+                  <span
+                    className="font-medium"
+                    style={{ color, fontSize: "var(--fs-small)" }}
+                  >
+                    {msg.username}
+                  </span>
+                  {isDjMsg && (
+                    <span
+                      style={{
+                        color: "rgba(232,154,60,0.75)",
+                        fontSize: "var(--fs-meta)",
+                      }}
+                    >
+                      DJ
+                    </span>
+                  )}
+                  {/* Relative times derive from Date.now(), so the value
+                      server-rendered with the room's initialData can drift
+                      a second or two by the time the client hydrates —
+                      suppress the (cosmetic) text mismatch. */}
+                  <span
+                    suppressHydrationWarning
+                    style={{
+                      color: "rgba(232,230,234,0.55)",
+                      fontSize: "var(--fs-meta)",
+                    }}
+                  >
+                    {relativeTime(
+                      msg.timestamp instanceof Date
+                        ? msg.timestamp
+                        : new Date(msg.timestamp)
+                    )}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    paddingLeft: "calc(clamp(14px, 1.4vw, 18px) + 0.375rem)",
+                  }}
+                >
+                  {/* Text content */}
+                  {msg.message && (
+                    <div
+                      className="leading-[1.4]"
+                      style={{
+                        color: "rgba(232,230,234,0.6)",
+                        fontSize: "var(--fs-body)",
+                      }}
+                    >
+                      {msg.type === "request" ? (
+                        <span className="italic">requested: {msg.message}</span>
+                      ) : (
+                        msg.message
+                      )}
+                    </div>
+                  )}
+
+                  {/* Inline GIF/image */}
+                  {hasMedia && mediaUrl && (
+                    <div style={{ marginTop: msg.message ? "var(--space-2xs)" : 0 }}>
+                      <ChatMediaInline url={mediaUrl} type={mediaType} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+
+          {/* Inline reaction cluster — aria-live="off" so rapid count
+              ticks inside the polite chat log don't spam screen readers */}
+          {topReactions.length > 0 && (
+            <div
+              className="flex gap-1"
+              aria-live="off"
+              style={{
+                paddingLeft: "calc(clamp(14px, 1.4vw, 18px) + 0.375rem)",
+              }}
+            >
+              {topReactions.map(([emoji, count], i) => (
+                <span
+                  key={emoji}
+                  className="rounded-[10px]"
+                  style={{
+                    paddingInline: "var(--space-sm)",
+                    paddingBlock: "2px",
+                    fontSize: "var(--fs-body)",
+                    background: "rgba(255,255,255,0.04)",
+                    animation:
+                      i === 0 && !prefersReducedMotion
+                        ? "listener-reaction-pulse 1.5s ease-in-out infinite"
+                        : undefined,
+                  }}
+                >
+                  {emoji} {count}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Floating emoji overlay */}
         <div
           ref={overlayElRef}
@@ -233,133 +514,28 @@ export const ListenerChatColumn = forwardRef<
           className="pointer-events-none absolute inset-0 overflow-hidden"
         />
 
-        {displayed.length === 0 && (
-          <div
-            className="text-center"
+        {/* New-messages pill — shown while scrolled up reading history */}
+        {newCount > 0 && (
+          <button
+            type="button"
+            onClick={scrollToBottom}
+            className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full font-semibold shadow-lg transition-opacity hover:opacity-90"
             style={{
-              color: "rgba(232,230,234,0.3)",
+              paddingInline: "var(--space-md)",
+              paddingBlock: "4px",
               fontSize: "var(--fs-small)",
+              background: "#e89a3c",
+              color: "#0d0b10",
             }}
           >
-            {connected ? "Say something to start the chat" : "Connecting..."}
-          </div>
-        )}
-
-        {displayed.map((msg) => {
-          const color = colorFor(msg.username)
-          const isDjMsg = msg.username === djName || msg.type === "announcement"
-          const mediaUrl = msg.mediaUrl
-          const mediaType = msg.mediaType
-          const hasMedia = !!mediaUrl
-
-          return (
-            <div key={msg.id}>
-              <div
-                className="flex items-center gap-1.5"
-                style={{ marginBottom: "var(--space-2xs)" }}
-              >
-                <div
-                  className="shrink-0 rounded-full"
-                  style={{
-                    width: "clamp(14px, 1.4vw, 18px)",
-                    height: "clamp(14px, 1.4vw, 18px)",
-                    background: color,
-                  }}
-                />
-                <span
-                  className="font-medium"
-                  style={{ color, fontSize: "var(--fs-small)" }}
-                >
-                  {msg.username}
-                </span>
-                {isDjMsg && (
-                  <span
-                    style={{
-                      color: "rgba(232,154,60,0.5)",
-                      fontSize: "var(--fs-meta)",
-                    }}
-                  >
-                    DJ
-                  </span>
-                )}
-                <span
-                  style={{
-                    color: "rgba(232,230,234,0.25)",
-                    fontSize: "var(--fs-meta)",
-                  }}
-                >
-                  {relativeTime(
-                    msg.timestamp instanceof Date
-                      ? msg.timestamp
-                      : new Date(msg.timestamp)
-                  )}
-                </span>
-              </div>
-              <div
-                style={{
-                  paddingLeft: "calc(clamp(14px, 1.4vw, 18px) + 0.375rem)",
-                }}
-              >
-                {/* Text content */}
-                {msg.message && (
-                  <div
-                    className="leading-[1.4]"
-                    style={{
-                      color: "rgba(232,230,234,0.6)",
-                      fontSize: "var(--fs-body)",
-                    }}
-                  >
-                    {msg.type === "request" ? (
-                      <span className="italic">requested: {msg.message}</span>
-                    ) : (
-                      msg.message
-                    )}
-                  </div>
-                )}
-
-                {/* Inline GIF/image */}
-                {hasMedia && mediaUrl && (
-                  <div style={{ marginTop: msg.message ? "var(--space-2xs)" : 0 }}>
-                    <ChatMediaInline url={mediaUrl} type={mediaType} />
-                  </div>
-                )}
-              </div>
-            </div>
-          )
-        })}
-
-        {/* Inline reaction cluster */}
-        {topReactions.length > 0 && (
-          <div
-            className="flex gap-1"
-            style={{
-              paddingLeft: "calc(clamp(14px, 1.4vw, 18px) + 0.375rem)",
-            }}
-          >
-            {topReactions.map(([emoji, count], i) => (
-              <span
-                key={emoji}
-                className="rounded-[10px]"
-                style={{
-                  paddingInline: "var(--space-sm)",
-                  paddingBlock: "2px",
-                  fontSize: "var(--fs-body)",
-                  background: "rgba(255,255,255,0.04)",
-                  animation:
-                    i === 0
-                      ? "listener-reaction-pulse 1.5s ease-in-out infinite"
-                      : undefined,
-                }}
-              >
-                {emoji} {count}
-              </span>
-            ))}
-          </div>
+            {newCount} new {newCount === 1 ? "message" : "messages"} ↓
+          </button>
         )}
       </div>
 
       {/* Listeners bar */}
       <div
+        className="shrink-0 md:shrink"
         style={{
           paddingInline: "var(--space-md)",
           paddingBlock: "var(--space-sm)",
@@ -392,7 +568,7 @@ export const ListenerChatColumn = forwardRef<
                 background: "rgba(255,255,255,0.08)",
                 border: "1.5px solid #0d0b10",
                 marginLeft: -6,
-                color: "rgba(232,230,234,0.4)",
+                color: "rgba(232,230,234,0.6)",
                 fontSize: "var(--fs-meta)",
                 zIndex: 1,
               }}
@@ -405,7 +581,7 @@ export const ListenerChatColumn = forwardRef<
 
       {/* Reaction tray */}
       <div
-        className="flex items-center"
+        className="flex shrink-0 items-center md:shrink"
         style={{
           gap: "var(--space-xs)",
           paddingInline: "var(--space-md)",
@@ -441,9 +617,9 @@ export const ListenerChatColumn = forwardRef<
         onSend={handleSendText}
         onSendGif={handleGifSelect}
       />
-    </div>
+    </aside>
   )
-})
+}))
 
 // Isolated composer — owns the input text state locally so keystrokes
 // don't re-render ListenerChatColumn (which otherwise re-maps the full
@@ -485,7 +661,10 @@ function ChatComposer({
   return (
     <>
       {gifPickerOpen && (
-        <div style={{ paddingInline: "var(--space-md)", paddingTop: "var(--space-xs)" }}>
+        <div
+          className="shrink-0 md:shrink"
+          style={{ paddingInline: "var(--space-md)", paddingTop: "var(--space-xs)" }}
+        >
           <GifPicker
             open={gifPickerOpen}
             onClose={onCloseGifPicker}
@@ -495,6 +674,7 @@ function ChatComposer({
       )}
 
       <div
+        className="shrink-0 md:shrink"
         style={{
           paddingInline: "var(--space-md)",
           paddingBottom: "var(--space-sm)",
@@ -517,7 +697,7 @@ function ChatComposer({
               border: gifPickerOpen
                 ? "0.5px solid rgba(232,154,60,0.4)"
                 : "0.5px solid rgba(255,255,255,0.08)",
-              color: gifPickerOpen ? "#e89a3c" : "rgba(232,230,234,0.5)",
+              color: gifPickerOpen ? "#e89a3c" : "rgba(232,230,234,0.6)",
             }}
             aria-label="GIF picker"
           >
@@ -535,8 +715,9 @@ function ChatComposer({
               }
             }}
             placeholder="Say something..."
+            aria-label="Chat message"
             disabled={disabled}
-            className="flex-1 rounded-full outline-none transition-colors placeholder:text-[rgba(232,230,234,0.25)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="neon-focus flex-1 rounded-full transition-colors placeholder:text-[rgba(232,230,234,0.55)] disabled:cursor-not-allowed disabled:opacity-60"
             style={{
               height: "clamp(34px, 4vw, 42px)",
               paddingInline: "var(--space-md)",

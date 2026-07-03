@@ -1,8 +1,9 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback } from "react"
+import { memo, useEffect, useRef, useState, useCallback } from "react"
 import { Zap } from "lucide-react"
 import type { NeonTubeState } from "@/hooks/use-room-websocket"
+import { usePrefersReducedMotion } from "@/components/room/use-prefers-reduced-motion"
 
 /* ─── Level palette ──────────────────────────────────────────────── */
 
@@ -55,13 +56,20 @@ interface NeonTubeProps {
   onSendNeon?: () => void
 }
 
-export function NeonTube({ tube, powerUp, onSendNeon }: NeonTubeProps) {
+// Memoized — the tube runs its own canvas animation loop; it only
+// needs React reconciliation when the tube state itself changes.
+export const NeonTube = memo(function NeonTube({ tube, powerUp, onSendNeon }: NeonTubeProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const bubblesRef = useRef<Bubble[]>([])
   const animRef = useRef(0)
   const [showPowerUp, setShowPowerUp] = useState(false)
   const [prevFill, setPrevFill] = useState(0)
   const [isSplashing, setIsSplashing] = useState(false)
+  // Continuous inline-style animations (breathe glow, liquid cycle,
+  // surface wobble, cap shimmer, rainbow shift) bypass the global
+  // reduced-motion CSS block — gate them here. One-shot feedback
+  // effects (splash, flash, ring burst) are left as-is.
+  const prefersReducedMotion = usePrefersReducedMotion()
 
   const level = tube?.level ?? 1
   const fillAmount = tube?.fillAmount ?? 0
@@ -259,7 +267,9 @@ export function NeonTube({ tube, powerUp, onSendNeon }: NeonTubeProps) {
     : `linear-gradient(0deg, ${lv.css}, ${lv.bright})`
 
   const liquidBgSize = isRainbow ? "100% 300%" : isSupernova ? "100% 200%" : "100% 100%"
-  const liquidAnim = isRainbow
+  const liquidAnim = prefersReducedMotion
+    ? "none"
+    : isRainbow
     ? "neon-tube-liquid-cycle 4s linear infinite"
     : isSupernova
     ? "neon-tube-liquid-cycle 2s linear infinite"
@@ -300,7 +310,9 @@ export function NeonTube({ tube, powerUp, onSendNeon }: NeonTubeProps) {
             borderRadius: "50%",
             background: `radial-gradient(ellipse, rgba(${lv.glowRgb},${glowIntensity}) 0%, transparent 70%)`,
             filter: `blur(${glowSpread}px)`,
-            animation: "neon-tube-breathe 4s ease-in-out infinite",
+            animation: prefersReducedMotion
+              ? undefined
+              : "neon-tube-breathe 4s ease-in-out infinite",
             transition: "all 1.2s ease",
           }}
         />
@@ -326,7 +338,7 @@ export function NeonTube({ tube, powerUp, onSendNeon }: NeonTubeProps) {
               borderRadius: "4px 4px 2px 2px",
               background: capStyle.bg,
               border: capStyle.border,
-              animation: capStyle.anim,
+              animation: prefersReducedMotion ? undefined : capStyle.anim,
               backgroundSize: capStyle.anim ? "200% 100%" : undefined,
               position: "relative",
               zIndex: 3,
@@ -383,7 +395,9 @@ export function NeonTube({ tube, powerUp, onSendNeon }: NeonTubeProps) {
                     height: "7px",
                     borderRadius: "50%",
                     background: `radial-gradient(ellipse at 50% 80%, rgba(${lv.glowRgb},0.5), rgba(${lv.glowRgb},0.15) 60%, transparent)`,
-                    animation: "neon-tube-surface-wobble 3s ease-in-out infinite",
+                    animation: prefersReducedMotion
+                      ? undefined
+                      : "neon-tube-surface-wobble 3s ease-in-out infinite",
                   }}
                 />
               )}
@@ -491,7 +505,7 @@ export function NeonTube({ tube, powerUp, onSendNeon }: NeonTubeProps) {
               borderRadius: "2px 2px 4px 4px",
               background: capStyle.bg,
               border: capStyle.border,
-              animation: capStyle.anim,
+              animation: prefersReducedMotion ? undefined : capStyle.anim,
               backgroundSize: capStyle.anim ? "200% 100%" : undefined,
               position: "relative",
               zIndex: 3,
@@ -541,7 +555,7 @@ export function NeonTube({ tube, powerUp, onSendNeon }: NeonTubeProps) {
               </span>
               <span
                 className="text-xs font-semibold"
-                style={{ color: "rgba(232,230,234,0.5)" }}
+                style={{ color: "rgba(232,230,234,0.6)" }}
               >
                 {lv.label}
               </span>
@@ -585,7 +599,7 @@ export function NeonTube({ tube, powerUp, onSendNeon }: NeonTubeProps) {
               {prestigeCount > 10 && (
                 <span
                   className="tabular-nums font-bold"
-                  style={{ fontSize: "var(--fs-meta)", color: "rgba(232,154,60,0.6)" }}
+                  style={{ fontSize: "var(--fs-meta)", color: "rgba(232,154,60,0.8)" }}
                 >
                   +{prestigeCount - 10}
                 </span>
@@ -598,7 +612,7 @@ export function NeonTube({ tube, powerUp, onSendNeon }: NeonTubeProps) {
             className="uppercase tracking-[0.14em]"
             style={{
               fontSize: "var(--fs-meta)",
-              color: "rgba(232,230,234,0.3)",
+              color: "rgba(232,230,234,0.55)",
             }}
           >
             Room energy
@@ -626,7 +640,9 @@ export function NeonTube({ tube, powerUp, onSendNeon }: NeonTubeProps) {
                     ? "linear-gradient(90deg, oklch(0.90 0.04 80), oklch(0.98 0.01 0), oklch(0.90 0.04 270))"
                     : `linear-gradient(90deg, ${lv.css}, ${lv.bright})`,
                   backgroundSize: isRainbow || isSupernova ? "200% 100%" : "100% 100%",
-                  animation: isRainbow
+                  animation: prefersReducedMotion
+                    ? undefined
+                    : isRainbow
                     ? "rainbow-shift 3s linear infinite"
                     : isSupernova
                     ? "rainbow-shift 1.5s linear infinite"
@@ -651,13 +667,13 @@ export function NeonTube({ tube, powerUp, onSendNeon }: NeonTubeProps) {
               className="mt-1 flex items-baseline justify-between"
               style={{ fontSize: "var(--fs-meta)" }}
             >
-              <span className="tabular-nums font-semibold" style={{ color: "rgba(232,230,234,0.55)" }}>
+              <span className="tabular-nums font-semibold" style={{ color: "rgba(232,230,234,0.7)" }}>
                 {fillAmount}
-                <span style={{ color: "rgba(232,230,234,0.25)" }}> / {fillTarget}</span>
+                <span style={{ color: "rgba(232,230,234,0.55)" }}> / {fillTarget}</span>
               </span>
               <span
                 className="tabular-nums"
-                style={{ color: "rgba(232,230,234,0.25)" }}
+                style={{ color: "rgba(232,230,234,0.55)" }}
               >
                 {totalNeon > 0 && `${totalNeon.toLocaleString()} total`}
               </span>
@@ -690,7 +706,7 @@ export function NeonTube({ tube, powerUp, onSendNeon }: NeonTubeProps) {
       </div>
     </div>
   )
-}
+})
 
 /* ─── Legacy export for backwards compatibility ─────────────────── */
 

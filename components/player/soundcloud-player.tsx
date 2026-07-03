@@ -11,6 +11,12 @@ declare global {
 
 interface SoundCloudPlayerProps {
   trackUrl: string
+  // Consulted before the track-change self-play (widget.load's
+  // auto_play and its ensure-play retry). When it returns false the
+  // new track is loaded without playing, so a pause the AudioEngine is
+  // honoring (media key, headphone unplug, DJ mic) survives the track
+  // advance — the engine starts playback itself once the pause is over.
+  shouldAutoplay?: () => boolean
   onReady?: () => void
   onStateChange?: (state: "playing" | "paused" | "ended" | "buffering") => void
   onDuration?: (seconds: number) => void
@@ -75,12 +81,19 @@ function loadSCApi(): Promise<void> {
 }
 
 export const SoundCloudPlayer = forwardRef<AudioPlayerHandle, SoundCloudPlayerProps>(
-  function SoundCloudPlayer({ trackUrl, onReady, onStateChange, onDuration, onTimeUpdate, onArtwork }, ref) {
+  function SoundCloudPlayer({ trackUrl, shouldAutoplay, onReady, onStateChange, onDuration, onTimeUpdate, onArtwork }, ref) {
     const iframeRef = useRef<HTMLIFrameElement>(null)
     const widgetRef = useRef<any>(null)
     const timerRef = useRef<NodeJS.Timeout | null>(null)
     const durationRef = useRef(0)
     const positionRef = useRef(0)
+    // False until the current track's first PLAY event. The widget has
+    // no explicit "still loading" signal, so pre-first-PLAY is the
+    // closest analog to YouTube's unstarted/cued — exposed via
+    // isInitializing so the AudioEngine's watchdog grants slow loads
+    // its capped grace instead of flashing the autoplay gate at a
+    // player that was never policy-blocked.
+    const startedRef = useRef(false)
 
     useImperativeHandle(ref, () => ({
       play: () => widgetRef.current?.play?.(),
@@ -89,6 +102,7 @@ export const SoundCloudPlayer = forwardRef<AudioPlayerHandle, SoundCloudPlayerPr
       setVolume: (v: number) => widgetRef.current?.setVolume?.(v),
       getCurrentTime: () => positionRef.current,
       getDuration: () => durationRef.current,
+      isInitializing: () => !startedRef.current,
     }))
 
     const startTimeUpdates = useCallback(() => {
@@ -134,6 +148,7 @@ export const SoundCloudPlayer = forwardRef<AudioPlayerHandle, SoundCloudPlayerPr
 
           widget.bind(window.SC.Widget.Events.PLAY, () => {
             if (!destroyed) {
+              startedRef.current = true
               onStateChange?.("playing")
               startTimeUpdates()
             }
@@ -170,10 +185,13 @@ export const SoundCloudPlayer = forwardRef<AudioPlayerHandle, SoundCloudPlayerPr
         currentUrlRef.current = trackUrl
         durationRef.current = 0
         positionRef.current = 0
+        startedRef.current = false
         // Reset artwork while the new track loads so stale art doesn't linger
         onArtwork?.(null)
         widgetRef.current.load(trackUrl, {
-          auto_play: true,
+          // Gated so a pause the engine is honoring survives the track
+          // advance — the engine resumes playback itself when it ends.
+          auto_play: shouldAutoplay?.() ?? true,
           show_artwork: false,
           callback: () => {
             // Get duration of new track
@@ -185,14 +203,15 @@ export const SoundCloudPlayer = forwardRef<AudioPlayerHandle, SoundCloudPlayerPr
               onArtwork?.(upscaleArtwork(sound?.artwork_url))
             })
             onReady?.()
-            // Ensure playback starts
+            // Ensure playback starts — re-checked at fire time so a
+            // pause registered in the meantime isn't steamrolled.
             setTimeout(() => {
-              widgetRef.current?.play?.()
+              if (shouldAutoplay?.() ?? true) widgetRef.current?.play?.()
             }, 300)
           },
         })
       }
-    }, [trackUrl, onReady, onDuration, onArtwork])
+    }, [trackUrl, onReady, onDuration, onArtwork, shouldAutoplay])
 
     // Hidden iframe — audio only, no visible widget
     const embedUrl = `https://w.soundcloud.com/player/?url=${encodeURIComponent(trackUrl)}&auto_play=false&show_artwork=false&visual=false&hide_related=true&show_comments=false&show_user=false&show_reposts=false`

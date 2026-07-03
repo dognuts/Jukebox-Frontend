@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo, useEffect, useRef } from "react"
+import { useState, useCallback, useMemo, useEffect, useRef, type ReactNode } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
 import { Play, Radio } from "lucide-react"
@@ -11,27 +11,80 @@ import { ListenerDjContext } from "@/components/room/listener-dj-context"
 import { ListenerQueue } from "@/components/room/listener-queue"
 import { ListenerChatColumn } from "@/components/room/listener-chat-column"
 import { DjDeck } from "@/components/room/dj-deck"
+import { RoomMobileTabs, type MobileRoomTab } from "@/components/room/room-mobile-tabs"
 import { NeonTube } from "@/components/room/neon-tube"
+import { RoomSkeleton } from "@/components/room/room-skeleton"
 import { SupernovaExplosion } from "@/components/effects/supernova-explosion"
 import { RoomEffectOverlay } from "@/components/effects/room-effect-overlay"
-import { type Room, type Track, type ChatMessage, getRoomBySlug, rooms } from "@/lib/mock-data"
+import type { Room, Track } from "@/lib/mock-data"
 import { usePlayer } from "@/lib/player-context"
 import { usePlaylist } from "@/lib/playlist-context"
-import { getRoom, toFrontendRoom, type RoomDetail } from "@/lib/api"
-import { useRoomWebSocket } from "@/hooks/use-room-websocket"
+import { getRoom, toFrontendRoom, type RoomDetail, type APIChatMessage } from "@/lib/api"
+import { useRoomWebSocket, type SubmitTrackResult } from "@/hooks/use-room-websocket"
 import {
-  useRoomChatMessages,
+  chatMessagesSlice,
+  activityEventsSlice,
+  clockOffsetSlice,
+  playbackStateSlice,
   useRoomCurrentTrack,
+  useRoomHasPlaybackState,
   useRoomPlaybackState,
 } from "@/hooks/room-store"
-import { AudioEngine, type AudioEngineTrack } from "@/components/player/audio-engine"
+import {
+  type AudioEngineTrack,
+  type AudioEngineMediaMetadata,
+} from "@/components/player/audio-engine"
+import { RoomAudioEngine } from "@/components/player/room-audio-engine"
 import { parseTrackUrl } from "@/lib/track-utils"
 import { SendNeonModal } from "@/components/room/send-neon-modal"
 import { useAuth } from "@/lib/auth-context"
 import { useHypeTracking } from "@/components/room/hype-meter"
 import { useLiveKitVoice } from "@/hooks/use-livekit-voice"
 
-export function RoomClient({ slug }: { slug: string }) {
+// lib/api's request() throws `Error("API <status>: <body>")`. Parse the
+// status back out locally — api.ts is shared, so the error shape stays
+// string-based there.
+function isApiNotFound(err: unknown): boolean {
+  return err instanceof Error && err.message.startsWith("API 404")
+}
+
+// Watch a message slice for appended entries without subscribing the
+// page to it via React state. Slices are append-only (capped at 100 and
+// atomically replaced on reset), so walking back from the tail to the
+// last-seen id finds exactly the new messages.
+function subscribeToNewMessages(
+  slice: {
+    get: () => APIChatMessage[]
+    subscribe: (listener: () => void) => () => void
+  },
+  onNew: (m: APIChatMessage) => void
+): () => void {
+  const initial = slice.get()
+  let lastId = initial.length > 0 ? initial[initial.length - 1].id : null
+  return slice.subscribe(() => {
+    const msgs = slice.get()
+    if (msgs.length === 0) {
+      lastId = null
+      return
+    }
+    const fresh: APIChatMessage[] = []
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].id === lastId) break
+      fresh.push(msgs[i])
+    }
+    lastId = msgs[msgs.length - 1].id
+    // Restore chronological order (walked tail-first above).
+    for (let i = fresh.length - 1; i >= 0; i--) onNew(fresh[i])
+  })
+}
+
+export function RoomClient({
+  slug,
+  initialData,
+}: {
+  slug: string
+  initialData?: RoomDetail | null
+}) {
   // DJ key from sessionStorage (set when creating a room)
   const [djKey, setDjKey] = useState<string | null | undefined>(undefined) // undefined = not loaded yet
   useEffect(() => {
@@ -41,36 +94,68 @@ export function RoomClient({ slug }: { slug: string }) {
     }
   }, [slug])
 
-  // Room data — try API first, fall back to mock
-  const [room, setRoom] = useState<Room | null>(null)
-  const [usingMock, setUsingMock] = useState(false)
+  // Room data — seeded synchronously from the server component's fetch
+  // when available, so the first render (including the server-rendered
+  // HTML) already shows the real room shell; the WebSocket takes over
+  // live updates after connect. The client-side fetch below is only a
+  // fallback for when initialData is absent (backend unreachable during
+  // SSR) or a Retry. A 404 renders the not-found shell; any other
+  // failure renders a retryable error state. No mock fallback.
+  const initialRoom = useMemo(
+    () =>
+      initialData
+        ? toFrontendRoom(
+            initialData.room,
+            initialData.nowPlaying,
+            initialData.queue,
+            initialData.recentChat
+          )
+        : null,
+    [initialData]
+  )
+  const [room, setRoom] = useState<Room | null>(initialRoom)
   const [notFound, setNotFound] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [loadAttempt, setLoadAttempt] = useState(0)
   const { setRoom: setPlayerRoom, updateTrack, updatePlaybackTime, close: closePlayer } = usePlayer()
   const { toggleLike, isLiked } = usePlaylist()
 
   useEffect(() => {
     let cancelled = false
+    setNotFound(false)
+    setLoadError(null)
+    // The server component already fetched this room and passed it down —
+    // seed from that and skip the duplicate client fetch. Retries
+    // (loadAttempt > 0) still hit the API.
+    if (initialRoom && loadAttempt === 0) {
+      setRoom(initialRoom)
+      return
+    }
     async function load() {
       try {
         const detail = await getRoom(slug)
         if (!cancelled) {
           setRoom(toFrontendRoom(detail.room, detail.nowPlaying, detail.queue, detail.recentChat))
         }
-      } catch {
-        if (!cancelled) {
-          setUsingMock(true)
-          const mock = getRoomBySlug(slug) || rooms[0]
-          if (!mock) {
-            setNotFound(true)
-            return
-          }
-          setRoom(mock)
+      } catch (err) {
+        if (cancelled) return
+        if (isApiNotFound(err)) {
+          setNotFound(true)
+        } else {
+          console.error("[room] failed to load:", err)
+          setLoadError(err instanceof Error ? err.message : "Failed to load room")
         }
       }
     }
     load()
     return () => { cancelled = true }
-  }, [slug]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [slug, loadAttempt, initialRoom]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-run the room fetch (from the error state's Retry button). The
+  // effect clears loadError itself, which flips the UI back to loading.
+  const retryLoad = useCallback(() => {
+    setLoadAttempt((n) => n + 1)
+  }, [])
 
   // Ref for chat panel reaction overlay (to fire incoming WS reactions)
   const chatOverlayRef = useRef<HTMLDivElement>(null)
@@ -85,58 +170,110 @@ export function RoomClient({ slug }: { slug: string }) {
     hypeReactionRef.current()
   }, [])
 
-  // WebSocket for real-time updates (only when not using mock)
+  // Surface WS server errors (rate limit, requests closed, ...) as
+  // toasts — the backend messages are already user-readable. Dedupe
+  // identical messages within 3s so rapid retries don't stack toasts.
+  const lastWsErrorRef = useRef({ message: "", at: 0 })
+  const handleWsError = useCallback((message: string) => {
+    const now = Date.now()
+    if (
+      message === lastWsErrorRef.current.message &&
+      now - lastWsErrorRef.current.at < 3000
+    ) {
+      return
+    }
+    lastWsErrorRef.current = { message, at: now }
+    toast.error(message)
+  }, [])
+
+  // WebSocket for real-time updates (skipped while the room is known to
+  // be missing or failed to load)
   const ws = useRoomWebSocket({
     slug,
     djKey,
-    disabled: notFound,
-    onError: (msg) => console.warn("[ws error]", msg),
+    disabled: notFound || !!loadError,
+    onError: handleWsError,
     onReaction: handleIncomingReaction,
   })
 
-  // The hottest three slices live in an external store so WS ticks that
-  // only touch these slices don't re-render the parts of this page that
-  // subscribe to the rest of `ws`.
-  const wsChatMessages = useRoomChatMessages()
+  // The hottest WS slices live in an external store, and this page
+  // deliberately subscribes to almost none of them:
+  // - chat messages   → ListenerChatColumn / ListenerDjContext subscribe
+  // - playback state  → RoomAudioEngine / TroubleListeningLink subscribe
+  // - playback position (2-4Hz) → the progress leaf in ListenerNowPlaying
+  // The page only reads the current track (changes once per song) and a
+  // derived "is anything playing" boolean, so chat traffic and playback
+  // sync broadcasts never reconcile the whole room tree.
   const wsCurrentTrack = useRoomCurrentTrack()
-  const wsPlaybackState = useRoomPlaybackState()
+  const wsHasPlayback = useRoomHasPlaybackState()
+
+  // Once the socket has connected, keep rendering its last-received
+  // data through any disconnect — falling back to the REST snapshot
+  // mid-session visibly rewound chat/queue/listeners to join-time
+  // state. On reconnect the server replays fresh state, which replaces
+  // each slice atomically (see use-room-websocket).
+  const useWsData = ws.everConnected
+
+  // Suppress the connection banner briefly after mount so the normal
+  // socket handshake doesn't flash "Connecting…" on every page load.
+  // After the grace window (or once we've ever been connected), any
+  // non-connected status shows the banner.
+  const [wsGraceOver, setWsGraceOver] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setWsGraceOver(true), 4000)
+    return () => clearTimeout(t)
+  }, [])
 
   const isDJ = !!djKey
 
   const [requestModalOpen, setRequestModalOpen] = useState(false)
   const [sendNeonOpen, setSendNeonOpen] = useState(false)
+  // Mobile pane choice — below md the room columns render as tabbed
+  // panes (see RoomMobileTabs). null = the user hasn't picked yet; the
+  // effective pane is derived at render time (see mobileTab below) so
+  // DJs land on the deck once the room is live.
+  const [mobileTabChoice, setMobileTabChoice] = useState<MobileRoomTab | null>(null)
   const tubeBarRef = useRef<HTMLDivElement>(null)
   const { user: authUser } = useAuth()
   const [micActive, setMicActive] = useState(false)
   const [micPausesMusic, setMicPausesMusic] = useState(true)
 
-  // LiveKit voice — DJ broadcasts mic, listeners receive DJ audio
+  // LiveKit voice — DJ broadcasts mic, listeners receive DJ audio.
+  // Listeners reach the SFU only once the DJ's mic actually goes live
+  // (the dj_mic_state broadcast → ws.djMicActive) — never on room entry
+  // — so rooms where voice is never used cost zero token requests and
+  // zero extra WebSockets, and the ~1MB livekit-client SDK is never
+  // downloaded. djMicActive can only come from a live, DJ-driven room,
+  // so it subsumes the old isLive/!isAutoplay gate (and unlike the REST
+  // snapshot's isLive, it can't go stale). The DJ connects lazily via
+  // startBroadcasting when they first enable the mic.
   const liveKit = useLiveKitVoice({
     roomSlug: slug || "",
     isDJ,
-    enabled: !!room && room.isLive && !room.isAutoplay,
+    voiceActive: !!room && ws.djMicActive,
   })
 
-  // Hype tracking for DJ view only
-  const hypeTracking = useHypeTracking()
+  // Hype tracking for DJ view only — listeners pass enabled=false so
+  // the hook does zero per-second work for them.
+  const hypeTracking = useHypeTracking(isDJ)
 
-  // Connect hype tracking to real WS events — only for DJs
-  const prevChatCountRef = useRef(0)
+  // Connect hype tracking to real WS events — only for DJs. Subscribes
+  // to the slices imperatively (no useSyncExternalStore) so counting a
+  // new message never re-renders this page component.
+  const { recordChat, recordTip } = hypeTracking
   useEffect(() => {
-    if (!isDJ || !ws.connected) return
-    const newCount = wsChatMessages.length
-    if (newCount > prevChatCountRef.current) {
-      const newMessages = wsChatMessages.slice(prevChatCountRef.current)
-      for (const msg of newMessages) {
-        if ((msg.type as string) === "activity_tip") {
-          hypeTracking.recordTip()
-        } else if (msg.type === "message") {
-          hypeTracking.recordChat()
-        }
-      }
+    if (!isDJ) return
+    const unsubChat = subscribeToNewMessages(chatMessagesSlice, (m) => {
+      if (m.type === "message") recordChat()
+    })
+    const unsubTips = subscribeToNewMessages(activityEventsSlice, (m) => {
+      if ((m.type as string) === "activity_tip") recordTip()
+    })
+    return () => {
+      unsubChat()
+      unsubTips()
     }
-    prevChatCountRef.current = newCount
-  }, [wsChatMessages.length, ws.connected, isDJ]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isDJ, recordChat, recordTip])
 
   // Track reactions via the onReaction callback
   hypeReactionRef.current = hypeTracking.recordReaction
@@ -158,7 +295,7 @@ export function RoomClient({ slug }: { slug: string }) {
   const prevTubeLevelRef = useRef<number>(0)
 
   useEffect(() => {
-    const tube = ws.connected ? ws.tube : mockTube
+    const tube = useWsData ? ws.tube : mockTube
     if (!tube) return
     const prevLevel = prevTubeLevelRef.current
     prevTubeLevelRef.current = tube.level
@@ -176,7 +313,7 @@ export function RoomClient({ slug }: { slug: string }) {
         return newP
       })
     }
-  }, [ws.connected, ws.tube, ws.tube?.level, mockTube, mockTube.level]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [useWsData, ws.tube, ws.tube?.level, mockTube, mockTube.level]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch real tube state on room load
   useEffect(() => {
@@ -189,7 +326,7 @@ export function RoomClient({ slug }: { slug: string }) {
 
   // Handle neon sent - update tube locally in mock mode
   const handleNeonSent = useCallback((amount: number) => {
-    if (!ws.connected) {
+    if (!useWsData) {
       setMockTube((prev) => {
         const newFill = prev.fillAmount + amount
         const newTotal = prev.totalNeon + amount
@@ -215,16 +352,17 @@ export function RoomClient({ slug }: { slug: string }) {
         return { ...prev, fillAmount: newFill, totalNeon: newTotal }
       })
     }
-  }, [ws.connected])
+  }, [useWsData])
 
-  // Use WebSocket data when connected, otherwise room data from initial
-  // fetch. For the infoSnippet specifically, fall back to the REST
-  // room.nowPlaying value when the WS payload is missing it — this
-  // covers races where the track_changed event lands before the tracks
-  // table row has the latest snippet, and it lets the periodic REST
-  // refresh below populate fresher snippets as they land.
+  // Use WebSocket data once it has arrived (kept through disconnects —
+  // see useWsData), otherwise room data from the initial fetch. For
+  // the infoSnippet specifically, fall back to the REST room.nowPlaying
+  // value when the WS payload is missing it — this covers races where
+  // the track_changed event lands before the tracks table row has the
+  // latest snippet, and it lets the periodic REST refresh below
+  // populate fresher snippets as they land.
   const currentTrack: Track | null = useMemo(() => {
-    if (ws.connected && wsCurrentTrack) {
+    if (wsCurrentTrack) {
       const restSnippet =
         room?.nowPlaying && room.nowPlaying.id === wsCurrentTrack.id
           ? room.nowPlaying.infoSnippet
@@ -242,7 +380,7 @@ export function RoomClient({ slug }: { slug: string }) {
       }
     }
     return room?.nowPlaying ?? null
-  }, [ws.connected, wsCurrentTrack, room?.nowPlaying])
+  }, [wsCurrentTrack, room?.nowPlaying])
 
   // Periodic REST refresh of room.nowPlaying.infoSnippet. Runs every
   // 20 seconds as a safety net for snippet drift: if the backend
@@ -251,7 +389,7 @@ export function RoomClient({ slug }: { slug: string }) {
   // currentTrack memo via the fallback path above. Only updates state
   // when the snippet actually changed to avoid unnecessary re-renders.
   useEffect(() => {
-    if (!slug || notFound) return
+    if (!slug || notFound || loadError) return
     const id = setInterval(async () => {
       try {
         const detail = await getRoom(slug)
@@ -274,7 +412,7 @@ export function RoomClient({ slug }: { slug: string }) {
       }
     }, 20000)
     return () => clearInterval(id)
-  }, [slug, notFound])
+  }, [slug, notFound, loadError])
 
   // Autoplay playlist tracks — fetch for autoplay rooms
   const [autoplayTracks, setAutoplayTracks] = useState<Track[]>([])
@@ -310,9 +448,10 @@ export function RoomClient({ slug }: { slug: string }) {
       }
       return upcoming
     }
-    // When WebSocket is connected, always use its queue data (even if empty).
-    // Falling back to room?.queue would show stale data from the initial REST fetch.
-    if (ws.connected) {
+    // Once the WebSocket has connected, always use its queue data (even
+    // if empty, and even through a disconnect — the last-received queue
+    // beats rewinding to the initial REST fetch).
+    if (useWsData) {
       const mapped = ws.queue.map((e) => ({
         id: e.track.id,
         title: e.track.title,
@@ -331,7 +470,7 @@ export function RoomClient({ slug }: { slug: string }) {
       return mapped
     }
     return room?.queue ?? []
-  }, [ws.connected, ws.queue, wsCurrentTrack?.id, currentTrack?.id, room?.queue, room?.isAutoplay, autoplayTracks, autoplayIndex])
+  }, [useWsData, ws.queue, wsCurrentTrack?.id, currentTrack?.id, room?.queue, room?.isAutoplay, autoplayTracks, autoplayIndex])
 
   // Played tracks — accumulated from WS + initial fetch from API
   const [fetchedHistory, setFetchedHistory] = useState<Track[]>([])
@@ -379,31 +518,33 @@ export function RoomClient({ slug }: { slug: string }) {
     return merged
   }, [ws.playedTracks, fetchedHistory])
 
-  const chatMessages: ChatMessage[] = useMemo(() => {
-    if (ws.connected) {
-      return wsChatMessages.map((m) => ({
-        id: m.id,
-        username: m.username,
-        avatarColor: m.avatarColor,
-        message: m.message,
-        timestamp: new Date(m.timestamp),
-        type: m.type as "message" | "request" | "announcement",
-        mediaUrl: m.mediaUrl,
-        mediaType: m.mediaType,
-      }))
+  // Chat messages themselves are consumed by ListenerChatColumn (which
+  // subscribes to the chat slice directly); the page only precomputes
+  // the REST-snapshot fallbacks it hands down. The most recent DJ
+  // announcement from the initial fetch backs the DJ-context card until
+  // live announcements arrive over the socket.
+  const fallbackAnnouncement = useMemo(() => {
+    const msgs = room?.chatMessages ?? []
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      const m = msgs[i]
+      if (m.type === "announcement" && m.username === room?.djName) {
+        return m.message
+      }
     }
-    return room?.chatMessages ?? []
-  }, [ws.connected, wsChatMessages, room?.chatMessages])
+    return ""
+  }, [room?.chatMessages, room?.djName])
 
-  const listenerCount = ws.connected ? ws.listenerCount : (room?.listenerCount ?? 0)
+  const listenerCount = useWsData ? ws.listenerCount : (room?.listenerCount ?? 0)
   // Map server request policy to UI status
-  const serverPolicy = ws.connected ? ws.requestPolicy : (room?.requestPolicy ?? "open")
+  const serverPolicy = useWsData ? ws.requestPolicy : (room?.requestPolicy ?? "open")
   const requestStatus = serverPolicy === "approval" ? "paused" : serverPolicy as "open" | "closed"
 
-  // Sync player context
+  // Sync player context. Playback state is read from the slice at
+  // effect time (not subscribed) — this page shouldn't re-render on
+  // playback_state broadcasts.
   useEffect(() => {
     if (room && currentTrack) {
-      const startedAt = wsPlaybackState?.startedAt ?? Date.now()
+      const startedAt = playbackStateSlice.get()?.startedAt ?? Date.now()
       setPlayerRoom(room.slug, room.name, room.djName, currentTrack, startedAt)
     }
   }, [room?.slug, room?.name, room?.djName, currentTrack]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -414,12 +555,21 @@ export function RoomClient({ slug }: { slug: string }) {
     }
   }, [currentTrack, updateTrack])
 
-  // Keep playback time synced for mini player continuity
+  // Keep playback time synced for mini player continuity — imperative
+  // slice subscription so playback_state broadcasts don't re-render
+  // this page component.
   useEffect(() => {
-    if (wsPlaybackState?.startedAt) {
-      updatePlaybackTime(wsPlaybackState.startedAt)
+    let lastStartedAt = 0
+    const sync = () => {
+      const startedAt = playbackStateSlice.get()?.startedAt
+      if (startedAt && startedAt !== lastStartedAt) {
+        lastStartedAt = startedAt
+        updatePlaybackTime(startedAt)
+      }
     }
-  }, [wsPlaybackState?.startedAt, updatePlaybackTime])
+    sync()
+    return playbackStateSlice.subscribe(sync)
+  }, [updatePlaybackTime])
 
   // Close mini player when room ends
   useEffect(() => {
@@ -440,10 +590,14 @@ export function RoomClient({ slug }: { slug: string }) {
     } else {
       liveKit.stopBroadcasting()
     }
-  }, [liveKit, ws.connected, isDJ]) // eslint-disable-line react-hooks/exhaustive-deps
+    // Granular deps (not the per-render `ws`/`liveKit` objects) so this
+    // callback stays referentially stable and DjDeck's memo holds.
+  }, [liveKit.startBroadcasting, liveKit.stopBroadcasting, ws.connected, ws.djSetMic, isDJ]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Audio engine state
-  const [audioCurrentTime, setAudioCurrentTime] = useState(0)
+  // Audio engine state. The engine's playback position (2-4 updates
+  // per second) deliberately has NO page state — RoomAudioEngine writes
+  // it into the playback-position slice and only the progress leaf in
+  // ListenerNowPlaying subscribes.
   const [audioPlaying, setAudioPlaying] = useState(false)
   const [audioDuration, setAudioDuration] = useState(0)
   const [audioArtwork, setAudioArtwork] = useState<string | null>(null)
@@ -482,6 +636,19 @@ export function RoomClient({ slug }: { slug: string }) {
     }
   }, [currentTrack, room?.nowPlaying])
 
+  // Lock-screen / OS-media-hub metadata for the Media Session API —
+  // title/artist from the live track, artwork from the SoundCloud-
+  // derived art when the engine has emitted one.
+  const mediaMetadata: AudioEngineMediaMetadata | undefined = useMemo(() => {
+    const track = currentTrack ?? room?.nowPlaying
+    if (!track) return undefined
+    return {
+      title: track.title || "Untitled",
+      artist: track.artist || "Unknown artist",
+      artworkUrl: audioArtwork,
+    }
+  }, [currentTrack, room?.nowPlaying, audioArtwork])
+
   // Track when the current track started playing locally (for autoplay debounce)
   const trackStartTimeRef = useRef(0)
   useEffect(() => {
@@ -506,24 +673,46 @@ export function RoomClient({ slug }: { slug: string }) {
         ws.sendAutoplayEnd()
       }
     }
-  }, [isDJ, ws, room?.isAutoplay])
+  }, [isDJ, ws.connected, ws.djSkip, ws.sendAutoplayEnd, room?.isAutoplay]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSubmitTrack = useCallback(async (track: { title: string; artist: string; duration: number; source: string; sourceUrl: string }) => {
+  const handleSubmitTrack = useCallback(async (track: { title: string; artist: string; duration: number; source: string; sourceUrl: string }): Promise<SubmitTrackResult> => {
     if (ws.connected) {
-      ws.submitTrack(track)
-    } else {
-      // Fallback to REST API
-      try {
-        const { submitTrack: submitTrackAPI } = await import("@/lib/api")
-        await submitTrackAPI(slug, track, djKey ?? undefined)
-        // Refresh room data to get updated queue
-        const detail = await getRoom(slug)
-        setRoom(toFrontendRoom(detail.room, detail.nowPlaying, detail.queue, detail.recentChat))
-      } catch (err) {
-        console.error("[submit-track] REST fallback failed:", err)
+      // Resolves ok:true once the server confirms (submit_result, a
+      // new-entry queue echo, or the pending-approval announcement);
+      // ok:false on a submit-rejection error reply, disconnect, or
+      // timeout.
+      return ws.submitTrack(track)
+    }
+    // Fallback to REST API
+    try {
+      const { submitTrack: submitTrackAPI } = await import("@/lib/api")
+      await submitTrackAPI(slug, track, djKey ?? undefined)
+      // Refresh room data to get updated queue
+      const detail = await getRoom(slug)
+      setRoom(toFrontendRoom(detail.room, detail.nowPlaying, detail.queue, detail.recentChat))
+      return { ok: true }
+    } catch (err) {
+      console.error("[submit-track] REST fallback failed:", err)
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : "Failed to submit track",
       }
     }
-  }, [ws, slug, djKey])
+  }, [ws.connected, ws.submitTrack, slug, djKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // DjDeck fires onSubmitTrack without awaiting the result (unlike
+  // RequestModal, which renders it inline), so surface failures here
+  // as toasts — otherwise a rejected deck submit gives no feedback.
+  const handleDeckSubmitTrack = useCallback(
+    (track: { title: string; artist: string; duration: number; source: string; sourceUrl: string }) => {
+      void handleSubmitTrack(track).then((result) => {
+        if (!result.ok) {
+          toast.error(result.error || "Failed to add track")
+        }
+      })
+    },
+    [handleSubmitTrack]
+  )
 
   const handleDJTogglePlay = useCallback(() => {
     if (!isDJ || !ws.connected) return
@@ -532,7 +721,7 @@ export function RoomClient({ slug }: { slug: string }) {
     } else {
       ws.djResume()
     }
-  }, [isDJ, ws, audioPlaying])
+  }, [isDJ, ws.connected, ws.djPause, ws.djResume, audioPlaying]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const lastSkipRef = useRef(0)
   const handleSkip = useCallback(() => {
@@ -542,7 +731,19 @@ export function RoomClient({ slug }: { slug: string }) {
       lastSkipRef.current = now
       ws.djSkip()
     }
-  }, [isDJ, ws])
+  }, [isDJ, ws.connected, ws.djSkip]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Media Session transport (hardware media keys / lock screen). Only
+  // wired for the DJ, where play/pause carries room-pause semantics —
+  // the same dj_resume/dj_pause the deck buttons send. Listeners get no
+  // handlers here: the engine pauses locally and remembers it so its
+  // re-sync loop doesn't silently un-pause them.
+  const handleMediaPlay = useCallback(() => {
+    if (ws.connected) ws.djResume()
+  }, [ws.connected, ws.djResume]) // eslint-disable-line react-hooks/exhaustive-deps
+  const handleMediaPause = useCallback(() => {
+    if (ws.connected) ws.djPause()
+  }, [ws.connected, ws.djPause]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleGoLive = useCallback(async () => {
     if (!isDJ || queueTracks.length === 0 || !djKey) return
@@ -567,13 +768,86 @@ export function RoomClient({ slug }: { slug: string }) {
         console.error("[go-live] failed:", err)
       }
     }
-  }, [isDJ, ws, djKey, slug, queueTracks])
+  }, [isDJ, ws.connected, ws.djGoLive, djKey, slug, queueTracks]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─── Stable props for the memoized room columns ───────────────────────────
+  // These hooks keep prop identities steady across the page re-renders
+  // that remain (listener list, queue, tube, connection status) so the
+  // React.memo on each column actually bails out.
+
+  const handleSave = useCallback(() => {
+    const track = currentTrack ?? room?.nowPlaying ?? null
+    if (!track) return
+    const wasLiked = isLiked(track.id)
+    toggleLike(track)
+    toast.success(wasLiked ? "Removed from Liked" : "Saved to Liked")
+  }, [currentTrack, room?.nowPlaying, isLiked, toggleLike]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleOpenRequestModal = useCallback(() => setRequestModalOpen(true), [])
+  const handleCloseRequestModal = useCallback(() => setRequestModalOpen(false), [])
+  const handleOpenSendNeon = useCallback(() => setSendNeonOpen(true), [])
+  const handleCloseSendNeon = useCallback(() => setSendNeonOpen(false), [])
+
+  const handleRequestStatusChange = useCallback(
+    (status: "open" | "paused" | "closed") => {
+      if (!ws.connected) return
+      const policyMap: Record<string, string> = {
+        open: "open",
+        paused: "approval",
+        closed: "closed",
+      }
+      ws.djSetPolicy(policyMap[status] || "closed")
+    },
+    [ws.connected, ws.djSetPolicy] // eslint-disable-line react-hooks/exhaustive-deps
+  )
+
+  // Neon tube state — memoized (the previous inline spread minted a new
+  // object per render, which would defeat NeonTube's memo).
+  const tubeState = useWsData ? ws.tube : mockTube
+  const tubeWithPrestige = useMemo(
+    () =>
+      tubeState
+        ? {
+            ...tubeState,
+            prestigeCount:
+              tubeState.prestigeCount || localPrestige || mockTube.prestigeCount,
+          }
+        : null,
+    [tubeState, localPrestige, mockTube.prestigeCount]
+  )
+
+  // ─── Screen-reader track announcements ────────────────────────────────────
+  // A visually hidden polite live region (rendered near the top of the
+  // page below) says "Now playing: X by Y" whenever the current track
+  // changes mid-session — track swaps are otherwise silent to screen
+  // readers. The first observed track (initial page load) is not
+  // announced; it's already part of the rendered page.
+  const announceTrack = currentTrack ?? room?.nowPlaying ?? null
+  const [trackAnnouncement, setTrackAnnouncement] = useState("")
+  const lastAnnouncedTrackRef = useRef<string | null>(null)
+  useEffect(() => {
+    const track =
+      announceTrack && announceTrack.id !== "placeholder" ? announceTrack : null
+    const key = track ? `${track.title}|${track.artist}` : null
+    if (lastAnnouncedTrackRef.current === null) {
+      lastAnnouncedTrackRef.current = key ?? ""
+      return
+    }
+    if (track && key !== lastAnnouncedTrackRef.current) {
+      lastAnnouncedTrackRef.current = key
+      setTrackAnnouncement(
+        track.artist
+          ? `Now playing: ${track.title} by ${track.artist}`
+          : `Now playing: ${track.title}`
+      )
+    }
+  }, [announceTrack])
 
   // ─── Error / loading states ───────────────────────────────────────────────
   // Restyled to match the redesigned palette. No global navbar — the
   // in-room nav replaces it; these error states render only a back link.
 
-  const errorShell = (title: string, body: string) => (
+  const errorShell = (title: string, body: string, action?: ReactNode) => (
     <div
       className="flex min-h-screen items-center justify-center"
       style={{ background: "#0d0b10", color: "#e8e6ea" }}
@@ -585,25 +859,53 @@ export function RoomClient({ slug }: { slug: string }) {
         >
           <Radio className="h-6 w-6" style={{ color: "#e89a3c" }} />
         </div>
-        <p className="text-base font-semibold">{title}</p>
-        <p className="max-w-sm text-sm" style={{ color: "rgba(232,230,234,0.5)" }}>
+        <h1 className="text-base font-semibold">{title}</h1>
+        <p className="max-w-sm text-sm" style={{ color: "rgba(232,230,234,0.55)" }}>
           {body}
         </p>
-        <Link
-          href="/"
-          className="mt-2 rounded-full px-5 py-2 text-sm font-semibold"
-          style={{ background: "#e89a3c", color: "#0d0b10" }}
-        >
-          Back to Discover
-        </Link>
+        {action ? (
+          <>
+            {action}
+            <Link
+              href="/"
+              className="text-xs underline underline-offset-2"
+              style={{ color: "rgba(232,230,234,0.55)" }}
+            >
+              Back to Discover
+            </Link>
+          </>
+        ) : (
+          <Link
+            href="/"
+            className="mt-2 rounded-full px-5 py-2 text-sm font-semibold"
+            style={{ background: "#e89a3c", color: "#0d0b10" }}
+          >
+            Back to Discover
+          </Link>
+        )}
       </div>
     </div>
   )
 
   if (notFound) {
     return errorShell(
-      "Room not found",
-      "This room may have been deleted or the link is invalid."
+      "This room doesn't exist",
+      "It may have been deleted, or the link may be mistyped."
+    )
+  }
+
+  if (loadError) {
+    return errorShell(
+      "Couldn't load this room",
+      "Something went wrong while loading the room. Check your connection and try again.",
+      <button
+        type="button"
+        onClick={retryLoad}
+        className="mt-2 rounded-full px-5 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
+        style={{ background: "#e89a3c", color: "#0d0b10" }}
+      >
+        Retry
+      </button>
     )
   }
 
@@ -615,53 +917,29 @@ export function RoomClient({ slug }: { slug: string }) {
   }
 
   if (!room) {
-    return (
-      <div
-        className="flex min-h-screen items-center justify-center"
-        style={{ background: "#0d0b10", color: "rgba(232,230,234,0.6)" }}
-      >
-        <p className="text-sm">Loading room...</p>
-      </div>
-    )
+    // Only reachable on the fallback path (no initialData from the
+    // server) while the client fetch is in flight — mirrors the
+    // route-level loading.tsx so the shell doesn't jump.
+    return <RoomSkeleton />
   }
 
   // ─── Derived render data ──────────────────────────────────────────────────
 
   const displayTrack = currentTrack ?? room.nowPlaying
 
-  // Playback position for the "Trouble listening?" help link (listener view only)
-  let rawPos = 0
-  if (wsPlaybackState) {
-    rawPos = wsPlaybackState.isPlaying && wsPlaybackState.startedAt > 0
-      ? Math.max(0, (Date.now() - wsPlaybackState.startedAt) / 1000)
-      : wsPlaybackState.pausePosition
-  }
-  const playbackPos = Math.round(rawPos * 10) / 10
   const djInitials = (room.djName || "DJ").slice(0, 2).toUpperCase()
-
-  // DJ commentary body: prefer the admin-authored info snippet on the
-  // current track, fall back to the most recent DJ announcement chat.
-  const djAnnouncement = [...chatMessages]
-    .reverse()
-    .find((m) => m.type === "announcement" && m.username === room.djName)
-  const djContextBody = displayTrack?.infoSnippet || djAnnouncement?.message || ""
 
   // Subtitle shown under the DJ name: genre + (optional) description.
   const djSubtitle = [room.genre, room.description]
     .filter(Boolean)
     .join(" · ")
 
-  const handleSave = () => {
-    if (!displayTrack) return
-    const wasLiked = isLiked(displayTrack.id)
-    toggleLike(displayTrack)
-    toast.success(wasLiked ? "Removed from Liked" : "Saved to Liked")
-  }
-
   // Determine whether a real track is playing. This gates the listener
-  // "waiting" fallback and the DJ "Go Live" prompt.
+  // "waiting" fallback and the DJ "Go Live" prompt. wsHasPlayback is a
+  // derived boolean — it only re-renders this page when playback state
+  // appears or disappears, not on every playback_state broadcast.
   const apiHasTrack = !!room.nowPlaying && room.nowPlaying.id !== "placeholder"
-  const hasRealPlayback = !!(wsCurrentTrack || wsPlaybackState || apiHasTrack)
+  const hasRealPlayback = !!(wsCurrentTrack || wsHasPlayback || apiHasTrack)
 
   // DJ view, idle — show the Go Live prompt instead of the now-playing hero.
   const showDjGoLive = !hasRealPlayback && isDJ
@@ -671,6 +949,32 @@ export function RoomClient({ slug }: { slug: string }) {
 
   // Whether the listener should see the "DJ is speaking" chip inline.
   const djSpeaking = !isDJ && (ws.djMicActive || liveKit.djSpeaking)
+
+  // Effective mobile pane (only consulted below md — every desktop
+  // visibility class has an md: reset). Default: DJs land on the deck
+  // once the room is live (pre-live they see the Go Live prompt on the
+  // now-playing pane); listeners land on now-playing. Panes the current
+  // role can't reach (deck for listeners, queue for DJs — possible for
+  // the brief window before the DJ key loads from sessionStorage) fall
+  // back to the main pane.
+  const requestedMobileTab =
+    mobileTabChoice ?? (isDJ && !showDjGoLive ? "deck" : "main")
+  const mobileTab: MobileRoomTab = isDJ
+    ? requestedMobileTab === "queue"
+      ? "main"
+      : requestedMobileTab
+    : requestedMobileTab === "deck"
+      ? "main"
+      : requestedMobileTab
+
+  // One-line "Title — Artist" for the mobile strip that keeps the
+  // current track visible while the now-playing pane is hidden.
+  const mobileNowPlayingLabel =
+    hasRealPlayback && displayTrack && displayTrack.id !== "placeholder"
+      ? [displayTrack.title || "Untitled", displayTrack.artist]
+          .filter(Boolean)
+          .join(" — ")
+      : null
 
   // Choose the effective audio artwork: SoundCloud-derived first, then
   // whatever the engine has already emitted.
@@ -690,7 +994,16 @@ export function RoomClient({ slug }: { slug: string }) {
     djHypeScore >= 80 ? "#ff5a3a" : djHypeScore >= 50 ? "#e89a3c" : djHypeScore >= 25 ? "#4a8fe8" : "#8a8a9a"
 
   return (
-    <div className="min-h-screen" style={{ background: "#0d0b10", color: "#e8e6ea" }}>
+    // Below md the page is a fixed-height app shell (nav + tab bar +
+    // one pane, each pane scrolling internally) so chat and DJ controls
+    // are always reachable without scrolling past the whole stack.
+    // md+ restores the original block layout — h-auto/min-h-screen/
+    // overflow-visible make it pixel-identical to the old
+    // className="min-h-screen".
+    <div
+      className="flex h-dvh flex-col overflow-hidden md:block md:h-auto md:min-h-screen md:overflow-visible"
+      style={{ background: "#0d0b10", color: "#e8e6ea" }}
+    >
       {/* Supernova explosion — full-screen particle burst when level 5 maxes out.
           Uses backend event when available, falls back to local detection. */}
       <SupernovaExplosion
@@ -702,26 +1015,34 @@ export function RoomClient({ slug }: { slug: string }) {
           Uses backend event when available, falls back to local state. */}
       <RoomEffectOverlay effect={ws.activeRoomEffect || localRoomEffect || mockRoomEffect} />
 
+      {/* Visually hidden live region — announces track changes to
+          screen readers ("Now playing: X by Y"). */}
+      <div className="sr-only" role="status" aria-live="polite">
+        {trackAnnouncement}
+      </div>
+
       {/* Audio engine mounts once per track so playback keeps running while
           the listener browses. For YouTube tracks, it portals the iframe
           into the album-art slot inside ListenerNowPlaying (via ytSlot) so
           the video is the primary visual instead of a hidden corner
           fallback. Non-YouTube tracks don't use the slot. */}
       {audioTrack && (
-        <AudioEngine
+        <RoomAudioEngine
           track={audioTrack}
-          playbackState={wsPlaybackState}
           volume={roomVolume}
           muted={roomMuted}
           isDJ={isDJ}
           visible={false}
           inlineTarget={ytSlot}
           forcePaused={isDJ ? (micActive && micPausesMusic) : (ws.djMicActive && ws.djMicPauseMusic)}
-          onTimeUpdate={setAudioCurrentTime}
           onDuration={handleDuration}
           onTrackEnd={handleTrackEnd}
           onPlayStateChange={setAudioPlaying}
           onArtwork={setAudioArtwork}
+          mediaMetadata={mediaMetadata}
+          onMediaPlay={isDJ ? handleMediaPlay : undefined}
+          onMediaPause={isDJ ? handleMediaPause : undefined}
+          onMediaNextTrack={isDJ ? handleSkip : undefined}
         />
       )}
 
@@ -732,21 +1053,84 @@ export function RoomClient({ slug }: { slug: string }) {
         listenerCount={listenerCount}
       />
 
+      {/* Connection banner — slim, non-blocking strip under the nav
+          whenever the room socket isn't live. The room stays fully
+          rendered with last-known data; reconnection is automatic
+          (indefinite jittered backoff plus online/visibility
+          re-triggers), so this is a status signal, not a dead end.
+          Hidden during the initial handshake grace window so it
+          doesn't flash on every page load. */}
+      {ws.connectionStatus !== "connected" && (ws.everConnected || wsGraceOver) && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center justify-center gap-2"
+          style={{
+            paddingBlock: "5px",
+            paddingInline: "var(--space-md)",
+            background: "rgba(255,255,255,0.03)",
+            borderBottom: "0.5px solid rgba(255,255,255,0.06)",
+            color: "rgba(232,230,234,0.65)",
+            fontSize: "var(--fs-small)",
+          }}
+        >
+          <span
+            className="h-[6px] w-[6px] shrink-0 animate-pulse rounded-full motion-reduce:animate-none"
+            style={{ background: "#e89a3c" }}
+          />
+          {ws.connectionStatus === "offline"
+            ? "You're offline — we'll reconnect when your connection returns"
+            : ws.everConnected
+              ? "Connection lost — reconnecting…"
+              : "Connecting to the room…"}
+        </div>
+      )}
+
+      {/* Mobile pane switcher — below md the room columns render as
+          tabbed panes (now playing / chat / queue, plus the deck for
+          DJs) so chat and host controls are one tap away instead of a
+          full-stack scroll. Hidden on md+ where all columns are
+          visible side by side. */}
+      <RoomMobileTabs
+        activeTab={mobileTab}
+        onTabChange={setMobileTabChoice}
+        isDJ={isDJ}
+        pendingCount={ws.pendingRequests.length}
+        nowPlayingLabel={mobileNowPlayingLabel}
+      />
+      <MobileTabFocusGuard tab={mobileTab} />
+
       {/* Main grid — 2 columns for listeners, 3 columns for DJs.
-          The DJ third column ("deck") holds all host controls. On
-          narrow viewports it stacks vertically below chat. */}
+          The DJ third column ("deck") holds all host controls. Below
+          md the columns become the tabbed panes driven by mobileTab:
+          the active pane fills the remaining shell height (flex-1) and
+          scrolls internally; inactive panes are display:none'd via
+          their wrappers. */}
       <div
         className={
           isDJ
-            ? "shell-narrow flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_clamp(240px,20vw,320px)_clamp(260px,20vw,320px)]"
-            : "shell-narrow flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_clamp(260px,22vw,360px)]"
+            ? "shell-narrow flex min-h-0 flex-1 flex-col md:min-h-[calc(100vh-56px)] md:grid md:grid-cols-[minmax(0,1fr)_clamp(240px,20vw,320px)_clamp(260px,20vw,320px)]"
+            : "shell-narrow flex min-h-0 flex-1 flex-col md:min-h-[calc(100vh-56px)] md:grid md:grid-cols-[minmax(0,1fr)_clamp(260px,22vw,360px)]"
         }
-        style={{
-          minHeight: "calc(100vh - 56px)",
-        }}
       >
-        {/* Left: now playing + DJ context + queue */}
-        <div className="flex flex-col md:border-r md:border-white/[0.06]">
+        {/* Left: now playing + DJ context + queue. <main> landmark —
+            the room page has no global <main> wrapper, and the chat
+            column is a complementary <aside>. On mobile it hosts both
+            the now-playing and (for listeners) queue panes, scrolling
+            internally; hidden while the chat/deck panes are active. */}
+        <main
+          className={`${
+            mobileTab === "chat" || mobileTab === "deck"
+              ? "hidden md:flex"
+              : "flex"
+          } min-h-0 flex-1 flex-col overflow-y-auto md:min-h-[auto] md:flex-initial md:overflow-visible md:border-r md:border-white/[0.06]`}
+        >
+          {/* Now-playing pane content — mobile: visible only on the
+              now-playing tab. md:contents removes the wrapper from
+              desktop layout entirely, keeping it pixel-identical. */}
+          <div
+            className={mobileTab === "main" ? "contents" : "hidden md:contents"}
+          >
           {showDjGoLive ? (
             <div className="flex flex-col items-center gap-4 py-16 text-center">
               <div
@@ -759,10 +1143,10 @@ export function RoomClient({ slug }: { slug: string }) {
                 <Play className="h-8 w-8" style={{ color: "#e89a3c" }} />
               </div>
               <div>
-                <h3 className="text-lg font-bold" style={{ color: "#e8e6ea" }}>
+                <h2 className="text-lg font-bold" style={{ color: "#e8e6ea" }}>
                   Ready to go live
-                </h3>
-                <p className="mt-1 text-sm" style={{ color: "rgba(232,230,234,0.5)" }}>
+                </h2>
+                <p className="mt-1 text-sm" style={{ color: "rgba(232,230,234,0.55)" }}>
                   {queueTracks.length > 0
                     ? `${queueTracks.length} track${queueTracks.length !== 1 ? "s" : ""} in queue — hit play to start`
                     : "Add tracks to the queue, then start playing"}
@@ -789,7 +1173,7 @@ export function RoomClient({ slug }: { slug: string }) {
                   border: "0.5px solid rgba(255,255,255,0.08)",
                 }}
               />
-              <p className="text-sm" style={{ color: "rgba(232,230,234,0.5)" }}>
+              <p className="text-sm" style={{ color: "rgba(232,230,234,0.55)" }}>
                 Waiting for the DJ to start playing...
               </p>
             </div>
@@ -801,7 +1185,7 @@ export function RoomClient({ slug }: { slug: string }) {
                 djInitials={djInitials}
                 trackTitle={displayTrack.title || "Untitled"}
                 trackArtist={displayTrack.artist || "Unknown artist"}
-                currentTime={ws.connected ? audioCurrentTime : 0}
+                progressEnabled={useWsData}
                 duration={
                   audioDuration > 0
                     ? audioDuration
@@ -810,7 +1194,7 @@ export function RoomClient({ slug }: { slug: string }) {
                 isPlaying={audioPlaying}
                 djSpeaking={djSpeaking}
                 onSave={handleSave}
-                onRequest={() => setRequestModalOpen(true)}
+                onRequest={handleOpenRequestModal}
                 requestDisabled={serverPolicy === "closed"}
                 albumArtUrl={effectiveAlbumArt}
                 albumGradient={displayTrack.albumGradient}
@@ -826,92 +1210,93 @@ export function RoomClient({ slug }: { slug: string }) {
               <ListenerDjContext
                 djName={room.djName}
                 djInitials={djInitials}
-                body={djContextBody}
+                infoSnippet={displayTrack?.infoSnippet ?? ""}
+                fallbackAnnouncement={fallbackAnnouncement}
               />
             </>
           )}
 
           {/* Neon tube — visible to listeners only. Shows the room's
               energy level powered by neon donations. Clicking opens
-              the send-neon modal. */}
-          {!isDJ && (() => {
-            const tubeState = ws.connected ? ws.tube : mockTube
-            // Merge local prestige count until backend supports it
-            const tubeWithPrestige = tubeState
-              ? { ...tubeState, prestigeCount: tubeState.prestigeCount || localPrestige || mockTube.prestigeCount }
-              : null
-            return (
-              <NeonTube
-                tube={tubeWithPrestige}
-                powerUp={ws.connected ? ws.lastPowerUp : mockPowerUp}
-                onSendNeon={() => setSendNeonOpen(true)}
-              />
-            )
-          })()}
+              the send-neon modal. (tubeWithPrestige merges the local
+              prestige count until the backend supports it.) */}
+          {!isDJ && (
+            <NeonTube
+              tube={tubeWithPrestige}
+              powerUp={useWsData ? ws.lastPowerUp : mockPowerUp}
+              onSendNeon={handleOpenSendNeon}
+            />
+          )}
+          </div>
 
           {/* Queue — always render, even in idle state, so DJs can see
-              what's lined up. */}
-          <ListenerQueue tracks={queueTracks} />
+              what's lined up. Mobile: its own pane for listeners; part
+              of the now-playing pane for DJs (who have no queue tab). */}
+          <div
+            className={
+              (isDJ ? mobileTab === "main" : mobileTab === "queue")
+                ? "contents"
+                : "hidden md:contents"
+            }
+          >
+            <ListenerQueue tracks={queueTracks} />
+          </div>
 
-          {/* "Trouble listening?" — listener-only footer link to help page */}
+          {/* "Trouble listening?" — listener-only footer link to help page.
+              Isolated leaf because it embeds the live playback position
+              in its href (subscribes to the playback-state slice). */}
           {!isDJ && (
-            <div className="flex justify-center py-4">
-              <Link
-                href={`/help/listening?${new URLSearchParams({
-                  room: slug,
-                  ...(room?.name ? { roomName: room.name } : {}),
-                  ...(currentTrack?.id ? { track: currentTrack.id } : {}),
-                  ...(currentTrack?.title ? { trackTitle: currentTrack.title } : {}),
-                  ...(currentTrack?.artist ? { trackArtist: currentTrack.artist } : {}),
-                  ...(playbackPos ? { pos: String(playbackPos) } : {}),
-                }).toString()}`}
-                className="font-sans text-xs underline underline-offset-2"
-                style={{ color: "rgba(232,230,234,0.4)" }}
-              >
-                Trouble listening?
-              </Link>
+            <div
+              className={
+                mobileTab === "main" ? "contents" : "hidden md:contents"
+              }
+            >
+              <TroubleListeningLink
+                slug={slug}
+                roomName={room?.name}
+                currentTrack={currentTrack}
+              />
             </div>
           )}
 
           {/* DJ controls live in the DjDeck third column (added below
               after the chat column when isDJ). */}
-        </div>
+        </main>
 
-        {/* Right: chat column */}
-        <ListenerChatColumn
-          messages={chatMessages}
-          listeners={ws.listeners}
-          listenerCount={listenerCount}
-          onSendMessage={ws.connected ? ws.sendChat : undefined}
-          onSendReaction={ws.connected ? ws.sendReaction : undefined}
-          connected={ws.connected}
-          djName={room.djName}
-          overlayRef={chatOverlayRef}
-        />
+        {/* Right: chat column — subscribes to the chat slice itself so
+            incoming messages re-render only this column. Mobile: the
+            chat pane (stays mounted while hidden so live messages,
+            composer text and the mic keep working). */}
+        <div className={mobileTab === "chat" ? "contents" : "hidden md:contents"}>
+          <ListenerChatColumn
+            fallbackMessages={room.chatMessages}
+            useWsData={useWsData}
+            listeners={ws.listeners}
+            listenerCount={listenerCount}
+            onSendMessage={ws.connected ? ws.sendChat : undefined}
+            onSendReaction={ws.connected ? ws.sendReaction : undefined}
+            connected={ws.connected}
+            djName={room.djName}
+            overlayRef={chatOverlayRef}
+          />
+        </div>
 
         {/* Third column — DJ deck with all host controls. Only
             renders when the user is a DJ; pushes the grid from
-            2 columns to 3. */}
+            2 columns to 3. Mobile: the deck pane, first in the DJ's
+            tab order so transport/mic/approvals are one tap away. */}
         {isDJ && (
+          <div className={mobileTab === "deck" ? "contents" : "hidden md:contents"}>
           <DjDeck
             djName={room.djName}
             djInitials={djInitials}
             requestStatus={requestStatus as "open" | "paused" | "closed"}
-            onRequestStatusChange={(status) => {
-              if (ws.connected) {
-                const policyMap: Record<string, string> = {
-                  open: "open",
-                  paused: "approval",
-                  closed: "closed",
-                }
-                ws.djSetPolicy(policyMap[status] || "closed")
-              }
-            }}
+            onRequestStatusChange={handleRequestStatusChange}
             audioPlaying={audioPlaying}
             onTogglePlay={handleDJTogglePlay}
             onSkip={handleSkip}
             onMicChange={handleMicChange}
-            onSubmitTrack={handleSubmitTrack}
+            onSubmitTrack={handleDeckSubmitTrack}
             onEndRoom={ws.connected ? ws.djEndRoom : undefined}
             listenerCount={listenerCount}
             pendingRequests={ws.pendingRequests}
@@ -924,23 +1309,94 @@ export function RoomClient({ slug }: { slug: string }) {
             recentChats={hypeTracking.recentChats}
             recentReactions={hypeTracking.recentReactions}
           />
+          </div>
         )}
       </div>
 
       {/* Modals */}
       <RequestModal
         open={requestModalOpen}
-        onClose={() => setRequestModalOpen(false)}
+        onClose={handleCloseRequestModal}
         isDJ={isDJ}
         onSubmitTrack={handleSubmitTrack}
       />
       <SendNeonModal
         open={sendNeonOpen}
-        onClose={() => setSendNeonOpen(false)}
+        onClose={handleCloseSendNeon}
         roomId={room?.id ?? ""}
         neonBalance={(authUser as any)?.neonBalance ?? 0}
         onNeonSent={handleNeonSent}
       />
+    </div>
+  )
+}
+
+// Re-anchors keyboard/switch-access focus after a mobile pane switch.
+// Below md the pane wrappers display:none whatever currently holds
+// focus (e.g. the chat composer), which silently drops focus to
+// <body> and breaks the tab order. When the active pane changes and
+// focus was dropped, move it to the active tab button — the one
+// element guaranteed visible in the new state (focus that survived
+// the switch is left alone). On md+ the tab bar is display:none, so
+// the focus() call is a no-op and desktop focus is never stolen.
+// Lives in its own leaf because the effective pane is derived after
+// RoomClient's loading/error early returns, where hooks can't go.
+function MobileTabFocusGuard({ tab }: { tab: MobileRoomTab }) {
+  const prevTabRef = useRef(tab)
+  useEffect(() => {
+    if (prevTabRef.current === tab) return
+    prevTabRef.current = tab
+    const active = document.activeElement
+    if (active && active !== document.body) return
+    document
+      .querySelector<HTMLButtonElement>(`[data-room-tab="${tab}"]`)
+      ?.focus()
+  }, [tab])
+  return null
+}
+
+// "Trouble listening?" help link. Lives in its own leaf because the
+// href embeds the current playback position — subscribing to the
+// playback-state slice down here means playback_state broadcasts
+// re-render just this link instead of the whole room page.
+function TroubleListeningLink({
+  slug,
+  roomName,
+  currentTrack,
+}: {
+  slug: string
+  roomName?: string
+  currentTrack: Track | null
+}) {
+  const playbackState = useRoomPlaybackState()
+
+  let rawPos = 0
+  if (playbackState) {
+    // startedAt is a SERVER timestamp — correct our wall clock by the
+    // offset from the WS handshake (0 when unknown) like the audio
+    // engine does, so a clock-skewed visitor reports a sane position.
+    rawPos = playbackState.isPlaying && playbackState.startedAt > 0
+      ? Math.max(0, (Date.now() + clockOffsetSlice.get() - playbackState.startedAt) / 1000)
+      : playbackState.pausePosition
+  }
+  const playbackPos = Math.round(rawPos * 10) / 10
+
+  return (
+    <div className="flex justify-center py-4">
+      <Link
+        href={`/help/listening?${new URLSearchParams({
+          room: slug,
+          ...(roomName ? { roomName } : {}),
+          ...(currentTrack?.id ? { track: currentTrack.id } : {}),
+          ...(currentTrack?.title ? { trackTitle: currentTrack.title } : {}),
+          ...(currentTrack?.artist ? { trackArtist: currentTrack.artist } : {}),
+          ...(playbackPos ? { pos: String(playbackPos) } : {}),
+        }).toString()}`}
+        className="font-sans text-xs underline underline-offset-2"
+        style={{ color: "rgba(232,230,234,0.55)" }}
+      >
+        Trouble listening?
+      </Link>
     </div>
   )
 }

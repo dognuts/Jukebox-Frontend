@@ -161,7 +161,8 @@ export function SaveTrackMenu({
                   if (e.key === "Escape") setCreating(false)
                 }}
                 placeholder="Playlist name..."
-                className="flex-1 rounded px-2 py-1 font-sans text-xs outline-none"
+                aria-label="Playlist name"
+                className="neon-focus flex-1 rounded px-2 py-1 font-sans text-xs"
                 style={{
                   background: "oklch(0.18 0.01 280)",
                   border: "1px solid oklch(0.30 0.02 280 / 0.5)",
@@ -172,6 +173,7 @@ export function SaveTrackMenu({
                 onClick={handleCreate}
                 className="rounded p-1 transition-colors"
                 style={{ color: "oklch(0.75 0.15 85)" }}
+                aria-label="Create playlist"
               >
                 <Check className="h-4 w-4" />
               </button>

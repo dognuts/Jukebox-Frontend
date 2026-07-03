@@ -1,6 +1,7 @@
 "use client"
 
 import { useEasterEggs } from "@/hooks/use-easter-eggs"
+import { usePrefersReducedMotion } from "@/components/room/use-prefers-reduced-motion"
 
 interface AudioVisualizerProps {
   isPlaying: boolean
@@ -14,6 +15,7 @@ export function AudioVisualizer({
   color = "amber",
 }: AudioVisualizerProps) {
   const { dropTheBeat } = useEasterEggs()
+  const prefersReducedMotion = usePrefersReducedMotion()
 
   const hue = color === "amber" ? 80 : color === "magenta" ? 350 : 250
 
@@ -34,7 +36,7 @@ export function AudioVisualizer({
               minHeight: "3px",
               background: `oklch(0.75 0.15 ${hue})`,
               transformOrigin: "bottom",
-              animation: isPlaying
+              animation: isPlaying && !prefersReducedMotion
                 ? `visualizer-bar ${0.25 + i * 0.06}s ease-in-out ${i * 0.04}s infinite alternate`
                 : "none",
               boxShadow: isPlaying

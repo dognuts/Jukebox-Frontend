@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import { type Track } from "@/lib/mock-data"
 
 interface ListenerQueueProps {
@@ -17,7 +18,12 @@ function formatDuration(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`
 }
 
-export function ListenerQueue({ tracks, startIndex = 2 }: ListenerQueueProps) {
+// Memoized — the queue only needs to reconcile when the (memoized)
+// tracks array actually changes, not on every room-page render.
+export const ListenerQueue = memo(function ListenerQueue({
+  tracks,
+  startIndex = 2,
+}: ListenerQueueProps) {
   return (
     <div
       style={{
@@ -29,7 +35,10 @@ export function ListenerQueue({ tracks, startIndex = 2 }: ListenerQueueProps) {
         className="flex items-center justify-between"
         style={{ marginBottom: "var(--space-sm)" }}
       >
-        <div
+        {/* h2 for the screen-reader outline — Tailwind's preflight
+            neutralizes heading defaults, so this renders identically
+            to the previous div. */}
+        <h2
           className="font-semibold"
           style={{
             color: "#e8e6ea",
@@ -37,10 +46,10 @@ export function ListenerQueue({ tracks, startIndex = 2 }: ListenerQueueProps) {
           }}
         >
           Up next
-        </div>
+        </h2>
         <div
           style={{
-            color: "rgba(232,230,234,0.3)",
+            color: "rgba(232,230,234,0.55)",
             fontSize: "var(--fs-small)",
           }}
         >
@@ -55,22 +64,20 @@ export function ListenerQueue({ tracks, startIndex = 2 }: ListenerQueueProps) {
             paddingInline: "var(--space-md)",
             paddingBlock: "var(--space-md)",
             background: "rgba(255,255,255,0.02)",
-            color: "rgba(232,230,234,0.35)",
+            color: "rgba(232,230,234,0.55)",
             fontSize: "var(--fs-small)",
           }}
         >
           Queue is empty
         </div>
       ) : (
-        <div
-          className="flex flex-col gap-0.5 overflow-y-auto"
-          style={{
-            /* Show ~3 tracks then scroll. Each row is roughly 50-68px
-               depending on viewport. 195px comfortably fits 3 rows with
-               a sliver of the 4th peeking to hint at scrollability. */
-            maxHeight: "195px",
-          }}
-        >
+        // md+: show ~3 tracks then scroll — each row is roughly
+        // 50-68px depending on viewport, and 195px comfortably fits 3
+        // rows with a sliver of the 4th peeking to hint at
+        // scrollability. Below md the queue lives in its own tab pane
+        // (or the DJ's now-playing pane), which scrolls as a whole —
+        // no inner cap.
+        <div className="flex flex-col gap-0.5 overflow-y-auto md:max-h-[195px]">
           {tracks.map((track, i) => (
             <div
               key={track.id ?? `${track.title}-${i}`}
@@ -87,7 +94,7 @@ export function ListenerQueue({ tracks, startIndex = 2 }: ListenerQueueProps) {
                 className="text-right tabular-nums"
                 style={{
                   width: "1.25rem",
-                  color: "rgba(232,230,234,0.25)",
+                  color: "rgba(232,230,234,0.55)",
                   fontSize: "var(--fs-small)",
                 }}
               >
@@ -116,7 +123,7 @@ export function ListenerQueue({ tracks, startIndex = 2 }: ListenerQueueProps) {
                 <div
                   className="truncate"
                   style={{
-                    color: "rgba(232,230,234,0.4)",
+                    color: "rgba(232,230,234,0.55)",
                     fontSize: "var(--fs-small)",
                   }}
                 >
@@ -126,7 +133,7 @@ export function ListenerQueue({ tracks, startIndex = 2 }: ListenerQueueProps) {
               <div
                 className="shrink-0 tabular-nums"
                 style={{
-                  color: "rgba(232,230,234,0.3)",
+                  color: "rgba(232,230,234,0.55)",
                   fontSize: "var(--fs-small)",
                 }}
               >
@@ -138,4 +145,4 @@ export function ListenerQueue({ tracks, startIndex = 2 }: ListenerQueueProps) {
       )}
     </div>
   )
-}
+})

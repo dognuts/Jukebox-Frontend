@@ -1,20 +1,42 @@
 "use client"
 
+import { memo, useMemo } from "react"
+import { useRoomChatMessages } from "@/hooks/room-store"
+
 interface ListenerDjContextProps {
   djName: string
   djInitials: string
-  body: string
+  // Admin-authored blurb on the current track — preferred body copy.
+  infoSnippet: string
+  // Most recent DJ announcement from the initial REST snapshot; used
+  // until (and unless) a live announcement arrives over the socket.
+  fallbackAnnouncement: string
 }
 
 // Amber-tinted card that renders DJ commentary about the current track.
 // The body copy comes from the track's infoSnippet (admin-authored blurb)
-// or the most recent DJ announcement chat message — whatever the caller
-// decides to pass in.
-export function ListenerDjContext({
+// or the most recent DJ announcement chat message. It subscribes to the
+// chat slice ITSELF (memoized against parent re-renders) so the room
+// page doesn't have to — a new chat message re-renders just this card
+// and the chat column.
+export const ListenerDjContext = memo(function ListenerDjContext({
   djName,
   djInitials,
-  body,
+  infoSnippet,
+  fallbackAnnouncement,
 }: ListenerDjContextProps) {
+  const wsMessages = useRoomChatMessages()
+  const wsAnnouncement = useMemo(() => {
+    for (let i = wsMessages.length - 1; i >= 0; i--) {
+      const m = wsMessages[i]
+      if (m.type === "announcement" && m.username === djName) {
+        return m.message
+      }
+    }
+    return ""
+  }, [wsMessages, djName])
+
+  const body = infoSnippet || wsAnnouncement || fallbackAnnouncement
   if (!body) return null
 
   return (
@@ -74,4 +96,4 @@ export function ListenerDjContext({
       </div>
     </div>
   )
-}
+})

@@ -4,8 +4,10 @@ import { useEffect, useRef, useCallback, useState } from "react"
 import type { APITrack, APIChatMessage, APIQueueEntry, PlaybackState } from "@/lib/api"
 import {
   chatMessagesSlice,
+  activityEventsSlice,
   playbackStateSlice,
   currentTrackSlice,
+  clockOffsetSlice,
   resetRoomSlices,
 } from "@/hooks/room-store"
 
@@ -54,8 +56,63 @@ export interface RoomEffect {
   activatedBy: string
 }
 
+export interface SubmitTrackResult {
+  ok: boolean
+  error?: string
+}
+
+// A submit_track awaiting server confirmation. Resolved by a
+// submit_result reply, by a queue/request update echo listing the
+// submitted track as a new entry, by the per-client announcement
+// confirming an approval-policy request, by a recognized
+// submit-rejection error reply (SUBMIT_ERROR_MESSAGES), or by the
+// confirmation timeout — whichever first.
+interface PendingSubmit {
+  sourceUrl: string
+  resolve: (result: SubmitTrackResult) => void
+  timer: ReturnType<typeof setTimeout>
+}
+
+// How long to wait for the server to confirm a submit_track before
+// reporting failure to the caller.
+const SUBMIT_CONFIRM_TIMEOUT_MS = 4000
+
+// The rejections the backend's submit_track handler can emit (mirrors
+// its sendError calls; none are produced by any other action). Error
+// replies carry no correlation id, so this allowlist is how we tell a
+// submit rejection apart from an unrelated per-client error (chat rate
+// limit, DJ-only action, ...) arriving during the confirmation window.
+// If the backend wording drifts, an unmatched rejection falls back to
+// the error toast and the submit resolves via its timeout — degraded
+// wording, never lost feedback.
+const SUBMIT_ERROR_MESSAGES = new Set([
+  "invalid track submission",
+  "room not found",
+  "requests are closed for this room",
+  "failed to save track",
+  "failed to add to queue",
+])
+
+// Reconnect backoff: exponential from BASE doubling up to CAP, with
+// full jitter (each delay is uniform in [0, current cap]) so all the
+// clients dropped by a server restart don't stampede back in
+// synchronized waves. Retries never give up — a listener riding out a
+// long outage should recover the moment the backend/network returns,
+// not be stranded on a dead page.
+const RECONNECT_BASE_MS = 1000
+const RECONNECT_CAP_MS = 30000
+
+export type RoomConnectionStatus = "connected" | "reconnecting" | "offline"
+
 export interface RoomWSState {
   connected: boolean
+  // Drives the room's connection banner: "offline" when the browser
+  // reports no network, "reconnecting" for any other non-open state.
+  connectionStatus: RoomConnectionStatus
+  // True once this connection scope (room) has opened at least once.
+  // The room page uses it to keep rendering last-received WS data
+  // through a disconnect instead of rewinding to the REST snapshot.
+  everConnected: boolean
   listenerCount: number
   listeners: ListenerInfo[]
   queue: APIQueueEntry[]
@@ -72,26 +129,14 @@ export interface RoomWSState {
   djMicPauseMusic: boolean
 }
 
-interface UseRoomWebSocketOptions {
-  slug: string
-  djKey?: string | null | undefined
-  disabled?: boolean
-  onError?: (msg: string) => void
-  onReaction?: (emoji: string) => void
-}
-
-export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }: UseRoomWebSocketOptions) {
-  const wsRef = useRef<WebSocket | null>(null)
-  const onReactionRef = useRef(onReaction)
-  onReactionRef.current = onReaction
-  const reconnectTimer = useRef<NodeJS.Timeout | null>(null)
-  // Drop playback_state broadcasts closer than this — the server can
-  // emit them at ~20Hz on drift correction, which creates needless
-  // re-render churn. The audio engine re-syncs on its own 10s timer
-  // anyway, so skipping sub-100ms duplicates is safe.
-  const lastPlaybackStateAt = useRef(0)
-  const [state, setState] = useState<RoomWSState>({
+// Fresh per-connection-scope state — used for the initial useState and
+// re-applied whenever the connect effect restarts (room change) so one
+// room's queue/listeners can't bleed into the next.
+function initialWSState(): RoomWSState {
+  return {
     connected: false,
+    connectionStatus: "reconnecting",
+    everConnected: false,
     listenerCount: 0,
     listeners: [],
     queue: [],
@@ -106,7 +151,79 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
     activeRoomEffect: null,
     djMicActive: false,
     djMicPauseMusic: false,
-  })
+  }
+}
+
+interface UseRoomWebSocketOptions {
+  slug: string
+  djKey?: string | null | undefined
+  disabled?: boolean
+  onError?: (msg: string) => void
+  onReaction?: (emoji: string) => void
+}
+
+export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }: UseRoomWebSocketOptions) {
+  const wsRef = useRef<WebSocket | null>(null)
+  const onReactionRef = useRef(onReaction)
+  onReactionRef.current = onReaction
+  // Ref-wrapped like onReaction so the connect effect (deps: slug/djKey/
+  // disabled) never captures a stale callback for the connection's lifetime.
+  const onErrorRef = useRef(onError)
+  onErrorRef.current = onError
+  const reconnectTimer = useRef<NodeJS.Timeout | null>(null)
+  // Drop playback_state broadcasts closer than this — the server can
+  // emit them at ~20Hz on drift correction, which creates needless
+  // re-render churn. The audio engine re-syncs on its own 10s timer
+  // anyway, so skipping sub-100ms duplicates is safe.
+  const lastPlaybackStateAt = useRef(0)
+  // Track submissions awaiting server confirmation (see PendingSubmit).
+  const pendingSubmitsRef = useRef<PendingSubmit[]>([])
+  // Every queue/request entry id seen on this connection (bootstrapped
+  // by the initial queue_update on join). Entry ids are minted server-
+  // side per submission, so an entry seen BEFORE a submit was sent
+  // can't be that submit's echo — this stops a duplicate URL already
+  // sitting in the queue from resolving a pending submit prematurely
+  // when an unrelated broadcast re-lists it.
+  const knownEntryIdsRef = useRef<Set<string>>(new Set())
+
+  // Resolve the oldest pending submission. submit_result replies are
+  // per-client and ordered, so FIFO pairs requests with replies.
+  function resolveOldestPendingSubmit(result: SubmitTrackResult) {
+    const pending = pendingSubmitsRef.current.shift()
+    if (!pending) return
+    clearTimeout(pending.timer)
+    pending.resolve(result)
+  }
+
+  // Resolve any pending submissions whose track shows up as a NEW
+  // entry in a queue or request update echo — proof the submission
+  // landed server-side. Only entries this connection hasn't seen
+  // before count: the server never sends the entry's session id, so
+  // sourceUrl plus id-freshness is the tightest match available.
+  function resolvePendingSubmitsIn(entries: APIQueueEntry[]) {
+    if (pendingSubmitsRef.current.length > 0) {
+      const newUrls = new Set(
+        entries
+          .filter((e) => e?.id && !knownEntryIdsRef.current.has(e.id))
+          .map((e) => e?.track?.sourceUrl)
+          .filter(Boolean)
+      )
+      const remaining: PendingSubmit[] = []
+      for (const pending of pendingSubmitsRef.current) {
+        if (newUrls.has(pending.sourceUrl)) {
+          clearTimeout(pending.timer)
+          pending.resolve({ ok: true })
+        } else {
+          remaining.push(pending)
+        }
+      }
+      pendingSubmitsRef.current = remaining
+    }
+    for (const e of entries) {
+      if (e?.id) knownEntryIdsRef.current.add(e.id)
+    }
+  }
+  const [state, setState] = useState<RoomWSState>(initialWSState)
 
   // Reset the external store slices whenever the slug changes so a room
   // transition doesn't flash the previous room's chat/playback.
@@ -121,10 +238,64 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
 
     let cancelled = false
     let reconnectCount = 0
-    const MAX_RECONNECTS = 5
+    // Set on every socket open, cleared as the server's initial-state
+    // replay lands. Lets a reconnect keep showing the last-known data
+    // and swap in the fresh snapshot atomically instead of blanking
+    // the room (see ws.onopen).
+    const resync = { playbackPending: false, requestsPending: false }
+
+    // Fresh connection scope (mount or room change) — start from a
+    // clean slate so a previous room's queue/listeners can't bleed in.
+    setState(initialWSState())
+
+    function scheduleReconnect() {
+      // Exponential backoff with full jitter, retrying forever (see
+      // RECONNECT_BASE_MS above).
+      const cap = Math.min(
+        RECONNECT_CAP_MS,
+        RECONNECT_BASE_MS * 2 ** Math.min(reconnectCount, 10)
+      )
+      reconnectCount++
+      reconnectTimer.current = setTimeout(connect, Math.random() * cap)
+    }
+
+    // Immediate retry for the online/visibilitychange handlers below:
+    // reset the backoff and skip any pending timer. No-op while a
+    // socket is already open or mid-handshake.
+    function reconnectNow() {
+      if (cancelled) return
+      const current = wsRef.current
+      if (
+        current &&
+        (current.readyState === WebSocket.OPEN ||
+          current.readyState === WebSocket.CONNECTING)
+      ) {
+        return
+      }
+      if (reconnectTimer.current) {
+        clearTimeout(reconnectTimer.current)
+        reconnectTimer.current = null
+      }
+      reconnectCount = 0
+      connect()
+    }
 
     function connect() {
       if (cancelled) return
+
+      // Detach any previous socket first (reconnectNow can fire while
+      // one is still CLOSING) so its late onclose can't schedule a
+      // second reconnect loop against the fresh connection.
+      const stale = wsRef.current
+      if (stale) {
+        stale.onopen = null
+        stale.onclose = null
+        stale.onerror = null
+        stale.onmessage = null
+        try {
+          stale.close()
+        } catch {}
+      }
 
       const params = new URLSearchParams()
       if (djKey) params.set("djKey", djKey)
@@ -147,32 +318,37 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
       wsRef.current = ws
 
       ws.onopen = () => {
-        if (!cancelled) {
-          reconnectCount = 0
-          // On reconnect, clear playback state + current track so stale
-          // data doesn't flash. The server immediately re-sends them via
-          // sendInitialState.
-          playbackStateSlice.set(null)
-          currentTrackSlice.set(null)
-          setState((s) => ({
-            ...s,
-            connected: true,
-            queue: [],
-            pendingRequests: [],
-            listeners: [],
-          }))
-        }
+        if (cancelled || wsRef.current !== ws) return
+        reconnectCount = 0
+        // The server replays its initial state on every (re)connect
+        // (track/playback pair, queue, recent chat, settings, pending
+        // requests, listener list). Don't clear anything here — that
+        // visibly rewound the room to a blank state on every
+        // reconnect. Instead mark a resync and let each replayed event
+        // replace its slice atomically; the two markers catch the
+        // cases the replay can't express by itself (room went idle,
+        // pending requests drained — see queue_update/listener_list).
+        resync.playbackPending = true
+        resync.requestsPending = true
+        setState((s) => ({
+          ...s,
+          connected: true,
+          connectionStatus: "connected",
+          everConnected: true,
+        }))
       }
 
-      ws.onclose = (ev) => {
-        if (!cancelled) {
-          setState((s) => ({ ...s, connected: false }))
-          if (reconnectCount < MAX_RECONNECTS) {
-            reconnectCount++
-            const delay = Math.min(3000 * reconnectCount, 15000)
-            reconnectTimer.current = setTimeout(connect, delay)
-          }
-        }
+      ws.onclose = () => {
+        if (cancelled || wsRef.current !== ws) return
+        setState((s) => ({
+          ...s,
+          connected: false,
+          connectionStatus:
+            typeof navigator !== "undefined" && !navigator.onLine
+              ? "offline"
+              : "reconnecting",
+        }))
+        scheduleReconnect()
       }
 
       ws.onerror = () => {
@@ -180,6 +356,7 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
       }
 
       ws.onmessage = (event) => {
+        if (cancelled || wsRef.current !== ws) return
         try {
           const msg: WSMessage = JSON.parse(event.data)
           handleMessage(msg)
@@ -190,8 +367,39 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
     }
 
     function handleMessage(msg: WSMessage) {
+      // submit_result — the server's direct reply to this client's
+      // submit_track: {"type":"submit_result","ok":boolean,"error":string|null}.
+      // Accept it bare (as specified) or wrapped in the standard
+      // {event, payload} envelope the rest of the protocol uses.
+      const raw = msg as any
+      if (raw.type === "submit_result" || raw.event === "submit_result") {
+        const body = raw.type === "submit_result" ? raw : raw.payload ?? {}
+        resolveOldestPendingSubmit({
+          ok: !!body.ok,
+          error: body.error || undefined,
+        })
+        return
+      }
+
       switch (msg.event) {
+        case "initial_state": {
+          // WS CONTRACT (frozen): initial_state opens the per-client
+          // replay and carries a top-level "serverTime" field (unix
+          // epoch ms at send time). clockOffset = serverTime -
+          // Date.now(); every playback-position derivation adds it to
+          // Date.now(). Tolerate the field being absent (offset 0 —
+          // pre-contract servers).
+          const serverTime = raw.serverTime
+          clockOffsetSlice.set(
+            typeof serverTime === "number" && Number.isFinite(serverTime)
+              ? serverTime - Date.now()
+              : 0
+          )
+          break
+        }
+
         case "playback_state": {
+          resync.playbackPending = false
           const now = Date.now()
           if (now - lastPlaybackStateAt.current < 100) break
           lastPlaybackStateAt.current = now
@@ -200,11 +408,17 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
         }
 
         case "track_changed": {
+          resync.playbackPending = false
           const newTrack = msg.payload as APITrack | null
           const prev = currentTrackSlice.get()
+          // A reconnect replays track_changed for the track that's
+          // already showing — that's a resync, not a change, so don't
+          // log it to history or blank the playback state out from
+          // under the audio engine.
+          const sameTrack = !!prev && !!newTrack && prev.id === newTrack.id
           // Push previous track into played history (hook-level state
           // because it's read alongside other slices on the page).
-          if (prev && prev.id !== "placeholder") {
+          if (prev && prev.id !== "placeholder" && !sameTrack) {
             setState((s) => ({
               ...s,
               playedTracks: [prev, ...s.playedTracks].slice(0, 100),
@@ -214,7 +428,9 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
           // Clear playback state so the audio engine doesn't seek using
           // the PREVIOUS track's startedAt. Server sends a fresh
           // playback_state immediately after.
-          playbackStateSlice.set(null)
+          if (!sameTrack) {
+            playbackStateSlice.set(null)
+          }
           break
         }
 
@@ -228,13 +444,36 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
           break
         }
 
-        case "queue_update":
-          setState((s) => ({ ...s, queue: (msg.payload as APIQueueEntry[]) || [] }))
+        case "queue_update": {
+          const entries = (msg.payload as APIQueueEntry[]) || []
+          resolvePendingSubmitsIn(entries)
+          // The initial-state replay emits queue_update strictly after
+          // the (optional) track/playback pair — reaching it with
+          // playbackPending still set means nothing is playing, so
+          // drop the pre-disconnect track instead of "playing" it
+          // forever on a room that went idle while we were away.
+          if (resync.playbackPending) {
+            resync.playbackPending = false
+            currentTrackSlice.set(null)
+            playbackStateSlice.set(null)
+          }
+          setState((s) => ({ ...s, queue: entries }))
           break
+        }
 
-        case "chat_message":
-          chatMessagesSlice.update((prev) => [...prev.slice(-100), msg.payload as APIChatMessage])
+        case "chat_message": {
+          // The server replays the last 50 messages on every
+          // (re)connect — dedupe by id so a resync appends only what
+          // was missed while disconnected instead of duplicating the
+          // whole tail.
+          const incoming = msg.payload as APIChatMessage
+          chatMessagesSlice.update((prev) =>
+            incoming?.id && prev.some((m) => m.id === incoming.id)
+              ? prev
+              : [...prev.slice(-100), incoming]
+          )
           break
+        }
 
         case "reaction":
           // Fire the onReaction callback — state doesn't store reactions
@@ -247,9 +486,21 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
           setState((s) => ({ ...s, listenerCount: msg.payload?.count ?? 0 }))
           break
 
-        case "listener_list":
-          setState((s) => ({ ...s, listeners: (msg.payload as ListenerInfo[]) || [] }))
+        case "listener_list": {
+          const listeners = (msg.payload as ListenerInfo[]) || []
+          // The initial-state replay ends with this listener_list and
+          // only re-sends request_update when pending requests still
+          // exist — so a resync arriving here with requestsPending set
+          // means the list we kept through the disconnect was drained.
+          const dropPendingRequests = resync.requestsPending
+          resync.requestsPending = false
+          setState((s) => ({
+            ...s,
+            listeners,
+            pendingRequests: dropPendingRequests ? [] : s.pendingRequests,
+          }))
           break
+        }
 
         case "tube_update":
           setState((s) => ({ ...s, tube: msg.payload as NeonTubeState }))
@@ -278,6 +529,9 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
           setState((s) => ({ ...s, activeRoomEffect: (msg.payload as RoomEffect) || null }))
           break
 
+        // Presence/tip activity goes to its own slice — NOT the chat
+        // slice — so joins/leaves in a busy room don't invalidate the
+        // rendered message list (the chat feed filters them out anyway).
         case "neon_gift":
           if (msg.payload?.from && msg.payload?.amount) {
             const giftMsg: APIChatMessage = {
@@ -289,7 +543,7 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
               type: "activity_tip" as any,
               timestamp: new Date().toISOString(),
             }
-            chatMessagesSlice.update((prev) => [...prev.slice(-100), giftMsg])
+            activityEventsSlice.update((prev) => [...prev.slice(-100), giftMsg])
           }
           break
 
@@ -304,7 +558,7 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
               type: "activity_join" as any,
               timestamp: new Date().toISOString(),
             }
-            chatMessagesSlice.update((prev) => [...prev.slice(-100), joinMsg])
+            activityEventsSlice.update((prev) => [...prev.slice(-100), joinMsg])
           }
           break
 
@@ -319,7 +573,7 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
               type: "activity_leave" as any,
               timestamp: new Date().toISOString(),
             }
-            chatMessagesSlice.update((prev) => [...prev.slice(-100), leaveMsg])
+            activityEventsSlice.update((prev) => [...prev.slice(-100), leaveMsg])
           }
           break
 
@@ -332,6 +586,13 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
 
         case "announcement":
           if (msg.payload?.message) {
+            // In approval-policy rooms the server never echoes a pending
+            // entry back to the submitter (queue_update only carries
+            // approved entries; request_update goes to DJs only) — its
+            // confirmation to the submitter is this per-client
+            // announcement, the backend's sole `announcement` emitter.
+            // Treat it as proof the submission landed.
+            resolveOldestPendingSubmit({ ok: true })
             const announcement: APIChatMessage = {
               id: `ann-${Date.now()}`,
               roomId: "",
@@ -346,11 +607,14 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
           break
 
         case "request_update":
+          resync.requestsPending = false
           // Could be a single new pending request or a full list
           if (Array.isArray(msg.payload)) {
+            resolvePendingSubmitsIn(msg.payload as APIQueueEntry[])
             setState((s) => ({ ...s, pendingRequests: msg.payload as APIQueueEntry[] }))
           } else if (msg.payload) {
             // Single new request — append
+            resolvePendingSubmitsIn([msg.payload as APIQueueEntry])
             setState((s) => ({
               ...s,
               pendingRequests: [...s.pendingRequests, msg.payload as APIQueueEntry],
@@ -358,9 +622,25 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
           }
           break
 
-        case "error":
-          onError?.(msg.payload?.message || "Unknown error")
+        case "error": {
+          const message = msg.payload?.message || "Unknown error"
+          // A known submit_track rejection arriving while a submit
+          // awaits confirmation is that submit's rejection — surface it
+          // through the pending promise (inline in the modal) instead
+          // of a toast followed by a misleading confirmation timeout.
+          // Anything else (chat rate limit, DJ-only action, ...) must
+          // NOT be misattributed to the submit, so it takes the normal
+          // toast path even while a submit is pending.
+          if (
+            pendingSubmitsRef.current.length > 0 &&
+            SUBMIT_ERROR_MESSAGES.has(message)
+          ) {
+            resolveOldestPendingSubmit({ ok: false, error: message })
+          } else {
+            onErrorRef.current?.(message)
+          }
           break
+        }
 
         case "room_ended":
           currentTrackSlice.set(null)
@@ -374,11 +654,41 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
       }
     }
 
+    // Reconnect immediately when connectivity returns or the tab comes
+    // back to the foreground (mobile browsers routinely kill sockets
+    // while backgrounded/locked) instead of waiting out the backoff.
+    const handleOnline = () => reconnectNow()
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") reconnectNow()
+    }
+    // Flip the banner to "offline" right away — a dead network can
+    // take the socket seconds to notice, and the next onclose may be a
+    // full backoff interval away.
+    const handleOffline = () => {
+      setState((s) => (s.connected ? s : { ...s, connectionStatus: "offline" }))
+    }
+    window.addEventListener("online", handleOnline)
+    window.addEventListener("offline", handleOffline)
+    document.addEventListener("visibilitychange", handleVisibility)
+
     connect()
 
     return () => {
       cancelled = true
+      window.removeEventListener("online", handleOnline)
+      window.removeEventListener("offline", handleOffline)
+      document.removeEventListener("visibilitychange", handleVisibility)
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current)
+      // Flush submissions still awaiting confirmation — the socket is
+      // going away, so no reply or echo can arrive for them.
+      for (const pending of pendingSubmitsRef.current) {
+        clearTimeout(pending.timer)
+        pending.resolve({ ok: false, error: "Connection closed before the server confirmed the request." })
+      }
+      pendingSubmitsRef.current = []
+      // Fresh connection (room change / remount) — the next room's
+      // entries are unrelated, so start the seen-entry set over.
+      knownEntryIdsRef.current = new Set()
       wsRef.current?.close()
     }
   }, [slug, djKey, disabled]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -398,9 +708,34 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
     [send]
   )
 
+  // Submit a track and wait for server confirmation. Resolves ok:true
+  // on a submit_result reply, a queue/request update echo listing the
+  // track as a new entry, or the pending-approval announcement;
+  // resolves ok:false on a recognized submit-rejection error reply, a
+  // dropped connection, or the confirmation timeout. Never resolves
+  // with a false success.
   const submitTrack = useCallback(
-    (track: { title: string; artist: string; duration: number; source: string; sourceUrl: string }) =>
-      send("submit_track", track),
+    (track: { title: string; artist: string; duration: number; source: string; sourceUrl: string }): Promise<SubmitTrackResult> => {
+      const ws = wsRef.current
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        return Promise.resolve({ ok: false, error: "Not connected — try again in a moment." })
+      }
+      return new Promise<SubmitTrackResult>((resolve) => {
+        const pending: PendingSubmit = {
+          sourceUrl: track.sourceUrl,
+          resolve,
+          timer: setTimeout(() => {
+            pendingSubmitsRef.current = pendingSubmitsRef.current.filter((p) => p !== pending)
+            resolve({
+              ok: false,
+              error: "The server didn't confirm your request — it may not have gone through.",
+            })
+          }, SUBMIT_CONFIRM_TIMEOUT_MS),
+        }
+        pendingSubmitsRef.current.push(pending)
+        send("submit_track", track)
+      })
+    },
     [send]
   )
 

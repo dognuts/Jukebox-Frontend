@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { ChatMediaInline } from "./chat-media-inline"
 import { Send, Music, Users, MessageSquare, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { type ChatMessage } from "@/lib/mock-data"
 import { useEasterEggs } from "@/hooks/use-easter-eggs"
 import { UserPopover } from "./user-popover"
+import { usePrefersReducedMotion } from "./use-prefers-reduced-motion"
 import type { ListenerInfo } from "@/hooks/use-room-websocket"
 
 const simulatedMessages: { username: string; message: string; color: string }[] = [
@@ -54,18 +55,85 @@ export function ChatPanel({
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const internalOverlayRef = useRef<HTMLDivElement>(null)
   const { checkChatMagicWords } = useEasterEggs()
+  const prefersReducedMotion = usePrefersReducedMotion()
 
   // Sync messages from parent
   useEffect(() => {
     setMessages(initialMessages)
   }, [initialMessages])
 
-  // Auto-scroll to bottom on new messages
+  // Guarded auto-scroll: only stick to the bottom while the reader is
+  // already within ~80px of it. Scrolled up reading history? The view
+  // stays put and a "N new messages" pill offers the way back down.
+  // Activity events (joins/tips/leaves) never bump the pill count and
+  // — thanks to the guard — never yank the viewport either.
+  const nearBottomRef = useRef(true)
+  const [newCount, setNewCount] = useState(0)
+  const prevChatTailIdRef = useRef<string | null>(null)
+
+  const chatMessages = useMemo(
+    () =>
+      messages.filter(
+        (m) =>
+          m.type !== "activity_join" &&
+          m.type !== "activity_tip" &&
+          m.type !== "activity_leave"
+      ),
+    [messages]
+  )
+  const chatTailId =
+    chatMessages.length > 0 ? chatMessages[chatMessages.length - 1].id : null
+
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current
+    if (!el) return
+    const near = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    nearBottomRef.current = near
+    if (near) setNewCount((c) => (c === 0 ? c : 0))
+  }, [])
+
+  const scrollToBottom = useCallback(() => {
+    const el = scrollContainerRef.current
+    if (!el) return
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" })
+    nearBottomRef.current = true
+    setNewCount((c) => (c === 0 ? c : 0))
+  }, [])
+
+  // Re-pin when the chat tab (re)activates — matches the old
+  // always-scroll-on-tab-switch behavior.
   useEffect(() => {
     if (activeTab !== "chat") return
+    nearBottomRef.current = true
+    setNewCount((c) => (c === 0 ? c : 0))
+  }, [activeTab])
+
+  // Auto-scroll to bottom on new messages — only while pinned. New
+  // arrivals are detected via the tail message id, NOT the array
+  // length: once the parent-fed list hits its cap the length plateaus
+  // while ids keep changing. The pill count walks ids past the
+  // previously seen tail; if that tail has already been pruned off the
+  // top, everything remaining counts as new (bounded by the cap).
+  useEffect(() => {
+    if (activeTab !== "chat") return
+    const prevTailId = prevChatTailIdRef.current
+    prevChatTailIdRef.current = chatTailId
+    let delta = 0
+    if (chatTailId !== null && chatTailId !== prevTailId) {
+      delta = chatMessages.length
+      if (prevTailId !== null) {
+        const idx = chatMessages.findIndex((m) => m.id === prevTailId)
+        if (idx !== -1) delta = chatMessages.length - 1 - idx
+      }
+    }
     const el = scrollContainerRef.current
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" })
-  }, [messages, activeTab])
+    if (!el) return
+    if (nearBottomRef.current) {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" })
+    } else if (delta > 0) {
+      setNewCount((c) => c + delta)
+    }
+  }, [chatTailId, chatMessages, activeTab])
 
   // Simulate incoming messages only when not connected
   useEffect(() => {
@@ -109,7 +177,10 @@ export function ChatPanel({
   }, [connected])
 
   // --- Smooth emoji float animation ---
+  // Uses the Web Animations API, which the global reduced-motion CSS
+  // can't reach — skip spawning entirely when reduced motion is on.
   const spawnEmoji = useCallback((emoji: string) => {
+    if (prefersReducedMotion) return
     const container = internalOverlayRef.current
     if (!container) return
 
@@ -146,7 +217,7 @@ export function ChatPanel({
     )
 
     setTimeout(() => el.remove(), dur + 50)
-  }, [])
+  }, [prefersReducedMotion])
 
   const fireReaction = useCallback(
     (emoji: string) => {
@@ -253,7 +324,15 @@ export function ChatPanel({
               aria-hidden="true"
             />
 
-            <div ref={scrollContainerRef} className="relative z-20 h-full overflow-y-auto px-3 py-2 scrollbar-thin">
+            <div
+              ref={scrollContainerRef}
+              onScroll={handleScroll}
+              role="log"
+              aria-live="polite"
+              aria-atomic="false"
+              aria-label="Chat messages"
+              className="relative z-20 h-full overflow-y-auto px-3 py-2 scrollbar-thin"
+            >
               {messages.map((msg) => {
                 const isActivity = msg.type === "activity_join" || msg.type === "activity_tip" || msg.type === "activity_leave"
 
@@ -343,6 +422,17 @@ export function ChatPanel({
                 )
               })}
             </div>
+
+            {/* New-messages pill — shown while scrolled up reading history */}
+            {newCount > 0 && (
+              <button
+                type="button"
+                onClick={scrollToBottom}
+                className="absolute bottom-2 left-1/2 z-30 -translate-x-1/2 rounded-full bg-primary px-3 py-1 font-sans text-xs font-semibold text-primary-foreground shadow-lg transition-opacity hover:opacity-90"
+              >
+                {newCount} new {newCount === 1 ? "message" : "messages"} ↓
+              </button>
+            )}
           </div>
 
           {/* Reaction buttons */}
@@ -367,6 +457,7 @@ export function ChatPanel({
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Say something..."
+                aria-label="Chat message"
                 className="flex-1 rounded-full border-border/30 bg-muted/30 font-sans text-sm text-foreground placeholder:text-muted-foreground"
               />
               <Button

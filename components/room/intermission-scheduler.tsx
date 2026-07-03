@@ -64,7 +64,7 @@ export function IntermissionScheduler({ onIntermissionStart, onIntermissionEnd }
             <div className="relative">
               <Mic className="h-4 w-4" style={{ color: "oklch(0.65 0.20 270)" }} />
               <span
-                className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full animate-pulse"
+                className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full animate-pulse motion-reduce:animate-none"
                 style={{ background: "oklch(0.65 0.20 270)" }}
               />
             </div>

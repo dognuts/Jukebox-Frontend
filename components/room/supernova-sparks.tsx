@@ -94,6 +94,9 @@ export function SupernovaSparksCascade({ active, fillPct, tubeRef }: SupernovaSp
       return
     }
 
+    // Respect reduced motion — skip the whole particle loop.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 

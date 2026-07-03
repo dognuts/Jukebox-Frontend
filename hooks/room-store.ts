@@ -8,10 +8,20 @@ import type { APIChatMessage, PlaybackState, APITrack } from "@/lib/api"
 // slices via useSyncExternalStore so only the components that read
 // a given slice re-render when it updates.
 //
-// Slices included: chatMessages and playbackState. Everything else
-// still lives inside useRoomWebSocket's React state — moving those
-// hurts more than it helps because most of them are read by the
-// room page itself, which re-renders anyway.
+// Slices included:
+// - chatMessages: real chat (messages/requests/announcements) — read
+//   by the chat column and the DJ-context card.
+// - activityEvents: presence/tip events (joins, leaves, neon gifts).
+//   Kept separate from chatMessages so a busy room's join/leave churn
+//   doesn't invalidate the rendered message list.
+// - playbackState / currentTrack: playback sync data.
+// - playbackPosition: the audio engine's current position in seconds,
+//   written 2-4x per second while playing. Only the progress display
+//   leaf subscribes — page-level state here re-rendered the whole
+//   room tree on every tick.
+// Everything else still lives inside useRoomWebSocket's React state —
+// moving those hurts more than it helps because most of them are read
+// by the room page itself.
 
 type Listener = () => void
 
@@ -45,15 +55,38 @@ class Slice<T> {
 }
 
 export const chatMessagesSlice = new Slice<APIChatMessage[]>([])
+export const activityEventsSlice = new Slice<APIChatMessage[]>([])
 export const playbackStateSlice = new Slice<PlaybackState | null>(null)
 export const currentTrackSlice = new Slice<APITrack | null>(null)
+export const playbackPositionSlice = new Slice<number>(0)
+
+// Server-vs-client wall-clock offset in milliseconds, computed as
+// serverTime - Date.now() when the WebSocket's initial_state message
+// arrives (WS CONTRACT, frozen: initial_state carries a top-level
+// "serverTime" unix-epoch-ms field; absent field -> offset 0). Added
+// to Date.now() wherever a playback position is derived from
+// playbackState.startedAt, so a listener whose clock is minutes off
+// doesn't drift from the room — or worse, falsely signal track end.
+// Deliberately NOT reset in resetRoomSlices: the offset is a property
+// of this client against the backend, not of any one room, and keeping
+// it lets the mini-player (which runs without a room WebSocket) apply
+// the last known offset too.
+export const clockOffsetSlice = new Slice<number>(0)
+
+// True while the audio engine's playback is blocked by the browser's
+// autoplay policy and is waiting for a user gesture. Written by
+// AudioEngine (which also renders the "Tap to join the audio" gate).
+export const autoplayBlockedSlice = new Slice<boolean>(false)
 
 // Reset slices when the room slug changes or the connection opens so a
 // reconnect doesn't flash stale state from a different room.
 export function resetRoomSlices() {
   chatMessagesSlice.set([])
+  activityEventsSlice.set([])
   playbackStateSlice.set(null)
   currentTrackSlice.set(null)
+  playbackPositionSlice.set(0)
+  autoplayBlockedSlice.set(false)
 }
 
 export function useRoomChatMessages(): APIChatMessage[] {
@@ -72,10 +105,32 @@ export function useRoomPlaybackState(): PlaybackState | null {
   )
 }
 
+// Derived boolean for page-level layout gates ("is anything playing?").
+// useSyncExternalStore compares snapshots with Object.is, so subscribers
+// only re-render when playback state appears/disappears — not on every
+// playback_state broadcast.
+const getHasPlaybackState = () => playbackStateSlice.get() !== null
+
+export function useRoomHasPlaybackState(): boolean {
+  return useSyncExternalStore(
+    playbackStateSlice.subscribe,
+    getHasPlaybackState,
+    getHasPlaybackState
+  )
+}
+
 export function useRoomCurrentTrack(): APITrack | null {
   return useSyncExternalStore(
     currentTrackSlice.subscribe,
     currentTrackSlice.get,
     currentTrackSlice.get
+  )
+}
+
+export function useRoomPlaybackPosition(): number {
+  return useSyncExternalStore(
+    playbackPositionSlice.subscribe,
+    playbackPositionSlice.get,
+    playbackPositionSlice.get
   )
 }

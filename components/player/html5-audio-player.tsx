@@ -9,14 +9,29 @@ interface HTML5AudioPlayerProps {
   onStateChange?: (state: "playing" | "paused" | "ended" | "buffering") => void
   onDuration?: (seconds: number) => void
   onTimeUpdate?: (seconds: number) => void
+  // Fired when play() is rejected by the browser's autoplay policy
+  // (NotAllowedError) — i.e. playback needs a user gesture.
+  onPlayBlocked?: () => void
 }
 
 export const HTML5AudioPlayer = forwardRef<AudioPlayerHandle, HTML5AudioPlayerProps>(
-  function HTML5AudioPlayer({ src, onReady, onStateChange, onDuration, onTimeUpdate }, ref) {
+  function HTML5AudioPlayer({ src, onReady, onStateChange, onDuration, onTimeUpdate, onPlayBlocked }, ref) {
     const audioRef = useRef<HTMLAudioElement | null>(null)
+    const onPlayBlockedRef = useRef(onPlayBlocked)
+    onPlayBlockedRef.current = onPlayBlocked
 
     useImperativeHandle(ref, () => ({
-      play: () => audioRef.current?.play(),
+      play: () => {
+        // Don't discard the play() promise: a NotAllowedError rejection
+        // means the autoplay policy blocked us and the engine must show
+        // its tap-to-listen gate. AbortError (a load/pause interrupting
+        // the play) is expected churn and stays silent.
+        audioRef.current?.play()?.catch((err: unknown) => {
+          if ((err as DOMException | null)?.name === "NotAllowedError") {
+            onPlayBlockedRef.current?.()
+          }
+        })
+      },
       pause: () => audioRef.current?.pause(),
       seekTo: (s: number) => {
         if (audioRef.current) audioRef.current.currentTime = s

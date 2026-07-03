@@ -1,10 +1,9 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import { Link2, MessageSquare, Send, Loader2, AlertCircle, CheckCircle } from "lucide-react"
+import { Link2, Send, Loader2, AlertCircle, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
   DialogContent,
@@ -18,12 +17,11 @@ interface RequestModalProps {
   open: boolean
   onClose: () => void
   isDJ: boolean
-  onSubmitTrack?: (track: { title: string; artist: string; duration: number; source: string; sourceUrl: string }) => void
+  onSubmitTrack?: (track: { title: string; artist: string; duration: number; source: string; sourceUrl: string }) => Promise<{ ok: boolean; error?: string }>
 }
 
 export function RequestModal({ open, onClose, isDJ, onSubmitTrack }: RequestModalProps) {
   const [url, setUrl] = useState("")
-  const [message, setMessage] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [submitted, setSubmitted] = useState(false)
@@ -66,13 +64,18 @@ export function RequestModal({ open, onClose, isDJ, onSubmitTrack }: RequestModa
         } catch {}
       }
 
-      onSubmitTrack?.({ title, artist, duration, source: parsed.source, sourceUrl: parsed.sourceUrl })
+      // Wait for the server to confirm before showing success — the
+      // handler resolves ok:false on rejection, disconnect, or timeout.
+      const result = await onSubmitTrack?.({ title, artist, duration, source: parsed.source, sourceUrl: parsed.sourceUrl })
+      if (result && !result.ok) {
+        setError(result.error || "Failed to submit track")
+        return
+      }
 
       setSubmitted(true)
       setTimeout(() => {
         setSubmitted(false)
         setUrl("")
-        setMessage("")
         setError("")
         onClose()
       }, 1200)
@@ -99,7 +102,7 @@ export function RequestModal({ open, onClose, isDJ, onSubmitTrack }: RequestModa
           <DialogDescription className="font-sans text-sm text-muted-foreground">
             {isDJ
               ? "Paste a YouTube, SoundCloud, or direct audio link."
-              : "Send the DJ a link and an optional note."}
+              : "Send the DJ a YouTube, SoundCloud, or direct audio link."}
           </DialogDescription>
         </DialogHeader>
 
@@ -112,12 +115,16 @@ export function RequestModal({ open, onClose, isDJ, onSubmitTrack }: RequestModa
           )}
 
           <div className="flex flex-col gap-1.5">
-            <label className="font-sans text-xs font-medium text-muted-foreground">
+            <label
+              htmlFor="request-track-url"
+              className="font-sans text-xs font-medium text-muted-foreground"
+            >
               Track URL
             </label>
             <div className="relative">
-              <Link2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Link2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
               <Input
+                id="request-track-url"
                 value={url}
                 onChange={(e) => { setUrl(e.target.value); setError("") }}
                 placeholder="https://youtube.com/watch?v=..."
@@ -129,24 +136,6 @@ export function RequestModal({ open, onClose, isDJ, onSubmitTrack }: RequestModa
               />
             </div>
           </div>
-
-          {!isDJ && (
-            <div className="flex flex-col gap-1.5">
-              <label className="font-sans text-xs font-medium text-muted-foreground">
-                Note to DJ (optional)
-              </label>
-              <div className="relative">
-                <MessageSquare className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Textarea
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="This song always gets the crowd going..."
-                  className="min-h-[80px] pl-9 rounded-xl border-border/30 bg-muted/30 font-sans text-sm text-foreground placeholder:text-muted-foreground resize-none"
-                  disabled={loading || submitted}
-                />
-              </div>
-            </div>
-          )}
 
           <Button
             onClick={handleSubmit}

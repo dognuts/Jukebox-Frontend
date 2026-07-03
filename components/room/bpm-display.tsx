@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, useTransition } from "react"
 import { Activity } from "lucide-react"
 import { BPMDetector, TapTempo } from "@/lib/bpm-detector"
 import { estimateBpm } from "@/lib/estimate-bpm"
+import { usePrefersReducedMotion } from "@/components/room/use-prefers-reduced-motion"
 
 interface BPMDisplayProps {
   /** Whether audio is currently playing */
@@ -20,6 +21,7 @@ interface BPMDisplayProps {
 
 export function BPMDisplay({ isPlaying, audioElement, source, trackTitle, trackArtist, genre }: BPMDisplayProps) {
   const canAutoDetect = source === "mp3" || source === "direct"
+  const prefersReducedMotion = usePrefersReducedMotion()
 
   const [bpm, setBpm] = useState<number | null>(null)
   const [mode, setMode] = useState<"auto" | "tap" | "estimate">("auto")
@@ -219,7 +221,9 @@ export function BPMDisplay({ isPlaying, audioElement, source, trackTitle, trackA
             c && isPlaying
               ? {
                   color: c.text,
-                  animation: `bpm-icon-pulse ${pulseDuration}s ease-in-out infinite`,
+                  animation: prefersReducedMotion
+                    ? undefined
+                    : `bpm-icon-pulse ${pulseDuration}s ease-in-out infinite`,
                 }
               : { color: "oklch(0.45 0.02 280)" }
           }
@@ -253,11 +257,11 @@ export function BPMDisplay({ isPlaying, audioElement, source, trackTitle, trackA
             {tapCount === 0 ? "Tap to detect" : tapCount < 3 ? `Tap... (${tapCount})` : "Listening..."}
           </span>
         ) : canAutoDetect && isPlaying ? (
-          <span className="font-mono text-xs text-muted-foreground animate-pulse">
+          <span className="font-mono text-xs text-muted-foreground animate-pulse motion-reduce:animate-none">
             Detecting...
           </span>
         ) : isPlaying ? (
-          <span className="font-mono text-xs text-muted-foreground animate-pulse">
+          <span className="font-mono text-xs text-muted-foreground animate-pulse motion-reduce:animate-none">
             Estimating...
           </span>
         ) : (

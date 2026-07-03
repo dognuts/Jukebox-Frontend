@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { usePrefersReducedMotion } from "@/components/room/use-prefers-reduced-motion"
 
 interface ChatMediaInlineProps {
   url: string
@@ -20,6 +21,7 @@ export function ChatMediaInline({ url, type }: ChatMediaInlineProps) {
   const [loaded, setLoaded] = useState(false)
   const [errored, setErrored] = useState(false)
   const useVideo = type === "gif" && isMP4(url)
+  const prefersReducedMotion = usePrefersReducedMotion()
 
   if (errored) {
     return (
@@ -32,7 +34,7 @@ export function ChatMediaInline({ url, type }: ChatMediaInlineProps) {
           padding: "var(--space-sm)",
           background: "rgba(255,255,255,0.03)",
           border: "0.5px solid rgba(255,255,255,0.06)",
-          color: "rgba(232,230,234,0.4)",
+          color: "rgba(232,230,234,0.6)",
         }}
       >
         GIF failed to load — click to open
@@ -50,7 +52,9 @@ export function ChatMediaInline({ url, type }: ChatMediaInlineProps) {
             height: "140px",
             background: "rgba(255,255,255,0.03)",
             border: "0.5px solid rgba(255,255,255,0.06)",
-            animation: "chat-media-skeleton-pulse 1.5s ease-in-out infinite",
+            animation: prefersReducedMotion
+              ? undefined
+              : "chat-media-skeleton-pulse 1.5s ease-in-out infinite",
           }}
         />
       )}
