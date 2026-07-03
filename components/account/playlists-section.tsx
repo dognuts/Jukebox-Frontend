@@ -17,7 +17,7 @@ import {
   Loader2,
 } from "lucide-react"
 import { usePlaylist, type Playlist } from "@/lib/playlist-context"
-import { type Track, formatDuration } from "@/lib/mock-data"
+import { type Track, formatDuration } from "@/components/discover/types"
 import {
   DropdownMenu,
   DropdownMenuTrigger,

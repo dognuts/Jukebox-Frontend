@@ -1,9 +1,8 @@
 "use client"
 
-import { useEffect, useState, useCallback, type ReactNode } from "react"
-import { toast } from "sonner"
+import { useEffect, useState, useCallback } from "react"
 
-interface KeyboardShortcut {
+export interface KeyboardShortcut {
   key: string
   ctrl?: boolean
   shift?: boolean
@@ -13,11 +12,31 @@ interface KeyboardShortcut {
   action: () => void
 }
 
+function sameCombo(a: KeyboardShortcut, b: KeyboardShortcut) {
+  return (
+    a.key.toLowerCase() === b.key.toLowerCase() &&
+    !!(a.ctrl || a.meta) === !!(b.ctrl || b.meta) &&
+    !!a.shift === !!b.shift &&
+    !!a.alt === !!b.alt
+  )
+}
+
 export function useKeyboardShortcuts() {
   const [shortcuts, setShortcuts] = useState<KeyboardShortcut[]>([])
 
+  // Registering an already-registered key combo replaces the previous entry
+  // instead of appending. Callers re-register from effects whenever their
+  // state changes, so the action closure that runs is always the freshest
+  // one — appending would leave the oldest (stale) closure winning because
+  // the key handler stops on the first match.
   const registerShortcut = useCallback((shortcut: KeyboardShortcut) => {
-    setShortcuts(prev => [...prev, shortcut])
+    setShortcuts(prev => {
+      const index = prev.findIndex(s => sameCombo(s, shortcut))
+      if (index === -1) return [...prev, shortcut]
+      const next = [...prev]
+      next[index] = shortcut
+      return next
+    })
   }, [])
 
   const unregisterShortcut = useCallback((key: string) => {
@@ -26,19 +45,24 @@ export function useKeyboardShortcuts() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger shortcuts if typing in input/textarea
+      // Don't trigger shortcuts if typing in an input, textarea or
+      // contenteditable element
+      const target = e.target as HTMLElement
       if (
-        (e.target as HTMLElement).tagName === 'INPUT' ||
-        (e.target as HTMLElement).tagName === 'TEXTAREA'
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
       ) {
         return
       }
 
       for (const shortcut of shortcuts) {
         const keyMatch = e.key.toLowerCase() === shortcut.key.toLowerCase()
-        const ctrlMatch = (e.ctrlKey || e.metaKey) === (shortcut.ctrl || shortcut.meta)
-        const shiftMatch = e.shiftKey === (shortcut.shift || false)
-        const altMatch = e.altKey === (shortcut.alt || false)
+        // Coerce with !! — `shortcut.ctrl || shortcut.meta` is undefined for
+        // modifier-less shortcuts, and `false === undefined` would never match.
+        const ctrlMatch = (e.ctrlKey || e.metaKey) === !!(shortcut.ctrl || shortcut.meta)
+        const shiftMatch = e.shiftKey === !!shortcut.shift
+        const altMatch = e.altKey === !!shortcut.alt
 
         if (keyMatch && ctrlMatch && shiftMatch && altMatch) {
           e.preventDefault()
@@ -53,33 +77,4 @@ export function useKeyboardShortcuts() {
   }, [shortcuts])
 
   return { registerShortcut, unregisterShortcut, shortcuts }
-}
-
-export function KeyboardShortcutsProvider({ children }: { children: ReactNode }) {
-  const { registerShortcut } = useKeyboardShortcuts()
-
-  useEffect(() => {
-    // Register global shortcuts
-    registerShortcut({
-      key: '?',
-      shift: true,
-      description: 'Show keyboard shortcuts help',
-      action: () => {
-        toast.info('Keyboard Shortcuts:\n/ - Search\nArrow Keys - Navigate\nEsc - Close')
-      },
-    })
-
-    registerShortcut({
-      key: '/',
-      description: 'Open search',
-      action: () => {
-        const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement
-        if (searchInput) {
-          searchInput.focus()
-        }
-      },
-    })
-  }, [registerShortcut])
-
-  return <>{children}</>
 }

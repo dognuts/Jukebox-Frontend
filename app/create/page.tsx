@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useCallback, useRef, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { ArrowLeft, Radio, Sparkles, Upload, ImageIcon, X, CalendarDays, Clock, ListMusic, Check, Heart } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
+import { ArrowLeft, Radio, Sparkles, Upload, ImageIcon, X, CalendarDays, Clock, ListMusic, Check, Heart, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,11 +12,10 @@ import { Navbar } from "@/components/layout/navbar"
 import { Footer } from "@/components/layout/footer"
 import { usePlaylist } from "@/lib/playlist-context"
 
-import { genres, vibeOptions, rooms, coverGradients, avatarColors, createTrack, currentUser } from "@/lib/mock-data"
-import type { Room } from "@/lib/mock-data"
 import { containsProhibitedContent } from "@/lib/moderation"
 import { createRoom as apiCreateRoom } from "@/lib/api"
 import { useAuth } from "@/lib/auth-context"
+import { withNextParam } from "@/components/auth/next-param"
 
 const requestPolicies = [
   { value: "open", label: "Open", description: "Anyone can add tracks to the queue" },
@@ -24,17 +23,98 @@ const requestPolicies = [
   { value: "closed", label: "Closed", description: "Only the DJ can add tracks" },
 ]
 
+const genres = [
+  "Lo-fi",
+  "Hip-Hop",
+  "Jazz",
+  "Electronic",
+  "Indie",
+  "R&B",
+  "House",
+  "Ambient",
+  "Soul",
+  "Funk",
+  "Rock",
+  "Pop",
+]
+
+const vibeOptions = [
+  "Late Night",
+  "Chill",
+  "Hype",
+  "Throwbacks",
+  "Deep Cuts",
+  "Feel Good",
+  "Moody",
+  "Party",
+  "Focus",
+  "Workout",
+  "Road Trip",
+  "Sunday Morning",
+  "Underground",
+  "Soulful",
+  "Experimental",
+  "Groovy",
+  "Mellow",
+  "Energetic",
+]
+
+const coverGradients = [
+  "linear-gradient(160deg, oklch(0.25 0.08 30), oklch(0.15 0.12 350))",
+  "linear-gradient(160deg, oklch(0.20 0.10 250), oklch(0.12 0.08 280))",
+  "linear-gradient(160deg, oklch(0.30 0.06 150), oklch(0.15 0.10 180))",
+  "linear-gradient(160deg, oklch(0.28 0.12 80), oklch(0.18 0.14 50))",
+  "linear-gradient(160deg, oklch(0.22 0.14 320), oklch(0.14 0.10 280))",
+  "linear-gradient(160deg, oklch(0.25 0.08 200), oklch(0.15 0.06 230))",
+  "linear-gradient(160deg, oklch(0.20 0.06 100), oklch(0.30 0.08 130))",
+  "linear-gradient(160deg, oklch(0.28 0.12 350), oklch(0.20 0.10 20))",
+]
+
+/**
+ * Extract a human-readable message from a create-room failure.
+ * lib/api.ts throws `Error("API <status>: <body>")` where the body is the
+ * backend's plain-text message (via http.Error) or occasionally JSON.
+ * Anything else (e.g. a network-level fetch failure) gets a generic line.
+ */
+function extractApiErrorMessage(err: unknown): string {
+  if (!(err instanceof Error) || !err.message) {
+    return "Could not create the room. Please try again."
+  }
+  const match = err.message.match(/^API (\d{3}): ([\s\S]*)$/)
+  if (!match) {
+    return "Could not reach the server. Check your connection and try again."
+  }
+  let body = match[2].trim()
+  if (body.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(body) as { error?: unknown; message?: unknown }
+      body = typeof parsed.error === "string"
+        ? parsed.error
+        : typeof parsed.message === "string"
+          ? parsed.message
+          : ""
+    } catch {
+      body = ""
+    }
+  }
+  if (!body || body.startsWith("<")) {
+    return "Could not create the room. Please try again."
+  }
+  return body
+}
+
 
 export default function CreateRoomPage() {
   const router = useRouter()
+  const pathname = usePathname()
   const { isLoggedIn, loading: authLoading } = useAuth()
 
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated, remembering where we came from
   useEffect(() => {
     if (!authLoading && !isLoggedIn) {
-      router.replace("/login")
+      router.replace(withNextParam("/login", pathname))
     }
-  }, [authLoading, isLoggedIn, router])
+  }, [authLoading, isLoggedIn, router, pathname])
 
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
@@ -95,10 +175,12 @@ export default function CreateRoomPage() {
   }, [])
 
   const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
 
   const handleCreate = useCallback(async () => {
     if (creating) return
     setCreating(true)
+    setCreateError(null)
 
     try {
       // Build scheduled start ISO string if applicable
@@ -132,55 +214,10 @@ export default function CreateRoomPage() {
         router.push(`/room/${result.room.slug}`)
       }
     } catch (err) {
-      console.error("[create] API error, falling back to local:", err)
-
-      // Fallback to local mock behavior if backend is down
-      const slug = name
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "")
-        || `room-${Date.now()}`
-
-      const existingRoom = rooms.find((r) => r.slug === slug)
-      if (existingRoom) {
-        router.push(`/room/${slug}?dj=1`)
-        setCreating(false)
-        return
-      }
-
-      const gradientSeed = name.length % coverGradients.length
-      const newRoom: Room = {
-        id: `user-${Date.now()}`,
-        slug,
-        name: name.trim(),
-        description: description.trim(),
-        djName: currentUser.displayName,
-        djUsername: currentUser.username,
-        djAvatarColor: currentUser.avatarColor,
-        coverGradient: coverGradients[gradientSeed],
-        coverArt: coverArt || undefined,
-        genre: selectedGenres[0] || "Electronic",
-        vibes: selectedVibes,
-        isLive: !isScheduled,
-        listenerCount: 0,
-        isOfficial: false,
-        requestPolicy: requestPolicy as "open" | "approval" | "closed",
-        nowPlaying: createTrack("new-t1", "Waiting for first track...", "Queue a track to begin", 180, "mp3", currentUser.displayName, 0),
-        queue: [],
-        chatMessages: [],
-        ...(isScheduled && scheduleDate && scheduleTime
-          ? { scheduledStart: new Date(`${scheduleDate}T${scheduleTime}`) }
-          : {}),
-      }
-
-      rooms.push(newRoom)
-
-      if (isScheduled) {
-        router.push("/")
-      } else {
-        router.push(`/room/${slug}?dj=1`)
-      }
+      // Fail loudly: no fake local room, no navigation. Keep the form state
+      // so the user can correct the problem and retry.
+      console.error("[create] Failed to create room:", err)
+      setCreateError(extractApiErrorMessage(err))
     } finally {
       setCreating(false)
     }
@@ -189,17 +226,33 @@ export default function CreateRoomPage() {
   // Preview gradient based on name length as seed
   const previewGradient = `linear-gradient(160deg, oklch(0.25 0.08 ${(name.length * 37) % 360}), oklch(0.15 0.12 ${(name.length * 73) % 360}))`
 
-  // Don't render form while checking auth or if not logged in
+  // While auth resolves (and during the brief logged-out redirect) show a
+  // neutral skeleton of the page chrome instead of a flash message.
   if (authLoading || !isLoggedIn) {
     return (
       <div className="relative min-h-screen">
         <div className="relative z-10">
           <Navbar />
-          <main className="mx-auto max-w-3xl px-4 py-24 text-center">
-            <p className="font-sans text-sm text-muted-foreground">
-              {authLoading ? "Loading..." : "Redirecting to login..."}
-            </p>
+          <main className="mx-auto max-w-3xl px-4 py-8 lg:px-6" aria-busy="true">
+            <div className="animate-pulse">
+              <div className="h-4 w-32 rounded bg-muted/30" />
+              <div className="mt-8 flex flex-col gap-8 lg:flex-row lg:gap-10">
+                <div className="flex-1">
+                  <div className="h-8 w-44 rounded-lg bg-muted/40" />
+                  <div className="mt-6 flex flex-col gap-6">
+                    <div className="h-10 w-full rounded-xl border border-border/30 bg-muted/20" />
+                    <div className="h-24 w-full rounded-xl border border-border/30 bg-muted/20" />
+                    <div className="h-36 w-full rounded-xl border border-border/30 bg-muted/20" />
+                    <div className="h-10 w-full rounded-xl border border-border/30 bg-muted/20" />
+                  </div>
+                </div>
+                <div className="lg:w-72">
+                  <div className="h-64 w-full rounded-2xl border border-border/30 bg-muted/20" />
+                </div>
+              </div>
+            </div>
           </main>
+          <Footer />
         </div>
       </div>
     )
@@ -720,9 +773,22 @@ export default function CreateRoomPage() {
                 </div>
 
                 {/* Action button */}
+                {createError && (
+                  <div
+                    className="rounded-lg px-3 py-2 font-sans text-sm"
+                    style={{
+                      background: "oklch(0.30 0.12 25 / 0.3)",
+                      border: "1px solid oklch(0.50 0.18 25 / 0.4)",
+                      color: "oklch(0.75 0.12 25)",
+                    }}
+                    role="alert"
+                  >
+                    {createError}
+                  </div>
+                )}
                 <Button
                   onClick={handleCreate}
-                  disabled={!name.trim() || hasBlockedContent || (isScheduled && (!scheduleDate || !scheduleTime))}
+                  disabled={creating || !name.trim() || hasBlockedContent || (isScheduled && (!scheduleDate || !scheduleTime))}
                   size="lg"
                   className="gap-2 rounded-xl font-sans text-lg font-bold disabled:opacity-30"
                   style={
@@ -734,7 +800,12 @@ export default function CreateRoomPage() {
                       : undefined
                   }
                 >
-                  {isScheduled ? (
+                  {creating ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      {isScheduled ? "Scheduling..." : "Creating Room..."}
+                    </>
+                  ) : isScheduled ? (
                     <>
                       <CalendarDays className="h-5 w-5" />
                       Schedule Room

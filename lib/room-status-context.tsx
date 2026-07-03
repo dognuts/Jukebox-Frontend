@@ -1,14 +1,8 @@
 "use client"
 
 import { createContext, useContext, useState, useMemo, type Dispatch, type SetStateAction } from "react"
-import { rooms, type RequestPolicy } from "@/lib/mock-data"
 
 export type RequestStatus = "open" | "paused" | "closed"
-
-function toRequestStatus(policy: RequestPolicy): RequestStatus {
-  if (policy === "closed") return "closed"
-  return "open"
-}
 
 type StatusMap = Record<string, RequestStatus>
 
@@ -18,13 +12,9 @@ const RoomStatusContext = createContext<{
 } | null>(null)
 
 export function RoomStatusProvider({ children }: { children: React.ReactNode }) {
-  const [statusMap, setStatusMap] = useState<StatusMap>(() => {
-    const initial: StatusMap = {}
-    for (const room of rooms) {
-      initial[room.id] = toRequestStatus(room.requestPolicy)
-    }
-    return initial
-  })
+  // Rooms default to "open" (see useRoomStatus); entries are only added when
+  // a status is changed at runtime.
+  const [statusMap, setStatusMap] = useState<StatusMap>({})
 
   const value = useMemo(() => ({ statusMap, setStatusMap }), [statusMap])
 

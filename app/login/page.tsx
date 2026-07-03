@@ -1,18 +1,22 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AuthShell } from "@/components/auth/auth-shell"
+import { sanitizeNextPath, withNextParam } from "@/components/auth/next-param"
 import { useAuth } from "@/lib/auth-context"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  // Where to return after login — only same-origin relative paths are honored
+  const nextPath = sanitizeNextPath(searchParams.get("next"))
   const { login } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -27,7 +31,7 @@ export default function LoginPage() {
     try {
       await login(email, password)
       toast.success("Welcome back!")
-      router.push("/")
+      router.replace(nextPath || "/")
     } catch (err: any) {
       setError(err.message || "Login failed")
       toast.error("Login failed")
@@ -72,8 +76,16 @@ export default function LoginPage() {
 
       <p className="mt-6 text-center font-sans text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}
-        <Link href="/signup" className="text-primary hover:underline">Sign up</Link>
+        <Link href={withNextParam("/signup", nextPath)} className="text-primary hover:underline">Sign up</Link>
       </p>
     </AuthShell>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<AuthShell title="Welcome back" subtitle="Log in to your Jukebox account."><div /></AuthShell>}>
+      <LoginForm />
+    </Suspense>
   )
 }

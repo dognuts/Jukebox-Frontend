@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Headphones, Music, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { type Room, formatListenerCount } from "@/lib/mock-data"
+import { type Room, formatListenerCount } from "./types"
 
 export function FeaturedRoom({ room }: { room: Room }) {
   return (
@@ -171,19 +171,22 @@ export function FeaturedRoom({ room }: { room: Room }) {
               </div>
 
               <div className="flex items-center gap-3 mt-1">
-                <Link href={`/room/${room.slug}`}>
-                  <Button
-                    size="lg"
-                    className="gap-2 rounded-full font-sans text-primary-foreground"
-                    style={{
-                      background: "linear-gradient(135deg, oklch(0.82 0.18 80), oklch(0.75 0.20 70))",
-                      boxShadow: "0 0 15px oklch(0.82 0.18 80 / 0.3), 0 4px 12px oklch(0.10 0.01 280 / 0.4)",
-                    }}
-                  >
+                {/* asChild renders the styled control as the anchor itself —
+                    a <button> nested inside an <a> is invalid HTML */}
+                <Button
+                  asChild
+                  size="lg"
+                  className="gap-2 rounded-full font-sans text-primary-foreground"
+                  style={{
+                    background: "linear-gradient(135deg, oklch(0.82 0.18 80), oklch(0.75 0.20 70))",
+                    boxShadow: "0 0 15px oklch(0.82 0.18 80 / 0.3), 0 4px 12px oklch(0.10 0.01 280 / 0.4)",
+                  }}
+                >
+                  <Link href={`/room/${room.slug}`}>
                     <Play className="h-4 w-4" />
                     Tune In
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
                 <Badge
                   variant="secondary"
                   className="text-muted-foreground"

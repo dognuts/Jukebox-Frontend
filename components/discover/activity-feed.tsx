@@ -1,6 +1,6 @@
 "use client"
 
-import { type Room } from "@/lib/mock-data"
+import { type Room } from "./types"
 
 const AVATAR_COLORS = [
   "#c06ad8",
@@ -193,8 +193,12 @@ export function ActivityFeed({ rooms }: ActivityFeedProps) {
                   </>
                 )}
               </div>
+              {/* suppressHydrationWarning: the homepage HTML is prerendered
+                  (revalidate window), so the relative label can cross a
+                  bucket ("2m ago" → "3m ago") between render and hydrate. */}
               <div
                 className="shrink-0"
+                suppressHydrationWarning
                 style={{
                   fontSize: "var(--fs-meta)",
                   color: "rgba(232,230,234,0.25)",

@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { type Room } from "@/lib/mock-data"
+import { type Room } from "./types"
 import { RoomCard } from "./room-card"
 import { EmptyState } from "@/components/ui/empty-state"
 

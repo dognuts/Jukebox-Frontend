@@ -2,7 +2,7 @@
 
 import { Calendar, MapPin, Clock, Radio as RadioIcon, Music } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { type User } from "@/lib/mock-data"
+import { type User } from "./types"
 
 interface ProfileViewProps {
   user: User

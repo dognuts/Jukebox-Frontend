@@ -1,7 +1,21 @@
 "use client"
 
 import { useState, useCallback, useRef } from "react"
-import { genres } from "@/lib/mock-data"
+
+const genres = [
+  "Lo-fi",
+  "Hip-Hop",
+  "Jazz",
+  "Electronic",
+  "Indie",
+  "R&B",
+  "House",
+  "Ambient",
+  "Soul",
+  "Funk",
+  "Rock",
+  "Pop",
+]
 
 const genreColors: Record<string, string> = {
   "Lo-fi": "80",

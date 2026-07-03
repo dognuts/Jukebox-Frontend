@@ -1,14 +1,15 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, Suspense } from "react"
 import Link from "next/link"
 import Script from "next/script"
-import { useRouter } from "next/navigation"
-import { CheckCircle, XCircle, Loader2 } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { CheckCircle, XCircle, Loader2, MailCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AuthShell } from "@/components/auth/auth-shell"
+import { sanitizeNextPath, withNextParam } from "@/components/auth/next-param"
 import { useAuth } from "@/lib/auth-context"
 import { API_BASE } from "@/lib/api"
 import { containsProfanity } from "@/lib/moderation"
@@ -16,9 +17,13 @@ import { toast } from "sonner"
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ""
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  // Where to return after signup — only same-origin relative paths are honored
+  const nextPath = sanitizeNextPath(searchParams.get("next"))
   const { signup } = useAuth()
+  const [signedUp, setSignedUp] = useState(false)
   const [stageName, setStageName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -123,7 +128,7 @@ export default function SignupPage() {
     try {
       await signup(email, password, stageName, stageName, captchaToken, website)
       toast.success("Welcome to Jukebox!")
-      router.push("/")
+      setSignedUp(true)
     } catch (err: any) {
       const msg = err.message || "Signup failed"
       if (msg.toLowerCase().includes("stage name") && msg.toLowerCase().includes("taken")) {
@@ -135,6 +140,29 @@ export default function SignupPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Post-signup: tell the user a verification email went out before sending
+  // them on their way (they're already logged in at this point).
+  if (signedUp) {
+    return (
+      <AuthShell title="Check your email" subtitle={`We sent a verification link to ${email}.`}>
+        <div className="text-center py-4">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full" style={{ background: "oklch(0.55 0.18 150 / 0.15)" }}>
+            <MailCheck className="h-6 w-6" style={{ color: "oklch(0.65 0.18 150)" }} />
+          </div>
+          <p className="font-sans text-sm text-muted-foreground mb-6">
+            Your account is ready — click the link in the email to verify your address. You can also resend it later from the user menu.
+          </p>
+          <Button
+            onClick={() => router.replace(nextPath || "/")}
+            className="rounded-xl bg-primary font-sans font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            Continue to Jukebox
+          </Button>
+        </div>
+      </AuthShell>
+    )
   }
 
   return (
@@ -228,8 +256,16 @@ export default function SignupPage() {
 
       <p className="mt-6 text-center font-sans text-sm text-muted-foreground">
         Already have an account?{" "}
-        <Link href="/login" className="text-primary hover:underline">Log in</Link>
+        <Link href={withNextParam("/login", nextPath)} className="text-primary hover:underline">Log in</Link>
       </p>
     </AuthShell>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<AuthShell title="Create your account" subtitle="Start listening, hosting, and vibing."><div /></AuthShell>}>
+      <SignupForm />
+    </Suspense>
   )
 }

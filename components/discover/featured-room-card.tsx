@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { ArrowUpRight } from "lucide-react"
-import { type Room, type ChatMessage, formatListenerCount } from "@/lib/mock-data"
+import { type Room, type ChatMessage, formatListenerCount } from "./types"
 
 const AVATAR_COLORS = [
   "#c06ad8",

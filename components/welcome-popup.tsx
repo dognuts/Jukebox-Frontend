@@ -2,45 +2,60 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Headphones, Radio, MessageCircle, Sparkles, X } from "lucide-react"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { NeonJukeboxLogo } from "@/components/effects/neon-jukebox-logo"
+import { withNextParam } from "@/components/auth/next-param"
+import { useAuth } from "@/lib/auth-context"
 
 const WELCOME_DISMISSED_KEY = "jukebox_welcome_dismissed"
 
 export function WelcomePopup({ isLoggedIn }: { isLoggedIn: boolean }) {
-  const [visible, setVisible] = useState(false)
-  const [closing, setClosing] = useState(false)
+  const pathname = usePathname()
+  const { loading: authLoading } = useAuth()
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    if (isLoggedIn) return
+    // Never start the timer until auth has resolved — AuthProvider begins
+    // with user=null, so gating only on isLoggedIn would flash the anonymous
+    // onboarding modal at logged-in users whenever /api/auth/me takes longer
+    // than the delay below.
+    if (authLoading) return
+    if (isLoggedIn) {
+      // Auth resolved to a logged-in user (possibly after the popup already
+      // opened, e.g. they logged in from the popup's own link) — hide it.
+      setOpen(false)
+      return
+    }
     const dismissed = localStorage.getItem(WELCOME_DISMISSED_KEY)
     if (!dismissed) {
       // Small delay so the page loads first
-      const timer = setTimeout(() => setVisible(true), 600)
+      const timer = setTimeout(() => setOpen(true), 600)
       return () => clearTimeout(timer)
     }
-  }, [isLoggedIn])
+  }, [authLoading, isLoggedIn])
 
-  const dismiss = () => {
-    setClosing(true)
-    setTimeout(() => {
-      setVisible(false)
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next)
+    if (!next) {
       localStorage.setItem(WELCOME_DISMISSED_KEY, "1")
-    }, 400)
+    }
   }
 
-  if (!visible) return null
+  const dismiss = () => handleOpenChange(false)
 
   return (
-    <div
-      className={`fixed inset-0 z-[200] flex items-center justify-center px-4 ${closing ? "welcome-fade-out" : "welcome-fade-in"}`}
-    >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/80" onClick={dismiss} />
-
-      {/* Card */}
-      <div
-        className={`relative w-full max-w-md overflow-hidden rounded-3xl ${closing ? "welcome-card-out" : "welcome-card-in"}`}
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        showCloseButton={false}
+        className="gap-0 overflow-hidden rounded-3xl p-0 sm:max-w-md"
         style={{
           background: "oklch(0.10 0.02 280)",
           border: "1px solid oklch(0.30 0.06 80 / 0.4)",
@@ -51,14 +66,19 @@ export function WelcomePopup({ isLoggedIn }: { isLoggedIn: boolean }) {
           `,
         }}
       >
+        <DialogTitle className="sr-only">Welcome to Jukebox</DialogTitle>
+        <DialogDescription className="sr-only">
+          Find rooms, listen live with other music heads, and talk about it.
+        </DialogDescription>
+
         {/* Close button */}
-        <button
-          onClick={dismiss}
+        <DialogClose
+          aria-label="Close"
           className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-white/10"
           style={{ color: "oklch(0.60 0.02 280)" }}
         >
           <X className="h-4 w-4" />
-        </button>
+        </DialogClose>
 
         {/* Top glow bar */}
         <div className="welcome-glow-bar h-[2px] w-full" />
@@ -122,7 +142,7 @@ export function WelcomePopup({ isLoggedIn }: { isLoggedIn: boolean }) {
           <div className="welcome-stagger-5 flex items-center justify-center gap-1 font-sans text-xs">
             <span style={{ color: "oklch(0.50 0.02 280)" }}>Already have an account?</span>
             <Link
-              href="/login"
+              href={withNextParam("/login", pathname)}
               onClick={dismiss}
               className="font-semibold transition-colors hover:underline"
               style={{ color: "oklch(0.82 0.18 80)" }}
@@ -131,7 +151,7 @@ export function WelcomePopup({ isLoggedIn }: { isLoggedIn: boolean }) {
             </Link>
             <span style={{ color: "oklch(0.35 0.02 280)" }}>·</span>
             <Link
-              href="/signup"
+              href={withNextParam("/signup", pathname)}
               onClick={dismiss}
               className="font-semibold transition-colors hover:underline"
               style={{ color: "oklch(0.72 0.18 250)" }}
@@ -148,83 +168,53 @@ export function WelcomePopup({ isLoggedIn }: { isLoggedIn: boolean }) {
             background: "radial-gradient(ellipse, oklch(0.82 0.18 80 / 0.06), transparent 70%)",
           }}
         />
-      </div>
 
-      <style jsx>{`
-        .welcome-fade-in {
-          animation: wFadeIn 0.4s ease-out both;
-        }
-        .welcome-fade-out {
-          animation: wFadeOut 0.4s ease-in both;
-        }
-        .welcome-card-in {
-          animation: wCardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
-          animation-delay: 0.1s;
-        }
-        .welcome-card-out {
-          animation: wCardOut 0.35s ease-in both;
-        }
-        @keyframes wFadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes wFadeOut {
-          from { opacity: 1; }
-          to { opacity: 0; }
-        }
-        @keyframes wCardIn {
-          from { opacity: 0; transform: scale(0.92) translateY(24px); }
-          to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        @keyframes wCardOut {
-          from { opacity: 1; transform: scale(1) translateY(0); }
-          to { opacity: 0; transform: scale(0.95) translateY(12px); }
-        }
+        <style jsx>{`
+          .welcome-glow-bar {
+            background: linear-gradient(90deg,
+              transparent 0%,
+              oklch(0.82 0.18 80 / 0.6) 20%,
+              oklch(0.70 0.22 350 / 0.5) 50%,
+              oklch(0.72 0.18 250 / 0.6) 80%,
+              transparent 100%
+            );
+            animation: glowBarShimmer 3s ease-in-out infinite;
+          }
+          @keyframes glowBarShimmer {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+          }
 
-        .welcome-glow-bar {
-          background: linear-gradient(90deg,
-            transparent 0%,
-            oklch(0.82 0.18 80 / 0.6) 20%,
-            oklch(0.70 0.22 350 / 0.5) 50%,
-            oklch(0.72 0.18 250 / 0.6) 80%,
-            transparent 100%
-          );
-          animation: glowBarShimmer 3s ease-in-out infinite;
-        }
-        @keyframes glowBarShimmer {
-          0%, 100% { opacity: 0.6; }
-          50% { opacity: 1; }
-        }
+          .welcome-cta {
+            box-shadow: 0 0 20px oklch(0.82 0.18 80 / 0.3), 0 0 40px oklch(0.82 0.18 80 / 0.1);
+            transition: box-shadow 0.3s ease, transform 0.15s ease;
+          }
+          .welcome-cta:hover {
+            box-shadow: 0 0 28px oklch(0.82 0.18 80 / 0.5), 0 0 56px oklch(0.82 0.18 80 / 0.2);
+          }
+          .welcome-cta-shine {
+            background: linear-gradient(105deg, transparent 40%, oklch(0.95 0.05 80 / 0.25) 50%, transparent 60%);
+            animation: ctaShine 2.5s ease-in-out infinite;
+            animation-delay: 1s;
+          }
+          @keyframes ctaShine {
+            0% { transform: translateX(-100%); }
+            30% { transform: translateX(100%); }
+            100% { transform: translateX(100%); }
+          }
 
-        .welcome-cta {
-          box-shadow: 0 0 20px oklch(0.82 0.18 80 / 0.3), 0 0 40px oklch(0.82 0.18 80 / 0.1);
-          transition: box-shadow 0.3s ease, transform 0.15s ease;
-        }
-        .welcome-cta:hover {
-          box-shadow: 0 0 28px oklch(0.82 0.18 80 / 0.5), 0 0 56px oklch(0.82 0.18 80 / 0.2);
-        }
-        .welcome-cta-shine {
-          background: linear-gradient(105deg, transparent 40%, oklch(0.95 0.05 80 / 0.25) 50%, transparent 60%);
-          animation: ctaShine 2.5s ease-in-out infinite;
-          animation-delay: 1s;
-        }
-        @keyframes ctaShine {
-          0% { transform: translateX(-100%); }
-          30% { transform: translateX(100%); }
-          100% { transform: translateX(100%); }
-        }
-
-        .welcome-stagger-1 { animation: wStagger 0.5s ease-out both; animation-delay: 0.2s; }
-        .welcome-stagger-2 { animation: wStagger 0.5s ease-out both; animation-delay: 0.35s; }
-        .welcome-stagger-3 { animation: wStagger 0.5s ease-out both; animation-delay: 0.5s; }
-        .welcome-stagger-4 { animation: wStagger 0.5s ease-out both; animation-delay: 0.65s; }
-        .welcome-stagger-5 { animation: wStagger 0.5s ease-out both; animation-delay: 0.8s; }
-        @keyframes wStagger {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-    </div>
+          .welcome-stagger-1 { animation: wStagger 0.5s ease-out both; animation-delay: 0.2s; }
+          .welcome-stagger-2 { animation: wStagger 0.5s ease-out both; animation-delay: 0.35s; }
+          .welcome-stagger-3 { animation: wStagger 0.5s ease-out both; animation-delay: 0.5s; }
+          .welcome-stagger-4 { animation: wStagger 0.5s ease-out both; animation-delay: 0.65s; }
+          .welcome-stagger-5 { animation: wStagger 0.5s ease-out both; animation-delay: 0.8s; }
+          @keyframes wStagger {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+        `}</style>
+      </DialogContent>
+    </Dialog>
   )
 }
 

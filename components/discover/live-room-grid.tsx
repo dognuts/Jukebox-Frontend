@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { type Room } from "@/lib/mock-data"
+import { type Room } from "./types"
 
 // Per-genre accent colors for the small genre pill on each card.
 const GENRE_ACCENTS: Record<string, { label: string; bg: string }> = {

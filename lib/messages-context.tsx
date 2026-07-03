@@ -10,15 +10,39 @@ import {
   useRef,
   type ReactNode,
 } from "react"
-import {
-  type Conversation,
-  type DirectMessage,
-  type ChatUser,
-  currentUser,
-} from "@/lib/mock-data"
 import { useAuth } from "@/lib/auth-context"
 
-import { API_BASE, authRequest } from "@/lib/api"
+import { API_BASE } from "@/lib/api"
+
+// ---------- Types ----------
+// Formerly imported from lib/mock-data.ts (slated for deletion). Kept
+// structurally identical so consumers typed against the old shapes still fit.
+
+export interface ChatUser {
+  username: string
+  displayName: string
+  avatarColor: string
+  bio: string
+  joinDate: string // e.g. "Mar 2024"
+  listenHours: number
+}
+
+export interface DirectMessage {
+  id: string
+  fromUsername: string
+  text: string
+  timestamp: Date
+}
+
+export interface Conversation {
+  withUser: ChatUser
+  messages: DirectMessage[]
+  unreadCount: number
+}
+
+// Matches the mock `currentUser.username` that MessagesDrawer compares
+// against on the demo (not-logged-in) path; removed with lib/mock-data.
+const MOCK_SENDER_USERNAME = "musiclover42"
 
 // ---------- API helpers ----------
 
@@ -50,10 +74,13 @@ interface APIDirectMessage {
   fromAvatarColor?: string
 }
 
-async function apiListConversations(): Promise<APIConversationSummary[]> {
+async function apiListConversations(
+  signal?: AbortSignal
+): Promise<APIConversationSummary[]> {
   const res = await fetch(`${API_BASE}/api/messages`, {
     credentials: "include",
     headers: getAuthHeaders(),
+    signal,
   })
   if (!res.ok) return []
   return res.json()
@@ -123,18 +150,38 @@ export function MessagesProvider({ children }: { children: ReactNode }) {
   )
   const [hydrated, setHydrated] = useState(false)
   const pollRef = useRef<NodeJS.Timeout | null>(null)
+  // In-flight poll request — aborted before each new tick and on unmount.
+  const pollAbortRef = useRef<AbortController | null>(null)
+  // Raw payload of the last applied poll. Identical responses skip setState
+  // so the memoized context value keeps its identity and useMessages
+  // consumers (navbar badge, drawer) don't re-render every 30s for nothing.
+  const lastSummariesRef = useRef<string | null>(null)
   const isRealAPI = isLoggedIn && !!user
 
   // ---------- Load conversations ----------
 
   const loadConversations = useCallback(async () => {
     if (!isRealAPI) {
+      lastSummariesRef.current = null
       setConversations([])
       return
     }
 
+    // Abort any still-in-flight poll instead of stacking requests.
+    pollAbortRef.current?.abort()
+    const controller = new AbortController()
+    pollAbortRef.current = controller
+    const timeout = setTimeout(() => controller.abort(), 10_000)
+
     try {
-      const summaries = await apiListConversations()
+      const summaries = await apiListConversations(controller.signal)
+      if (pollAbortRef.current !== controller || controller.signal.aborted) {
+        return
+      }
+      const payload = JSON.stringify(summaries)
+      if (payload === lastSummariesRef.current) return
+      lastSummariesRef.current = payload
+
       const convos: Conversation[] = summaries.map((s) => ({
         withUser: {
           username: s.userId,
@@ -158,7 +205,14 @@ export function MessagesProvider({ children }: { children: ReactNode }) {
       }))
       setConversations(convos)
     } catch {
+      // Aborted (unmount / superseded tick) — keep current state.
+      if (pollAbortRef.current !== controller || controller.signal.aborted) {
+        return
+      }
+      lastSummariesRef.current = null
       setConversations([])
+    } finally {
+      clearTimeout(timeout)
     }
   }, [isRealAPI])
 
@@ -166,10 +220,23 @@ export function MessagesProvider({ children }: { children: ReactNode }) {
     loadConversations().then(() => setHydrated(true))
 
     if (isRealAPI) {
-      pollRef.current = setInterval(loadConversations, 30000)
+      pollRef.current = setInterval(() => {
+        // Skip ticks while the tab is hidden — the visibilitychange
+        // handler below refreshes when the user comes back.
+        if (document.visibilityState === "hidden") return
+        loadConversations()
+      }, 30000)
     }
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && isRealAPI) {
+        loadConversations()
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibility)
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
+      document.removeEventListener("visibilitychange", handleVisibility)
+      pollAbortRef.current?.abort()
     }
   }, [loadConversations, isRealAPI])
 
@@ -292,7 +359,7 @@ export function MessagesProvider({ children }: { children: ReactNode }) {
       } else {
         const newMsg: DirectMessage = {
           id: `dm-${Date.now()}-${Math.random()}`,
-          fromUsername: currentUser.username,
+          fromUsername: MOCK_SENDER_USERNAME,
           text,
           timestamp: new Date(),
         }

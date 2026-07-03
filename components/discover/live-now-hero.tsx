@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { ChevronRight } from "lucide-react"
-import { type Room } from "@/lib/mock-data"
+import { type Room } from "./types"
 import { FeaturedRoom } from "./featured-room"
 import { RoomCard } from "./room-card"
 

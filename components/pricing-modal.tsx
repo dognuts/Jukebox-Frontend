@@ -3,8 +3,17 @@
 import { useState, useCallback, useMemo, createContext, useContext, type ReactNode } from "react"
 import { X, Check, Zap, Crown, Loader2, Sparkles } from "lucide-react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { useAuth } from "@/lib/auth-context"
 import { authRequest } from "@/lib/api"
+import { withNextParam } from "@/components/auth/next-param"
 
 // ── Context so any component can open the pricing modal ──
 
@@ -56,6 +65,7 @@ const NEON_PACKS = [
 // ── Modal Component ──
 
 function PricingModal({ onClose }: { onClose: () => void }) {
+  const pathname = usePathname()
   const { isLoggedIn, user, refreshAuth } = useAuth()
   const [subscribing, setSubscribing] = useState(false)
   const [buyingPack, setBuyingPack] = useState<string | null>(null)
@@ -95,16 +105,10 @@ function PricingModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200" />
-
-      {/* Modal */}
-      <div
-        className="relative z-10 w-full max-w-2xl mx-4 my-8 rounded-3xl animate-in slide-in-from-bottom-4 fade-in duration-300"
+    <Dialog open onOpenChange={(o) => { if (!o) onClose() }}>
+      <DialogContent
+        showCloseButton={false}
+        className="max-h-[calc(100vh-4rem)] gap-0 overflow-y-auto rounded-3xl p-0 sm:max-w-2xl"
         style={{
           background: "oklch(0.12 0.015 280)",
           border: "1px solid oklch(0.25 0.02 280 / 0.6)",
@@ -112,29 +116,29 @@ function PricingModal({ onClose }: { onClose: () => void }) {
         }}
       >
         {/* Close button */}
-        <button
-          onClick={onClose}
+        <DialogClose
+          aria-label="Close"
           className="absolute right-4 top-4 z-20 flex h-8 w-8 items-center justify-center rounded-full transition-all hover:bg-muted/20"
           style={{ color: "oklch(0.6 0.02 280)" }}
         >
           <X className="h-5 w-5" />
-        </button>
+        </DialogClose>
 
         <div className="px-6 py-8 sm:px-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <h2 className="font-sans text-2xl font-bold text-foreground tracking-tight">
+            <DialogTitle className="font-sans text-2xl font-bold leading-tight text-foreground tracking-tight">
               {(user as any)?.isPlus
                 ? <>Get <span style={{ color: "oklch(0.72 0.18 195)" }}>Neon</span></>
                 : <>Level Up Your <span style={{ color: "oklch(0.82 0.18 80)" }}>Jukebox</span></>
               }
-            </h2>
-            <p className="mt-1.5 font-sans text-sm text-muted-foreground">
+            </DialogTitle>
+            <DialogDescription className="mt-1.5 font-sans text-sm text-muted-foreground">
               {(user as any)?.isPlus
                 ? "Grab Neon to light up live rooms and support your favorite DJs."
                 : "Subscribe to Plus or grab Neon to light up live rooms."
               }
-            </p>
+            </DialogDescription>
           </div>
 
           {/* Plus Card — hidden for existing Plus members */}
@@ -188,7 +192,7 @@ function PricingModal({ onClose }: { onClose: () => void }) {
                 </button>
                 {!isLoggedIn && (
                   <p className="font-sans text-[10px] text-muted-foreground">
-                    <Link href="/login" className="text-primary hover:underline" onClick={onClose}>Log in</Link> to subscribe
+                    <Link href={withNextParam("/login", pathname)} className="text-primary hover:underline" onClick={onClose}>Log in</Link> to subscribe
                   </p>
                 )}
               </div>
@@ -274,12 +278,12 @@ function PricingModal({ onClose }: { onClose: () => void }) {
 
             {!isLoggedIn && (
               <p className="mt-3 text-center font-sans text-[10px] text-muted-foreground">
-                <Link href="/login" className="text-primary hover:underline" onClick={onClose}>Log in</Link> to purchase
+                <Link href={withNextParam("/login", pathname)} className="text-primary hover:underline" onClick={onClose}>Log in</Link> to purchase
               </p>
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
