@@ -540,7 +540,7 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
               username: msg.payload.from,
               avatarColor: "oklch(0.72 0.18 195)",
               message: `sent ${msg.payload.amount} Neon`,
-              type: "activity_tip" as any,
+              type: "activity_tip",
               timestamp: new Date().toISOString(),
             }
             activityEventsSlice.update((prev) => [...prev.slice(-100), giftMsg])
@@ -555,7 +555,7 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
               username: msg.payload.username,
               avatarColor: msg.payload.avatarColor || "oklch(0.65 0.15 155)",
               message: "joined the room",
-              type: "activity_join" as any,
+              type: "activity_join",
               timestamp: new Date().toISOString(),
             }
             activityEventsSlice.update((prev) => [...prev.slice(-100), joinMsg])
@@ -570,7 +570,7 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
               username: msg.payload.username,
               avatarColor: msg.payload.avatarColor || "oklch(0.55 0.08 280)",
               message: "left the room",
-              type: "activity_leave" as any,
+              type: "activity_leave",
               timestamp: new Date().toISOString(),
             }
             activityEventsSlice.update((prev) => [...prev.slice(-100), leaveMsg])

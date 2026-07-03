@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback, useMemo, forwardRef, memo } from "react"
-import { type ChatMessage } from "@/lib/mock-data"
+import { type ChatMessage } from "@/components/discover/types"
 import { type ListenerInfo } from "@/hooks/use-room-websocket"
 import { useRoomChatMessages } from "@/hooks/room-store"
 import { GifPicker } from "@/components/room/gif-picker"

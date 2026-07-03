@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { Radio as RadioIcon, Clock, Music } from "lucide-react"
+import { SmartImage } from "@/components/smart-image"
 
 interface APIFavoriteRoom {
   roomId: string
@@ -58,13 +59,24 @@ export function FavoritesSection({ favoriteRooms }: FavoritesSectionProps) {
 
               {/* Cover art */}
               <div
-                className="h-10 w-10 shrink-0 rounded-lg"
+                className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg"
                 style={{
-                  background: fav.coverArtUrl
-                    ? `url(${fav.coverArtUrl}) center/cover no-repeat`
-                    : "linear-gradient(135deg, oklch(0.40 0.15 270), oklch(0.30 0.10 300))",
+                  background:
+                    "linear-gradient(135deg, oklch(0.40 0.15 270), oklch(0.30 0.10 300))",
                 }}
-              />
+              >
+                {fav.coverArtUrl && (
+                  <SmartImage
+                    src={fav.coverArtUrl}
+                    alt=""
+                    aria-hidden="true"
+                    fill
+                    sizes="40px"
+                    className="object-cover"
+                    draggable={false}
+                  />
+                )}
+              </div>
 
               {/* Info */}
               <div className="flex-1 min-w-0">

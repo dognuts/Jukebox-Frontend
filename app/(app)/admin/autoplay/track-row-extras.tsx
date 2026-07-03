@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Loader2, RotateCw, Sparkles } from "lucide-react"
+import { SmartImage } from "@/components/smart-image"
 import { type TrackCandidate, adminSearchTrack } from "@/lib/api"
 
 // Minimal shape the extras component reads off of a track. The host page's
@@ -176,10 +177,11 @@ export function BulkAltsPanel<TrackT extends TrackWithBulkExtras>({
                 className="flex w-full items-center gap-2 rounded px-1.5 py-1 text-left hover:bg-muted/20"
               >
                 {alt.thumbnail ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <SmartImage
                     src={alt.thumbnail}
                     alt=""
+                    width={48}
+                    height={28}
                     className="h-7 w-12 shrink-0 rounded-sm object-cover"
                   />
                 ) : (

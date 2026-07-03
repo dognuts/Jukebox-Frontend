@@ -10,7 +10,7 @@ import {
   useRef,
   type ReactNode,
 } from "react"
-import { type Track } from "@/lib/mock-data"
+import { type Track } from "@/components/discover/types"
 import { authRequest } from "@/lib/api"
 import { useAuth } from "@/lib/auth-context"
 import { toast } from "sonner"

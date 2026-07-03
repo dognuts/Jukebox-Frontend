@@ -3,6 +3,7 @@
 import { memo } from "react"
 import Link from "next/link"
 import { Heart, Plus, Mic } from "lucide-react"
+import { SmartImage } from "@/components/smart-image"
 import { soundcloudProfileUrl } from "@/lib/track-utils"
 import { useRoomPlaybackPosition } from "@/hooks/room-store"
 import { usePrefersReducedMotion } from "@/components/room/use-prefers-reduced-motion"
@@ -212,12 +213,22 @@ export const ListenerNowPlaying = memo(function ListenerNowPlaying({
               style={{
                 width: "clamp(88px, 10vw, 128px)",
                 height: "clamp(88px, 10vw, 128px)",
-                background: albumArtUrl
-                  ? `url(${albumArtUrl}) center/cover no-repeat`
-                  : albumGradient ||
-                    "linear-gradient(135deg, #3d2b1a 0%, #1a1225 100%)",
+                background:
+                  albumGradient ||
+                  "linear-gradient(135deg, #3d2b1a 0%, #1a1225 100%)",
               }}
             >
+              {albumArtUrl && (
+                <SmartImage
+                  src={albumArtUrl}
+                  alt=""
+                  aria-hidden="true"
+                  fill
+                  sizes="128px"
+                  className="object-cover"
+                  draggable={false}
+                />
+              )}
               {!albumArtUrl && (
                 <div
                   className="flex h-10 w-10 items-center justify-center rounded-full"

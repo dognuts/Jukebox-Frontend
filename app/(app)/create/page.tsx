@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Navbar } from "@/components/layout/navbar"
 import { Footer } from "@/components/layout/footer"
+import { SmartImage } from "@/components/smart-image"
 import { usePlaylist } from "@/lib/playlist-context"
 
 import { containsProhibitedContent } from "@/lib/moderation"
@@ -351,10 +352,16 @@ export default function CreateRoomPage() {
 
                   {coverArt ? (
                     <div className="relative overflow-hidden rounded-xl" style={{ border: "1px solid oklch(0.30 0.02 280 / 0.5)" }}>
-                      <div
-                        className="h-36 w-full"
-                        style={{ background: `url(${coverArt}) center/cover no-repeat` }}
-                      />
+                      <div className="relative h-36 w-full">
+                        <SmartImage
+                          src={coverArt}
+                          alt="Room artwork preview"
+                          fill
+                          sizes="640px"
+                          className="object-cover"
+                          draggable={false}
+                        />
+                      </div>
                       <button
                         onClick={() => { setCoverArt(null); if (fileInputRef.current) fileInputRef.current.value = "" }}
                         className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full transition-colors"
@@ -828,13 +835,20 @@ export default function CreateRoomPage() {
                 </h3>
                 <div className="overflow-hidden rounded-2xl border border-border/30">
                   <div
-                    className="relative h-28 w-full"
-                    style={{
-                      background: coverArt
-                        ? `url(${coverArt}) center/cover no-repeat`
-                        : previewGradient,
-                    }}
+                    className="relative h-28 w-full overflow-hidden"
+                    style={{ background: previewGradient }}
                   >
+                    {coverArt && (
+                      <SmartImage
+                        src={coverArt}
+                        alt=""
+                        aria-hidden="true"
+                        fill
+                        sizes="288px"
+                        className="object-cover"
+                        draggable={false}
+                      />
+                    )}
                     {!coverArt && (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <span className="font-sans text-[10px] text-white/30">No artwork uploaded</span>

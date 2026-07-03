@@ -1,7 +1,7 @@
 "use client"
 
 import { memo } from "react"
-import { type Track } from "@/lib/mock-data"
+import { type Track } from "@/components/discover/types"
 
 interface ListenerQueueProps {
   tracks: Track[]

@@ -2,8 +2,6 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { MDXRemote } from "next-mdx-remote/rsc"
 import { getAllPosts, getPostBySlug, getRelatedPosts } from "@/lib/blog"
-import { Navbar } from "@/components/layout/navbar"
-import { Footer } from "@/components/layout/footer"
 import { PostLayout } from "@/components/blog/post-layout"
 import { mdxComponents } from "@/components/blog/mdx-components"
 
@@ -98,24 +96,18 @@ export default async function BlogPostPage({
 
   const related = getRelatedPosts(slug, 3)
 
+  // Navbar, Footer, and the page background come from the (site) layout.
   return (
-    <div
-      className="relative min-h-screen"
-      style={{ background: "#0d0b10", color: "#e8e6ea" }}
-    >
+    <>
       <ArticleJsonLd
         slug={slug}
         title={post.title}
         description={post.description}
         date={post.date}
       />
-      <div className="relative z-10">
-        <Navbar />
-        <PostLayout post={post} related={related}>
-          <MDXRemote source={post.content} components={mdxComponents} />
-        </PostLayout>
-        <Footer />
-      </div>
-    </div>
+      <PostLayout post={post} related={related}>
+        <MDXRemote source={post.content} components={mdxComponents} />
+      </PostLayout>
+    </>
   )
 }

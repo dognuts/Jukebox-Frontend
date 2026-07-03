@@ -4,6 +4,7 @@ import Link from "next/link"
 import { memo, useRef, useState, useCallback, useEffect } from "react"
 import { Headphones, Music, Bell, BellRing, Clock, Inbox, PauseCircle, XCircle, Heart } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { SmartImage } from "@/components/smart-image"
 import { SoundWaveVisualizer } from "@/components/effects/sound-wave-visualizer"
 import { type Room, formatListenerCount } from "./types"
 import { useRoomStatus } from "@/lib/room-status-context"
@@ -169,10 +170,21 @@ function RoomCardImpl({ room }: { room: Room }) {
             <div
               className="relative flex w-full flex-col justify-between p-3"
               style={{
-                background: room.coverArt ? `url(${room.coverArt}) center/cover no-repeat` : room.coverGradient,
+                background: room.coverGradient,
                 minHeight: "9rem",
               }}
             >
+              {room.coverArt && (
+                <SmartImage
+                  src={room.coverArt}
+                  alt=""
+                  aria-hidden="true"
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  className="object-cover"
+                  draggable={false}
+                />
+              )}
               {/* Neon tube glow across display top */}
               <div
                 className="absolute top-0 left-0 right-0 h-px"

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import { usePrefersReducedMotion } from "@/components/room/use-prefers-reduced-motion"
 
 interface ChatMediaInlineProps {
@@ -76,11 +77,21 @@ export function ChatMediaInline({ url, type }: ChatMediaInlineProps) {
           onError={() => setErrored(true)}
         />
       ) : (
-        <img
+        // Chat media is user-posted GIFs from arbitrary hosts — always
+        // unoptimized (animations pass through the Next optimizer anyway).
+        // width/height are placeholders for aspect-ratio reservation; the
+        // width/height:auto style lets the GIF render at its natural size
+        // capped at 220px, exactly like the old <img>.
+        <Image
           src={url}
           alt="GIF"
+          width={220}
+          height={140}
+          unoptimized
           className="rounded-lg"
           style={{
+            width: "auto",
+            height: "auto",
             maxWidth: "220px",
             display: loaded ? "block" : "none",
             border: "0.5px solid rgba(255,255,255,0.06)",

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Navbar } from "@/components/layout/navbar"
+import { SmartImage } from "@/components/smart-image"
 import { useAuth } from "@/lib/auth-context"
 import { authRequest, type TrackCandidate } from "@/lib/api"
 import { BulkAddPanel } from "./bulk-add-panel"
@@ -543,12 +544,21 @@ export default function AdminAutoplayPage() {
                     className="h-14 w-14 shrink-0 rounded-lg overflow-hidden relative"
                     style={{
                       background: selectedRoom.coverGradient || "oklch(0.25 0.05 280)",
-                      backgroundImage: selectedRoom.coverArt ? `url(${selectedRoom.coverArt})` : undefined,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
                       border: "1px solid oklch(0.25 0.02 280 / 0.4)",
                     }}
-                  />
+                  >
+                    {selectedRoom.coverArt && (
+                      <SmartImage
+                        src={selectedRoom.coverArt}
+                        alt=""
+                        aria-hidden="true"
+                        fill
+                        sizes="56px"
+                        className="object-cover"
+                        draggable={false}
+                      />
+                    )}
+                  </div>
                   <div className="min-w-0">
                     <h2 className="font-sans text-lg font-bold text-foreground truncate">{selectedRoom.name}</h2>
                     <p className="font-sans text-xs text-muted-foreground truncate">{selectedRoom.slug} · {selectedRoom.genre}</p>
@@ -604,12 +614,20 @@ export default function AdminAutoplayPage() {
                       className="h-32 w-32 rounded-xl overflow-hidden relative mx-auto sm:mx-0"
                       style={{
                         background: editGradient || "oklch(0.25 0.05 280)",
-                        backgroundImage: editCoverArt ? `url(${editCoverArt})` : undefined,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
                         border: "1px solid oklch(0.25 0.02 280 / 0.4)",
                       }}
                     >
+                      {editCoverArt && (
+                        <SmartImage
+                          src={editCoverArt}
+                          alt=""
+                          aria-hidden="true"
+                          fill
+                          sizes="128px"
+                          className="object-cover"
+                          draggable={false}
+                        />
+                      )}
                       {editCoverArt && (
                         <button
                           onClick={() => setEditCoverArt(null)}

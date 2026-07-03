@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import Image from "next/image"
 import { X, Search } from "lucide-react"
 
 const GIPHY_API_KEY = "lOAnATq2QNUiHl2nzEaN71roXROQMbKg"
@@ -255,12 +256,17 @@ export function GifPicker({ open, onClose, onSelect }: GifPickerProps) {
                       style={{ display: "block", aspectRatio: `${aspectRatio}` }}
                     />
                   ) : (
-                    <img
+                    // Animated GIFs gain nothing from the Next optimizer
+                    // (it passes animations through) — serve them straight
+                    // from the GIPHY CDN, lazy-loaded.
+                    <Image
                       src={fw.url}
                       alt=""
-                      className="w-full rounded-md"
+                      width={Number(fw.width) || 200}
+                      height={Number(fw.height) || 200}
+                      unoptimized
+                      className="h-auto w-full rounded-md"
                       style={{ display: "block" }}
-                      loading="lazy"
                     />
                   )}
                 </button>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Headphones, Radio } from "lucide-react"
-import { formatListenerCount } from "@/lib/mock-data"
+import { formatListenerCount } from "@/components/discover/types"
 
 interface ListenerBarProps {
   initialCount: number

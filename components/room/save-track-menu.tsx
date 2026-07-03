@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Heart, Plus, Check, ListMusic } from "lucide-react"
-import { type Track } from "@/lib/mock-data"
+import { type Track } from "@/components/discover/types"
 import { usePlaylist } from "@/lib/playlist-context"
 import {
   DropdownMenu,

@@ -2,23 +2,9 @@
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
-import { EasterEggProvider } from "@/components/effects/easter-egg-provider"
-import { PlayerProvider } from "@/lib/player-context"
-import { PlaylistProvider } from "@/lib/playlist-context"
-import { MessagesProvider } from "@/lib/messages-context"
-import { UpgradeProvider } from "@/lib/upgrade-context"
-import { RoomStatusProvider } from "@/lib/room-status-context"
 import { AuthProvider } from "@/lib/auth-context"
-import { FavoritesProvider } from "@/lib/favorites-context"
-import { MiniPlayer } from "@/components/layout/mini-player"
-import { MessagesDrawer } from "@/components/messages/messages-drawer"
-import { PricingModalProvider } from "@/components/pricing-modal"
-import { UpgradeDialog } from "@/components/upgrade/upgrade-dialog"
 import { Toaster } from "@/components/ui/sonner"
-import { AmbientBackground } from "@/components/effects/ambient-background"
-import { BubbleBackground } from "@/components/effects/bubble-background"
 import { ProgressBar } from "@/components/effects/progress-bar"
-import { SourceProtection } from "@/components/effects/source-protection"
 import "./globals.css"
 
 const _geist = Geist({ subsets: ["latin"] })
@@ -76,6 +62,9 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
+// Deliberately lean: the full provider/chrome stack (player, playlists,
+// messages, upgrade dialogs, ambient effects) lives in app/(app)/layout.tsx
+// so static content routes in app/(site)/ don't download or hydrate any of it.
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -85,32 +74,10 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className="font-sans antialiased">
         <ProgressBar />
-        <SourceProtection />
-        <AmbientBackground />
-        <RoomStatusProvider>
         <AuthProvider>
-        <FavoritesProvider>
-        <UpgradeProvider>
-          <PricingModalProvider>
-          <PlaylistProvider>
-            <MessagesProvider>
-              <PlayerProvider>
-                <EasterEggProvider>
-                  <BubbleBackground />
-                  {children}
-                </EasterEggProvider>
-                <MiniPlayer />
-                <MessagesDrawer />
-                <UpgradeDialog />
-                <Toaster position="bottom-right" />
-              </PlayerProvider>
-            </MessagesProvider>
-          </PlaylistProvider>
-          </PricingModalProvider>
-        </UpgradeProvider>
-        </FavoritesProvider>
+          {children}
+          <Toaster position="bottom-right" />
         </AuthProvider>
-        </RoomStatusProvider>
         <Analytics />
       </body>
     </html>

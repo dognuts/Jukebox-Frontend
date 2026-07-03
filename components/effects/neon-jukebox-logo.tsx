@@ -49,6 +49,22 @@ export function NeonJukeboxLogo({ size = 'lg', staticRender = false }: NeonJukeb
       letterGroups.get(i)!.push(el as HTMLElement)
     })
 
+    // Track every pending timeout so the flicker/dip scheduling chains stop
+    // on unmount instead of re-arming themselves forever against detached
+    // DOM nodes.
+    const pendingTimeouts = new Set<ReturnType<typeof setTimeout>>()
+    function schedule(fn: () => void, ms: number) {
+      const id = setTimeout(() => {
+        pendingTimeouts.delete(id)
+        fn()
+      }, ms)
+      pendingTimeouts.add(id)
+    }
+    function clearPendingTimeouts() {
+      for (const id of pendingTimeouts) clearTimeout(id)
+      pendingTimeouts.clear()
+    }
+
     function setLetterBrightness(i: number, v: number) {
       const opacity = 0.18 + 0.82 * v
       const els = letterGroups.get(i) || []
@@ -71,16 +87,16 @@ export function NeonJukeboxLogo({ size = 'lg', staticRender = false }: NeonJukeb
     function runPattern(i: number, pattern: readonly (readonly [number, number])[]) {
       let t = 0
       for (const [v, ms] of pattern) {
-        setTimeout(() => setLetterBrightness(i, v), t)
+        schedule(() => setLetterBrightness(i, v), t)
         t += ms
       }
-      setTimeout(() => setLetterBrightness(i, 1), t)
+      schedule(() => setLetterBrightness(i, 1), t)
     }
 
     // Schedule per-letter flickers at random intervals
     function scheduleLetter(i: number): void {
       const nextIn = 440 + Math.random() * 2800
-      setTimeout(() => {
+      schedule(() => {
         const r = Math.random()
         if (r < 0.62) {
           runPattern(i, patterns[0])
@@ -102,10 +118,10 @@ export function NeonJukeboxLogo({ size = 'lg', staticRender = false }: NeonJukeb
     // and the cost would show up as a visible flash.
     function globalDip(): void {
       const nextIn = 5000 + Math.random() * 14000
-      setTimeout(() => {
+      schedule(() => {
         if (Math.random() < 0.65) {
           for (let i = 0; i < 7; i++) setLetterBrightness(i, 0.88)
-          setTimeout(() => {
+          schedule(() => {
             for (let i = 0; i < 7; i++) setLetterBrightness(i, 1)
           }, 90 + Math.random() * 90)
         }
@@ -114,19 +130,15 @@ export function NeonJukeboxLogo({ size = 'lg', staticRender = false }: NeonJukeb
     }
     if (isDesktop) globalDip()
 
-    // --- Color cycle via rAF ---
+    // --- Color cycle ---
     // Skip entirely on mobile — the warm orange base colors from the CSS
     // definitions are the final look there. This avoids rewriting .filter
     // on every tick, which is the primary source of the mobile flicker.
     if (!isDesktop) {
-      return () => {
-        // per-letter scheduleLetter setTimeouts will cancel naturally as
-        // the component unmounts (refs go stale); no rAF to cancel here.
-      }
+      return clearPendingTimeouts
     }
     // Cycle period: ~30 seconds. t oscillates 0→1→0 using a sine wave.
     const CYCLE_MS = 30000
-    let rafId: number
     if (startTimeRef.current === 0) {
       startTimeRef.current = performance.now()
     }
@@ -167,35 +179,48 @@ export function NeonJukeboxLogo({ size = 'lg', staticRender = false }: NeonJukeb
       }
     }
 
-    let lastTickTime = 0
-    function tick(now: number) {
-      // Throttle to ~10fps — color changes over 30s so 10fps is more than enough
-      if (now - lastTickTime < 100) {
-        rafId = requestAnimationFrame(tick)
-        return
-      }
-      lastTickTime = now
-      const elapsed = (now - startTime) % CYCLE_MS
+    // Rewriting the drop-shadow filter strings forces the SVG glow stack to
+    // re-rasterize, so tick as rarely as possible: the crossfade runs over
+    // 30s, so 1 update/sec keeps the steps imperceptible while cutting the
+    // raster work 10x versus the old ~10fps rAF loop.
+    const COLOR_TICK_MS = 1000
+
+    function tick() {
+      const elapsed = (performance.now() - startTime) % CYCLE_MS
       // sine wave: 0 → 1 → 0 over CYCLE_MS
       const t = (1 - Math.cos((elapsed / CYCLE_MS) * 2 * Math.PI)) / 2
       applyColor(t)
-      rafId = requestAnimationFrame(tick)
     }
 
-    rafId = requestAnimationFrame(tick)
+    let colorInterval: ReturnType<typeof setInterval> | null = null
 
+    function startColorLoop() {
+      if (colorInterval) return
+      tick()
+      colorInterval = setInterval(tick, COLOR_TICK_MS)
+    }
+    function stopColorLoop() {
+      if (colorInterval) {
+        clearInterval(colorInterval)
+        colorInterval = null
+      }
+    }
+
+    startColorLoop()
+
+    // Pause entirely while the tab is hidden.
     const handleVisibility = () => {
       if (document.hidden) {
-        cancelAnimationFrame(rafId)
+        stopColorLoop()
       } else {
-        lastTickTime = 0
-        rafId = requestAnimationFrame(tick)
+        startColorLoop()
       }
     }
     document.addEventListener("visibilitychange", handleVisibility)
 
     return () => {
-      cancelAnimationFrame(rafId)
+      stopColorLoop()
+      clearPendingTimeouts()
       document.removeEventListener("visibilitychange", handleVisibility)
     }
   }, [staticRender])

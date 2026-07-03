@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useCallback } from "react"
+import { SmartImage } from "@/components/smart-image"
 import { useEasterEggs } from "@/hooks/use-easter-eggs"
 
 interface VinylSpinnerProps {
@@ -137,12 +138,13 @@ export function VinylSpinner({
           }}
         >
           {albumArtUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <SmartImage
               src={albumArtUrl}
               alt=""
               aria-hidden="true"
-              className="absolute inset-0 h-full w-full object-cover"
+              fill
+              sizes="128px"
+              className="object-cover"
               draggable={false}
             />
           )}

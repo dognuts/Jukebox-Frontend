@@ -23,6 +23,13 @@ export function useUpgrade() {
   return ctx
 }
 
+// For components that render both inside and outside an UpgradeProvider
+// (e.g. the user menu, which also mounts in the lean (site) layout where
+// no upgrade stack exists). Returns null instead of throwing.
+export function useOptionalUpgrade() {
+  return useContext(UpgradeContext)
+}
+
 export function UpgradeProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const [isDialogOpen, setIsDialogOpen] = useState(false)

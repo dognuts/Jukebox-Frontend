@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { ArrowUpRight } from "lucide-react"
+import { SmartImage } from "@/components/smart-image"
 import { type Room, type ChatMessage, formatListenerCount } from "./types"
 
 const AVATAR_COLORS = [
@@ -44,11 +45,10 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
     .filter((m) => m.type === "message" || m.type === "request")
     .slice(-2)
 
-  const coverBackground = room.coverArt
-    ? `url(${room.coverArt}) center/cover no-repeat`
-    : room.coverGradient ||
-      room.nowPlaying.albumGradient ||
-      "linear-gradient(135deg, #3d2b1a 0%, #1a1225 100%)"
+  const coverBackground =
+    room.coverGradient ||
+    room.nowPlaying.albumGradient ||
+    "linear-gradient(135deg, #3d2b1a 0%, #1a1225 100%)"
 
   return (
     <article
@@ -79,6 +79,17 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
               "0 0 40px rgba(232,154,60,0.12), 0 20px 40px -10px rgba(0,0,0,0.5)",
           }}
         >
+          {room.coverArt && (
+            <SmartImage
+              src={room.coverArt}
+              alt=""
+              aria-hidden="true"
+              fill
+              sizes="280px"
+              className="object-cover"
+              draggable={false}
+            />
+          )}
           {/* Ambient amber glow behind the cover is implied by the
               box-shadow above. Inner border + spindle accents. */}
           <div

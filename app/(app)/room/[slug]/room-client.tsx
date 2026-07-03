@@ -16,7 +16,7 @@ import { NeonTube } from "@/components/room/neon-tube"
 import { RoomSkeleton } from "@/components/room/room-skeleton"
 import { SupernovaExplosion } from "@/components/effects/supernova-explosion"
 import { RoomEffectOverlay } from "@/components/effects/room-effect-overlay"
-import type { Room, Track } from "@/lib/mock-data"
+import type { Room, Track } from "@/components/discover/types"
 import { usePlayer } from "@/lib/player-context"
 import { usePlaylist } from "@/lib/playlist-context"
 import { getRoom, toFrontendRoom, type RoomDetail, type APIChatMessage } from "@/lib/api"
@@ -267,7 +267,7 @@ export function RoomClient({
       if (m.type === "message") recordChat()
     })
     const unsubTips = subscribeToNewMessages(activityEventsSlice, (m) => {
-      if ((m.type as string) === "activity_tip") recordTip()
+      if (m.type === "activity_tip") recordTip()
     })
     return () => {
       unsubChat()

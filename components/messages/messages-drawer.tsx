@@ -11,9 +11,13 @@ import {
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useMessages } from "@/lib/messages-context"
+import { useMessages, type Conversation } from "@/lib/messages-context"
 import { useAuth } from "@/lib/auth-context"
-import { currentUser, type Conversation } from "@/lib/mock-data"
+
+// Sender username stamped on messages composed on the demo
+// (not-logged-in) path — must match MOCK_SENDER_USERNAME in
+// lib/messages-context.tsx so "You:" attribution works there.
+const MOCK_SENDER_USERNAME = "musiclover42"
 
 // ---- Conversation list view ----
 
@@ -72,7 +76,7 @@ function ConversationList({
               <div className="flex items-center gap-2">
                 <p className="truncate font-sans text-xs text-muted-foreground">
                   {lastMsg
-                    ? `${lastMsg.fromUsername === currentUser.username || lastMsg.fromUsername === currentUserId ? "You: " : ""}${lastMsg.text}`
+                    ? `${lastMsg.fromUsername === MOCK_SENDER_USERNAME || lastMsg.fromUsername === currentUserId ? "You: " : ""}${lastMsg.text}`
                     : "Start a conversation"}
                 </p>
                 {conv.unreadCount > 0 && (
@@ -180,7 +184,7 @@ function ConversationChat({
 
           const isMe = isRealAPI
             ? msg.fromUsername === user?.id
-            : msg.fromUsername === currentUser.username
+            : msg.fromUsername === MOCK_SENDER_USERNAME
           return (
             <div
               key={msg.id}

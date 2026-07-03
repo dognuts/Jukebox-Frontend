@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { SmartImage } from "@/components/smart-image"
 import { type User } from "./types"
 import { useUpgrade } from "@/lib/upgrade-context"
 
@@ -61,14 +62,16 @@ export function SettingsForm({ user }: SettingsFormProps) {
         </Label>
         <div className="flex items-center gap-4">
           <div
-            className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-2 border-border/30 font-sans text-2xl font-bold text-background shadow-lg overflow-hidden"
+            className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-2 border-border/30 font-sans text-2xl font-bold text-background shadow-lg overflow-hidden"
             style={{ background: user.avatarColor }}
           >
             {avatarPreview ? (
-              <img
+              <SmartImage
                 src={avatarPreview}
                 alt="Avatar preview"
-                className="h-full w-full object-cover"
+                fill
+                sizes="80px"
+                className="object-cover"
               />
             ) : (
               user.displayName.slice(0, 2).toUpperCase()

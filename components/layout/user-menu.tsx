@@ -13,11 +13,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/lib/auth-context"
-import { useUpgrade } from "@/lib/upgrade-context"
+import { useOptionalUpgrade } from "@/lib/upgrade-context"
 
 export function UserMenu() {
   const { user, isLoggedIn, logout } = useAuth()
-  const { plan, openUpgradeDialog } = useUpgrade()
+  // Optional: the user menu also renders in the lean (site) layout where
+  // no UpgradeProvider is mounted. Derive the plan from the user there and
+  // fall back to the pricing page instead of the upgrade dialog.
+  const upgrade = useOptionalUpgrade()
+  const plan = upgrade?.plan ?? ((user as any)?.isPlus ? "premium" : "free")
   const router = useRouter()
 
   // Not logged in — show login button
@@ -92,7 +96,9 @@ export function UserMenu() {
             <DropdownMenuSeparator className="bg-border/30" />
             <DropdownMenuItem
               className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 font-sans text-sm font-semibold upgrade-button-premium transition-all"
-              onClick={openUpgradeDialog}
+              onClick={() =>
+                upgrade ? upgrade.openUpgradeDialog() : router.push("/pricing")
+              }
               style={{
                 background: "linear-gradient(135deg, oklch(0.82 0.18 80) 0%, oklch(0.85 0.20 60) 50%, oklch(0.72 0.18 250) 100%)",
                 backgroundSize: "200% auto",

@@ -20,6 +20,12 @@ interface Bubble {
   born: number
   popping: boolean
   popFrame: number
+  // Pre-rendered sprite (glow + body + rim + highlights). Rebuilding the
+  // five radial gradients per bubble per frame was ~1,000 short-lived
+  // allocations/sec of steady GC pressure; now they're painted once here
+  // and the frame loop just drawImages the sprite with a wobble transform.
+  sprite: HTMLCanvasElement
+  spriteSize: number // CSS px, square
 }
 
 interface PopDroplet {
@@ -35,19 +41,126 @@ interface PopDroplet {
 const HUES = [80, 350, 250, 160]
 const MAX_BUBBLES = 7
 const SPAWN_INTERVAL = 200 // frames (~3.3s at 60fps)
+// Droplet sprites are baked at this radius and scaled down on draw.
+const DROPLET_SPRITE_RADIUS = 4
+
+function spriteSizeFor(radius: number): number {
+  // Outer glow reaches radius * 1.5; pad a couple px for antialiasing.
+  return Math.ceil((radius * 1.5 + 2) * 2)
+}
+
+// Paint one bubble (all five gradient layers) into an offscreen canvas.
+// Called on spawn and on resize (devicePixelRatio changes) — never per frame.
+function makeBubbleSprite(
+  radius: number,
+  hue: number,
+  dpr: number
+): HTMLCanvasElement {
+  const size = spriteSizeFor(radius)
+  const canvas = document.createElement("canvas")
+  canvas.width = Math.max(1, Math.round(size * dpr))
+  canvas.height = canvas.width
+  const ctx = canvas.getContext("2d")!
+  ctx.scale(dpr, dpr)
+
+  const c = size / 2
+  const r = radius
+
+  // Soft outer glow
+  const glow = ctx.createRadialGradient(c, c, r * 0.4, c, c, r * 1.5)
+  glow.addColorStop(0, `oklch(0.65 0.10 ${hue} / 0.05)`)
+  glow.addColorStop(1, `oklch(0.65 0.10 ${hue} / 0)`)
+  ctx.fillStyle = glow
+  ctx.beginPath()
+  ctx.arc(c, c, r * 1.5, 0, Math.PI * 2)
+  ctx.fill()
+
+  // Thin iridescent shell body
+  const body = ctx.createRadialGradient(
+    c - r * 0.15,
+    c - r * 0.15,
+    r * 0.1,
+    c,
+    c,
+    r
+  )
+  body.addColorStop(0, `oklch(0.85 0.05 ${hue} / 0.06)`)
+  body.addColorStop(0.6, `oklch(0.72 0.07 ${hue} / 0.03)`)
+  body.addColorStop(1, `oklch(0.60 0.08 ${hue} / 0.01)`)
+  ctx.fillStyle = body
+  ctx.beginPath()
+  ctx.arc(c, c, r, 0, Math.PI * 2)
+  ctx.fill()
+
+  // Iridescent rim
+  const rim = ctx.createRadialGradient(c, c, r * 0.82, c, c, r)
+  rim.addColorStop(0, `oklch(0.78 0.08 ${hue} / 0)`)
+  rim.addColorStop(0.5, `oklch(0.78 0.12 ${hue} / 0.12)`)
+  rim.addColorStop(0.8, `oklch(0.72 0.14 ${(hue + 40) % 360} / 0.16)`)
+  rim.addColorStop(1, `oklch(0.68 0.10 ${hue} / 0.06)`)
+  ctx.fillStyle = rim
+  ctx.beginPath()
+  ctx.arc(c, c, r, 0, Math.PI * 2)
+  ctx.fill()
+
+  // Primary highlight
+  const hlX = c - r * 0.28
+  const hlY = c - r * 0.32
+  const hlR = r * 0.24
+  const hl = ctx.createRadialGradient(hlX, hlY, 0, hlX, hlY, hlR)
+  hl.addColorStop(0, "oklch(0.97 0.01 80 / 0.45)")
+  hl.addColorStop(0.5, "oklch(0.94 0.02 80 / 0.15)")
+  hl.addColorStop(1, "oklch(0.90 0.02 80 / 0)")
+  ctx.fillStyle = hl
+  ctx.beginPath()
+  ctx.ellipse(hlX, hlY, hlR, hlR * 0.55, -0.5, 0, Math.PI * 2)
+  ctx.fill()
+
+  // Small secondary highlight
+  const h2X = c + r * 0.18
+  const h2Y = c + r * 0.22
+  const h2R = r * 0.09
+  const h2 = ctx.createRadialGradient(h2X, h2Y, 0, h2X, h2Y, h2R)
+  h2.addColorStop(0, "oklch(0.95 0.01 80 / 0.25)")
+  h2.addColorStop(1, "oklch(0.90 0.01 80 / 0)")
+  ctx.fillStyle = h2
+  ctx.beginPath()
+  ctx.arc(h2X, h2Y, h2R, 0, Math.PI * 2)
+  ctx.fill()
+
+  return canvas
+}
+
+function makeDropletSprite(hue: number, dpr: number): HTMLCanvasElement {
+  const r = DROPLET_SPRITE_RADIUS
+  const size = r * 2
+  const canvas = document.createElement("canvas")
+  canvas.width = Math.max(1, Math.round(size * dpr))
+  canvas.height = canvas.width
+  const ctx = canvas.getContext("2d")!
+  ctx.scale(dpr, dpr)
+  const g = ctx.createRadialGradient(r, r, 0, r, r, r)
+  g.addColorStop(0, `oklch(0.82 0.10 ${hue} / 0.4)`)
+  g.addColorStop(1, `oklch(0.70 0.08 ${hue} / 0)`)
+  ctx.fillStyle = g
+  ctx.beginPath()
+  ctx.arc(r, r, r, 0, Math.PI * 2)
+  ctx.fill()
+  return canvas
+}
 
 export function BubbleBackground() {
   const pathname = usePathname()
   // Skip the canvas animation on room pages entirely — the room view
-  // covers the viewport with its own visuals, and the per-frame
-  // radial-gradient work here was measurably contending with input
-  // handling (causing noticeable typing lag in chat on lower-end
-  // machines).
+  // covers the viewport with its own visuals, and the per-frame canvas
+  // work here was measurably contending with input handling (causing
+  // noticeable typing lag in chat on lower-end machines).
   const skip = pathname?.startsWith("/room/") ?? false
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const bubblesRef = useRef<Bubble[]>([])
   const dropletsRef = useRef<PopDroplet[]>([])
+  const dropletSpritesRef = useRef<Map<number, HTMLCanvasElement>>(new Map())
   const animRef = useRef<number>(0)
   const spawnTimer = useRef(0)
   const { triggerBubblePop } = useEasterEggs()
@@ -57,7 +170,9 @@ export function BubbleBackground() {
 
   const spawnBubble = useCallback((w: number, h: number) => {
     if (bubblesRef.current.length >= MAX_BUBBLES) return
+    const dpr = window.devicePixelRatio || 1
     const radius = 8 + Math.random() * 22 // 8-30px, much smaller
+    const hue = HUES[Math.floor(Math.random() * HUES.length)]
     const maxOp = 0.35 + Math.random() * 0.25
     bubblesRef.current.push({
       x: radius + Math.random() * (w - radius * 2),
@@ -69,12 +184,14 @@ export function BubbleBackground() {
       driftPhase: Math.random() * Math.PI * 2,
       driftAmp: 0.15 + Math.random() * 0.3,
       driftSpeed: 0.2 + Math.random() * 0.3,
-      hue: HUES[Math.floor(Math.random() * HUES.length)],
+      hue,
       opacity: 0,
       maxOpacity: maxOp,
       born: performance.now(),
       popping: false,
       popFrame: 0,
+      sprite: makeBubbleSprite(radius, hue, dpr),
+      spriteSize: spriteSizeFor(radius),
     })
   }, [])
 
@@ -115,6 +232,17 @@ export function BubbleBackground() {
     let w = 0
     let h = 0
 
+    const dropletSprites = dropletSpritesRef.current
+
+    function getDropletSprite(hue: number): HTMLCanvasElement {
+      let sprite = dropletSprites.get(hue)
+      if (!sprite) {
+        sprite = makeDropletSprite(hue, window.devicePixelRatio || 1)
+        dropletSprites.set(hue, sprite)
+      }
+      return sprite
+    }
+
     function resize() {
       const dpr = window.devicePixelRatio || 1
       w = window.innerWidth
@@ -124,13 +252,21 @@ export function BubbleBackground() {
       canvas!.style.width = `${w}px`
       canvas!.style.height = `${h}px`
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0)
+      // devicePixelRatio can change (zoom, monitor move) — re-bake sprites
+      // so they stay crisp. This is the only place gradients are rebuilt.
+      for (const b of bubblesRef.current) {
+        b.sprite = makeBubbleSprite(b.radius, b.hue, dpr)
+      }
+      dropletSprites.clear()
     }
     resize()
     window.addEventListener("resize", resize)
 
     // Seed a few bubbles at random heights
+    const seedDpr = window.devicePixelRatio || 1
     for (let i = 0; i < 4; i++) {
       const radius = 8 + Math.random() * 22
+      const hue = HUES[Math.floor(Math.random() * HUES.length)]
       bubblesRef.current.push({
         x: radius + Math.random() * (Math.max(w, 200) - radius * 2),
         y: h * (0.25 + Math.random() * 0.6),
@@ -141,12 +277,14 @@ export function BubbleBackground() {
         driftPhase: Math.random() * Math.PI * 2,
         driftAmp: 0.15 + Math.random() * 0.3,
         driftSpeed: 0.2 + Math.random() * 0.3,
-        hue: HUES[Math.floor(Math.random() * HUES.length)],
+        hue,
         opacity: 0.3 + Math.random() * 0.2,
         maxOpacity: 0.35 + Math.random() * 0.25,
         born: performance.now() - 4000,
         popping: false,
         popFrame: 0,
+        sprite: makeBubbleSprite(radius, hue, seedDpr),
+        spriteSize: spriteSizeFor(radius),
       })
     }
 
@@ -160,84 +298,30 @@ export function BubbleBackground() {
 
       // Smooth wobble via sin: slight squash/stretch
       const wobble = Math.sin(ageSec * b.wobbleSpeed + b.wobblePhase) * 0.04
-      const rx = b.radius * (1 + wobble)
-      const ry = b.radius * (1 - wobble)
 
       // Smooth horizontal drift
       const drift = Math.sin(ageSec * b.driftSpeed + b.driftPhase) * b.driftAmp
       const cx = b.x + drift
       const cy = b.y
 
-      ctx!.save()
-
+      let popScale = 1
       if (b.popping) {
         b.popFrame++
         const p = b.popFrame / 14
-        if (p >= 1) { ctx!.restore(); return false }
-        ctx!.globalAlpha = b.opacity * (1 - p)
-        const s = 1 + p * 0.4
-        ctx!.translate(cx, cy)
-        ctx!.scale(s, s)
-        ctx!.translate(-cx, -cy)
-      } else {
-        ctx!.globalAlpha = b.opacity
+        if (p >= 1) return false
+        popScale = 1 + p * 0.4
       }
 
-      // Soft outer glow
-      const glow = ctx!.createRadialGradient(cx, cy, rx * 0.4, cx, cy, rx * 1.5)
-      glow.addColorStop(0, `oklch(0.65 0.10 ${b.hue} / 0.05)`)
-      glow.addColorStop(1, `oklch(0.65 0.10 ${b.hue} / 0)`)
-      ctx!.fillStyle = glow
-      ctx!.beginPath()
-      ctx!.ellipse(cx, cy, rx * 1.5, ry * 1.5, 0, 0, Math.PI * 2)
-      ctx!.fill()
-
-      // Thin iridescent shell body
-      const body = ctx!.createRadialGradient(cx - rx * 0.15, cy - ry * 0.15, rx * 0.1, cx, cy, rx)
-      body.addColorStop(0, `oklch(0.85 0.05 ${b.hue} / 0.06)`)
-      body.addColorStop(0.6, `oklch(0.72 0.07 ${b.hue} / 0.03)`)
-      body.addColorStop(1, `oklch(0.60 0.08 ${b.hue} / 0.01)`)
-      ctx!.fillStyle = body
-      ctx!.beginPath()
-      ctx!.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2)
-      ctx!.fill()
-
-      // Iridescent rim
-      const rim = ctx!.createRadialGradient(cx, cy, rx * 0.82, cx, cy, rx)
-      rim.addColorStop(0, `oklch(0.78 0.08 ${b.hue} / 0)`)
-      rim.addColorStop(0.5, `oklch(0.78 0.12 ${b.hue} / 0.12)`)
-      rim.addColorStop(0.8, `oklch(0.72 0.14 ${(b.hue + 40) % 360} / 0.16)`)
-      rim.addColorStop(1, `oklch(0.68 0.10 ${b.hue} / 0.06)`)
-      ctx!.fillStyle = rim
-      ctx!.beginPath()
-      ctx!.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2)
-      ctx!.fill()
-
-      // Primary highlight
-      const hlX = cx - rx * 0.28
-      const hlY = cy - ry * 0.32
-      const hlR = rx * 0.24
-      const hl = ctx!.createRadialGradient(hlX, hlY, 0, hlX, hlY, hlR)
-      hl.addColorStop(0, "oklch(0.97 0.01 80 / 0.45)")
-      hl.addColorStop(0.5, "oklch(0.94 0.02 80 / 0.15)")
-      hl.addColorStop(1, "oklch(0.90 0.02 80 / 0)")
-      ctx!.fillStyle = hl
-      ctx!.beginPath()
-      ctx!.ellipse(hlX, hlY, hlR, hlR * 0.55, -0.5, 0, Math.PI * 2)
-      ctx!.fill()
-
-      // Small secondary highlight
-      const h2X = cx + rx * 0.18
-      const h2Y = cy + ry * 0.22
-      const h2R = rx * 0.09
-      const h2 = ctx!.createRadialGradient(h2X, h2Y, 0, h2X, h2Y, h2R)
-      h2.addColorStop(0, "oklch(0.95 0.01 80 / 0.25)")
-      h2.addColorStop(1, "oklch(0.90 0.01 80 / 0)")
-      ctx!.fillStyle = h2
-      ctx!.beginPath()
-      ctx!.arc(h2X, h2Y, h2R, 0, Math.PI * 2)
-      ctx!.fill()
-
+      ctx!.save()
+      ctx!.globalAlpha = b.popping
+        ? b.opacity * (1 - b.popFrame / 14)
+        : b.opacity
+      // The sprite is baked circular; wobble squash/stretch and the pop
+      // scale are applied as a transform instead of regenerating gradients.
+      ctx!.translate(cx, cy)
+      ctx!.scale((1 + wobble) * popScale, (1 - wobble) * popScale)
+      const half = b.spriteSize / 2
+      ctx!.drawImage(b.sprite, -half, -half, b.spriteSize, b.spriteSize)
       ctx!.restore()
 
       // Physics update (after drawing to keep stable)
@@ -278,15 +362,16 @@ export function BubbleBackground() {
         d.vx *= 0.98
         d.life -= 0.025
         if (d.life <= 0) return false
+        const sprite = getDropletSprite(d.hue)
         ctx!.save()
         ctx!.globalAlpha = d.life * 0.5
-        const g = ctx!.createRadialGradient(d.x, d.y, 0, d.x, d.y, d.radius)
-        g.addColorStop(0, `oklch(0.82 0.10 ${d.hue} / 0.4)`)
-        g.addColorStop(1, `oklch(0.70 0.08 ${d.hue} / 0)`)
-        ctx!.fillStyle = g
-        ctx!.beginPath()
-        ctx!.arc(d.x, d.y, d.radius, 0, Math.PI * 2)
-        ctx!.fill()
+        ctx!.drawImage(
+          sprite,
+          d.x - d.radius,
+          d.y - d.radius,
+          d.radius * 2,
+          d.radius * 2
+        )
         ctx!.restore()
         return true
       })
@@ -320,6 +405,7 @@ export function BubbleBackground() {
       document.removeEventListener("visibilitychange", handleVisibility)
       bubblesRef.current = []
       dropletsRef.current = []
+      dropletSprites.clear()
     }
   }, [spawnBubble, reducedMotion, skip])
 

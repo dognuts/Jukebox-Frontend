@@ -4,6 +4,7 @@ import Link from "next/link"
 import { Headphones, Music, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { SmartImage } from "@/components/smart-image"
 import { type Room, formatListenerCount } from "./types"
 
 export function FeaturedRoom({ room }: { room: Room }) {
@@ -85,14 +86,23 @@ export function FeaturedRoom({ room }: { room: Room }) {
                 />
                 {/* Album art */}
                 <div
-                  className="relative h-32 w-32 rounded-xl sm:h-40 sm:w-40 md:h-48 md:w-48"
+                  className="relative h-32 w-32 overflow-hidden rounded-xl sm:h-40 sm:w-40 md:h-48 md:w-48"
                   style={{
-                    background: room.coverArt
-                      ? `url(${room.coverArt}) center/cover no-repeat`
-                      : room.nowPlaying.albumGradient,
+                    background: room.nowPlaying.albumGradient,
                     boxShadow: "0 0 20px oklch(0.82 0.18 80 / 0.2), inset 0 0 30px oklch(0.10 0.01 280 / 0.3)",
                   }}
                 >
+                  {room.coverArt && (
+                    <SmartImage
+                      src={room.coverArt}
+                      alt=""
+                      aria-hidden="true"
+                      fill
+                      sizes="192px"
+                      className="object-cover"
+                      draggable={false}
+                    />
+                  )}
                   {/* Visualizer bars overlay */}
                   <div className="absolute bottom-3 left-3 right-3 flex items-end justify-center gap-1">
                     {[0.5, 0.8, 0.3, 1, 0.6, 0.9, 0.4, 0.7].map((h, i) => (

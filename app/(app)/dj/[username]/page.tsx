@@ -6,6 +6,7 @@ import { ArrowLeft, Calendar, Music, Play, Radio, Users } from "lucide-react"
 import { Navbar } from "@/components/layout/navbar"
 import { Footer } from "@/components/layout/footer"
 import { Button } from "@/components/ui/button"
+import { SmartImage } from "@/components/smart-image"
 import { FollowButton } from "./follow-button"
 
 interface DJProfile {
@@ -128,11 +129,15 @@ export default async function DJProfilePage({
               {/* Avatar */}
               <div className="relative shrink-0">
                 {profile.avatarUrl ? (
-                  <img
-                    src={profile.avatarUrl}
-                    alt={`${profile.displayName}'s avatar`}
-                    className="h-28 w-28 rounded-full object-cover sm:h-36 sm:w-36"
-                  />
+                  <div className="relative h-28 w-28 overflow-hidden rounded-full sm:h-36 sm:w-36">
+                    <SmartImage
+                      src={profile.avatarUrl}
+                      alt={`${profile.displayName}'s avatar`}
+                      fill
+                      sizes="144px"
+                      className="object-cover"
+                    />
+                  </div>
                 ) : (
                   <div
                     aria-hidden="true"

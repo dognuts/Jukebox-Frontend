@@ -7,8 +7,13 @@ const nextConfig = {
   },
   images: {
     formats: ["image/avif", "image/webp"],
+    // Hosts the image optimizer may fetch from. Must stay in sync with
+    // OPTIMIZED_HOSTS in components/smart-image.tsx — everything else
+    // (data-URL cover art, GIPHY GIFs, arbitrary chat media) renders
+    // unoptimized and never reaches the optimizer.
     remotePatterns: [
-      { protocol: "https", hostname: "**" },
+      { protocol: "https", hostname: "i.ytimg.com" }, // YouTube thumbnails
+      { protocol: "https", hostname: "**.sndcdn.com" }, // SoundCloud artwork
     ],
   },
   // Disable source maps in production to prevent easy code copying

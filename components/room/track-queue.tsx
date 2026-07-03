@@ -6,7 +6,7 @@ import { Music, Youtube, Cloud, FileAudio, GripVertical, Plus, Loader2, AlertCir
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { type Track, formatDuration } from "@/lib/mock-data"
+import { type Track, formatDuration } from "@/components/discover/types"
 import { SaveTrackMenu } from "./save-track-menu"
 import { parseTrackUrl, guessTitleFromUrl } from "@/lib/track-utils"
 import { authRequest } from "@/lib/api"

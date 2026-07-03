@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { SmartImage } from "@/components/smart-image"
 import { type Room } from "./types"
 
 // Per-genre accent colors for the small genre pill on each card.
@@ -107,16 +108,26 @@ export function LiveRoomGrid({
                     proportional regardless of the column width the
                     auto-fit grid assigns. */}
                 <div
-                  className="relative flex items-end"
+                  className="relative flex items-end overflow-hidden"
                   style={{
                     aspectRatio: "16 / 7",
                     padding: "var(--space-sm)",
-                    background: room.coverArt
-                      ? `url(${room.coverArt}) center/cover no-repeat`
-                      : room.coverGradient ||
-                        "linear-gradient(135deg, #1a2535 0%, #0d1520 100%)",
+                    background:
+                      room.coverGradient ||
+                      "linear-gradient(135deg, #1a2535 0%, #0d1520 100%)",
                   }}
                 >
+                  {room.coverArt && (
+                    <SmartImage
+                      src={room.coverArt}
+                      alt=""
+                      aria-hidden="true"
+                      fill
+                      sizes="(max-width: 640px) 100vw, 220px"
+                      className="object-cover"
+                      draggable={false}
+                    />
+                  )}
                   <div
                     className="absolute flex items-center rounded-lg"
                     style={{

@@ -325,7 +325,16 @@ export interface APIChatMessage {
   username: string
   avatarColor: string
   message: string
-  type: "message" | "request" | "announcement"
+  // "message" | "request" | "announcement" come from the backend; the
+  // activity_* variants are synthesized client-side from presence/tip WS
+  // events (see use-room-websocket.ts) and only live in the activity slice.
+  type:
+    | "message"
+    | "request"
+    | "announcement"
+    | "activity_join"
+    | "activity_tip"
+    | "activity_leave"
   timestamp: string
   mediaUrl?: string
   mediaType?: string
@@ -429,10 +438,11 @@ export async function getPendingRequests(slug: string, djKey: string): Promise<A
 // ---------- Helpers ----------
 
 /**
- * Convert API room to the shape the existing components expect (Room from mock-data).
- * This is a bridge so we don't have to rewrite every component at once.
+ * Convert API room to the shape the existing components expect (Room from
+ * components/discover/types). This is a bridge so we don't have to rewrite
+ * every component at once.
  */
-export function toFrontendRoom(r: APIRoom, nowPlaying?: APITrack | null, queue?: APIQueueEntry[], chat?: APIChatMessage[]): import("@/lib/mock-data").Room {
+export function toFrontendRoom(r: APIRoom, nowPlaying?: APITrack | null, queue?: APIQueueEntry[], chat?: APIChatMessage[]): import("@/components/discover/types").Room {
   return {
     id: r.id,
     slug: r.slug,

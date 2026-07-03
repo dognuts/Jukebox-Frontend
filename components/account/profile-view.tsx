@@ -2,6 +2,7 @@
 
 import { Calendar, MapPin, Clock, Radio as RadioIcon, Music } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { SmartImage } from "@/components/smart-image"
 import { type User } from "./types"
 
 interface ProfileViewProps {
@@ -23,14 +24,16 @@ export function ProfileView({ user }: ProfileViewProps) {
       <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
         {/* Avatar */}
         <div
-          className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full border-2 border-border/30 font-sans text-3xl font-bold text-background shadow-lg"
+          className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-border/30 font-sans text-3xl font-bold text-background shadow-lg"
           style={{ background: user.avatarColor }}
         >
           {user.avatarUrl ? (
-            <img
+            <SmartImage
               src={user.avatarUrl}
               alt={user.displayName}
-              className="h-full w-full rounded-full object-cover"
+              fill
+              sizes="96px"
+              className="rounded-full object-cover"
             />
           ) : (
             user.displayName.slice(0, 2).toUpperCase()

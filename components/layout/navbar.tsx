@@ -1,17 +1,20 @@
 "use client"
 
 import Link from "next/link"
-import { useRef, useCallback, useState, useEffect } from "react"
+import { useRef, useCallback, useState, useEffect, useContext } from "react"
 import { MessageCircle } from "lucide-react"
-import { useEasterEggs } from "@/hooks/use-easter-eggs"
-import { useMessages } from "@/lib/messages-context"
+import { EasterEggContext } from "@/hooks/use-easter-eggs"
+import { useOptionalMessages } from "@/lib/messages-context"
 import { useAuth } from "@/lib/auth-context"
 import { UserMenu } from "@/components/layout/user-menu"
 import { NeonJukeboxLogo } from "@/components/effects/neon-jukebox-logo"
 
 export function Navbar() {
-  const { triggerRainbow } = useEasterEggs()
-  const { totalUnread, openDrawer } = useMessages()
+  // Optional contexts: the navbar also renders in the lean (site) layout
+  // (blog, support, legal pages) where the easter-egg and messages stacks
+  // aren't mounted. Degrade gracefully there instead of throwing.
+  const easterEggs = useContext(EasterEggContext)
+  const messages = useOptionalMessages()
   const { isLoggedIn } = useAuth()
   const clickCount = useRef(0)
   const clickTimer = useRef<NodeJS.Timeout | null>(null)
@@ -98,10 +101,10 @@ export function Navbar() {
     }, 1500)
 
     if (clickCount.current >= 5) {
-      triggerRainbow()
+      easterEggs?.triggerRainbow()
       clickCount.current = 0
     }
-  }, [triggerRainbow])
+  }, [easterEggs])
 
   return (
     <header
@@ -173,10 +176,11 @@ export function Navbar() {
             </Link>
           )}
 
-          {/* Messages — logged in only */}
-          {isLoggedIn && <button
+          {/* Messages — logged in only, and only where the messages stack
+              is mounted (the lean (site) layout has no drawer to open) */}
+          {isLoggedIn && messages && <button
             type="button"
-            onClick={() => openDrawer()}
+            onClick={() => messages.openDrawer()}
             className="relative flex items-center justify-center rounded-full p-1.5 transition-colors hover:bg-white/[0.06]"
             aria-label="Messages"
           >
@@ -184,12 +188,12 @@ export function Navbar() {
               className="h-[18px] w-[18px]"
               style={{ color: "rgba(232,230,234,0.55)" }}
             />
-            {totalUnread > 0 && (
+            {messages.totalUnread > 0 && (
               <span
                 className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-mono text-[9px] font-bold"
                 style={{ background: "#e89a3c", color: "#0d0b10" }}
               >
-                {totalUnread}
+                {messages.totalUnread}
               </span>
             )}
           </button>}

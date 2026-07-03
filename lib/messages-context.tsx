@@ -141,6 +141,13 @@ export function useMessages() {
   return ctx
 }
 
+// For components that render both inside and outside a MessagesProvider
+// (e.g. the navbar, which also mounts in the lean (site) layout where no
+// messages stack exists). Returns null instead of throwing.
+export function useOptionalMessages() {
+  return useContext(MessagesContext)
+}
+
 export function MessagesProvider({ children }: { children: ReactNode }) {
   const { user, isLoggedIn } = useAuth()
   const [conversations, setConversations] = useState<Conversation[]>([])

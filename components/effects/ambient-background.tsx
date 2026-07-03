@@ -5,12 +5,13 @@ import { usePathname } from "next/navigation"
 
 export function AmbientBackground() {
   const [reducedMotion, setReducedMotion] = useState(false)
+  const [pageHidden, setPageHidden] = useState(false)
   const pathname = usePathname()
-  // On room pages the content covers the background and the full-viewport
-  // blurred gradient animations here measurably contend with input
-  // handling. Fall through to the static (reduced-motion) branch so the
-  // GPU isn't constantly re-blurring 40–60px filters.
-  const onRoomPage = pathname?.startsWith("/room/") ?? false
+  // The homepage and room pages paint an opaque #0d0b10 surface over the
+  // whole viewport, so these layers would be 100% invisible while still
+  // costing GPU (three large blurred textures) — don't mount them at all.
+  const coveredByPage =
+    pathname === "/" || (pathname?.startsWith("/room/") ?? false)
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)")
@@ -20,7 +21,19 @@ export function AmbientBackground() {
     return () => mq.removeEventListener("change", handler)
   }, [])
 
-  if (reducedMotion || onRoomPage) {
+  // Pause the drift animations entirely while the tab is hidden so the
+  // compositor isn't asked to keep re-blurring full-viewport layers.
+  useEffect(() => {
+    const handleVisibility = () => setPageHidden(document.hidden)
+    handleVisibility()
+    document.addEventListener("visibilitychange", handleVisibility)
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibility)
+  }, [])
+
+  if (coveredByPage) return null
+
+  if (reducedMotion) {
     return (
       <div
         className="fixed inset-0 pointer-events-none"
@@ -48,6 +61,8 @@ export function AmbientBackground() {
     )
   }
 
+  const animationPlayState = pageHidden ? ("paused" as const) : ("running" as const)
+
   return (
     <div
       className="fixed inset-0 pointer-events-none"
@@ -63,6 +78,7 @@ export function AmbientBackground() {
           filter: "blur(40px)",
           transform: "translate3d(0,0,0)",
           backfaceVisibility: "hidden",
+          animationPlayState,
         }}
       />
       <div
@@ -72,6 +88,7 @@ export function AmbientBackground() {
           filter: "blur(50px)",
           transform: "translate3d(0,0,0)",
           backfaceVisibility: "hidden",
+          animationPlayState,
         }}
       />
       <div
@@ -81,6 +98,7 @@ export function AmbientBackground() {
           filter: "blur(60px)",
           transform: "translate3d(0,0,0)",
           backfaceVisibility: "hidden",
+          animationPlayState,
         }}
       />
 
