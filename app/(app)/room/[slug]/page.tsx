@@ -95,8 +95,12 @@ export async function generateMetadata({
 
   // For user-created rooms, build metadata from the shared room fetch
   // (deduped with the page component via cache()). Falls through to the
-  // generic copy when the backend is unreachable or the room is missing.
+  // generic copy when the backend is unreachable.
   const result = await getRoomDetail(slug)
+  // notFound() here (before streaming starts) makes dead room URLs real
+  // HTTP 404s; thrown from the page body alone, the loading.tsx shell has
+  // already flushed a 200 by the time it renders the not-found UI.
+  if (result.status === "not-found") notFound()
   if (result.status === "found" && result.detail.room.name) {
     const room = result.detail.room
     const title = `${room.name} — Live Listening Room`
