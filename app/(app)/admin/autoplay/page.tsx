@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { SmartImage } from "@/components/smart-image"
 import { useAuth } from "@/lib/auth-context"
 import { authRequest, type TrackCandidate } from "@/lib/api"
+import { compressCoverArt, COVER_MAX_CHARS, COVER_TOO_LARGE_MESSAGE } from "@/lib/compress-cover-art"
 import { BulkAddPanel } from "./bulk-add-panel"
 import { BulkActionButton, BulkAltsPanel } from "./track-row-extras"
 
@@ -232,8 +233,10 @@ export default function AdminAutoplayPage() {
     loadPlaylists(room.id)
   }
 
-  // Cover art upload (reused pattern from /create page)
-  const handleCoverFile = useCallback((file: File) => {
+  // Cover art upload — shares the /create page's canvas compressor so the
+  // stored data URL stays under the backend's 128KB cover cap (raw
+  // FileReader output for a normal photo is multi-MB base64 and gets a 400).
+  const handleCoverFile = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) {
       alert("Please select an image file")
       return
@@ -242,9 +245,17 @@ export default function AdminAutoplayPage() {
       alert("Image must be 5MB or smaller")
       return
     }
-    const reader = new FileReader()
-    reader.onload = (e) => setEditCoverArt(e.target?.result as string)
-    reader.readAsDataURL(file)
+    try {
+      const dataUrl = await compressCoverArt(file)
+      if (dataUrl.length > COVER_MAX_CHARS) {
+        alert(COVER_TOO_LARGE_MESSAGE)
+        return
+      }
+      setEditCoverArt(dataUrl)
+    } catch {
+      // Corrupt/undecodable file, or the browser refused the canvas export.
+      alert("Couldn't read that image — try a different file.")
+    }
   }, [])
 
   const handleCoverDrop = useCallback((e: React.DragEvent) => {
@@ -719,6 +730,9 @@ export default function AdminAutoplayPage() {
                           className="hidden"
                           onChange={(e) => {
                             const file = e.target.files?.[0]
+                            // Reset so re-selecting the same file re-fires
+                            // onChange (e.g. retrying after a size alert).
+                            e.target.value = ""
                             if (file) handleCoverFile(file)
                           }}
                         />
