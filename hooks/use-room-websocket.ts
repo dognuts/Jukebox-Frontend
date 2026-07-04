@@ -626,13 +626,11 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
 
         case "announcement":
           if (msg.payload?.message) {
-            // In approval-policy rooms the server never echoes a pending
-            // entry back to the submitter (queue_update only carries
-            // approved entries; request_update goes to DJs only) — its
-            // confirmation to the submitter is this per-client
-            // announcement, the backend's sole `announcement` emitter.
-            // Treat it as proof the submission landed.
-            resolveOldestPendingSubmit({ ok: true })
+            // Deliberately NOT a submit confirmation: the backend always
+            // sends the contractual submit_result BEFORE this per-client
+            // announcement, so the pending submit is already resolved by
+            // the time it arrives — resolving again here would falsely
+            // confirm the NEXT in-flight submit when two are pending.
             const announcement: APIChatMessage = {
               id: `ann-${Date.now()}`,
               roomId: "",

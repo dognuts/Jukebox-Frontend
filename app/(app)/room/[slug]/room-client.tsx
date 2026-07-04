@@ -595,6 +595,21 @@ export function RoomClient({
     // callback stays referentially stable and DjDeck's memo holds.
   }, [liveKit.startBroadcasting, liveKit.stopBroadcasting, ws.connected, ws.djSetMic, isDJ]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Re-announce the local mic state after a WS reconnect. The hub treats a
+  // DJ socket drop as mic-off (it clears mic state and broadcasts
+  // active:false), but the LiveKit publish survives the room-WS blip — so
+  // without this, listeners' music resumes OVER the DJ's still-live voice
+  // and late joiners never connect to it. Re-sending restores hub state
+  // (and everyone's pause) without a manual toggle.
+  const prevWsConnectedRef = useRef(ws.connected)
+  useEffect(() => {
+    const wasConnected = prevWsConnectedRef.current
+    prevWsConnectedRef.current = ws.connected
+    if (!wasConnected && ws.connected && isDJ && micActive) {
+      ws.djSetMic(micActive, micPausesMusic)
+    }
+  }, [ws.connected, isDJ, micActive, micPausesMusic, ws.djSetMic]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Audio engine state. The engine's playback position (2-4 updates
   // per second) deliberately has NO page state — RoomAudioEngine writes
   // it into the playback-position slice and only the progress leaf in
