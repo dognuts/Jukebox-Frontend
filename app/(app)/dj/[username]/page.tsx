@@ -7,6 +7,10 @@ import { Navbar } from "@/components/layout/navbar"
 import { Footer } from "@/components/layout/footer"
 import { Button } from "@/components/ui/button"
 import { SmartImage } from "@/components/smart-image"
+import {
+  DETAIL_DATA_URL_MAX_CHARS,
+  stripOversizedDataUrl,
+} from "@/lib/strip-oversized-data-urls"
 import { FollowButton } from "./follow-button"
 
 interface DJProfile {
@@ -53,6 +57,14 @@ export async function generateMetadata({
   const profile = await getDJProfile(username)
   if (!profile) notFound()
 
+  // Defensive cap: an oversized `data:` avatar would bloat the OG image tag in
+  // the prerendered <head>. Strip it before embedding (https avatars pass
+  // through untouched).
+  const avatarUrl = stripOversizedDataUrl(
+    profile.avatarUrl,
+    DETAIL_DATA_URL_MAX_CHARS,
+  )
+
   const canonical = `https://jukebox-app.com/dj/${profile.username}`
   const title = `${profile.displayName} (@${profile.username}) — DJ on Jukebox`
   const description =
@@ -68,7 +80,7 @@ export async function generateMetadata({
       title: `${profile.displayName} on Jukebox`,
       description,
       url: canonical,
-      ...(profile.avatarUrl ? { images: [profile.avatarUrl] } : {}),
+      ...(avatarUrl ? { images: [avatarUrl] } : {}),
     },
     twitter: {
       card: "summary_large_image",
@@ -104,6 +116,15 @@ export default async function DJProfilePage({
   const profile = await getDJProfile(username)
   if (!profile) notFound()
 
+  // Defensive cap on the ISR payload: strip an oversized `data:` avatar before
+  // it's embedded into the prerendered <img src>. Only `data:` URLs over the
+  // 512KB detail cap are replaced with "" (https avatars pass through); the ""
+  // falls through to the initials placeholder below.
+  const avatarUrl = stripOversizedDataUrl(
+    profile.avatarUrl,
+    DETAIL_DATA_URL_MAX_CHARS,
+  )
+
   const liveRoomHref =
     profile.isLive && profile.currentRoomSlug
       ? `/room/${profile.currentRoomSlug}`
@@ -128,10 +149,10 @@ export default async function DJProfilePage({
             <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start sm:gap-8">
               {/* Avatar */}
               <div className="relative shrink-0">
-                {profile.avatarUrl ? (
+                {avatarUrl ? (
                   <div className="relative h-28 w-28 overflow-hidden rounded-full sm:h-36 sm:w-36">
                     <SmartImage
-                      src={profile.avatarUrl}
+                      src={avatarUrl}
                       alt={`${profile.displayName}'s avatar`}
                       fill
                       sizes="144px"

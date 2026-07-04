@@ -2,6 +2,10 @@ import { cache } from "react"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import type { RoomDetail } from "@/lib/api"
+import {
+  DETAIL_DATA_URL_MAX_CHARS,
+  stripOversizedDataUrl,
+} from "@/lib/strip-oversized-data-urls"
 import { RoomClient } from "./room-client"
 
 const ROOM_SEO: Record<
@@ -64,6 +68,40 @@ const getRoomDetail = cache(async (slug: string): Promise<RoomDetailResult> => {
     return { status: "unavailable" }
   }
 })
+
+// Defensive cap on the room DETAIL ISR payload: strip any oversized `data:`
+// URL before it's embedded into the prerendered page / passed to RoomClient.
+// A detail page embeds a single room, so this uses the 512KB detail cap. The
+// only `data:`-capable fields in RoomDetail are `room.coverArt` and each
+// chat message's `mediaUrl` (nowPlaying / queue tracks carry only a CSS
+// `albumGradient`, never an image data URL). Oversized values become "",
+// which SmartImage/the gradient fallback renders as a missing cover.
+function stripOversizedRoomDetailDataUrls(detail: RoomDetail): RoomDetail {
+  const capChat = (messages: RoomDetail["recentChat"]) =>
+    messages.map((message) => ({
+      ...message,
+      mediaUrl: stripOversizedDataUrl(
+        message.mediaUrl,
+        DETAIL_DATA_URL_MAX_CHARS,
+      ),
+    }))
+  return {
+    ...detail,
+    room: {
+      ...detail.room,
+      coverArt: stripOversizedDataUrl(
+        detail.room.coverArt,
+        DETAIL_DATA_URL_MAX_CHARS,
+      ),
+      recentChat: detail.room.recentChat
+        ? capChat(detail.room.recentChat)
+        : detail.room.recentChat,
+    },
+    recentChat: detail.recentChat
+      ? capChat(detail.recentChat)
+      : detail.recentChat,
+  }
+}
 
 export async function generateMetadata({
   params,
@@ -141,7 +179,11 @@ export default async function RoomPage({
   return (
     <RoomClient
       slug={slug}
-      initialData={result.status === "found" ? result.detail : null}
+      initialData={
+        result.status === "found"
+          ? stripOversizedRoomDetailDataUrls(result.detail)
+          : null
+      }
     />
   )
 }
