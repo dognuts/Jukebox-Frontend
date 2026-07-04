@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react"
 import { Zap, Loader2, Sparkles, ArrowLeft, Plus, ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { authRequest } from "@/lib/api"
 import { useAuth } from "@/lib/auth-context"
 
@@ -145,6 +145,11 @@ export function SendNeonModal({ open, onClose, roomId, neonBalance: initialBalan
                 <Zap className="h-5 w-5" style={{ color: "var(--brand-cyan)" }} />
                 Send Neon
               </DialogTitle>
+              {/* Screen-reader-only dialog description — the visual
+                  design carries the context already. */}
+              <DialogDescription className="sr-only">
+                Pick an amount of Neon to send and power up this room's energy tube.
+              </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 pt-2">
@@ -270,13 +275,17 @@ export function SendNeonModal({ open, onClose, roomId, neonBalance: initialBalan
               <DialogTitle className="flex items-center gap-2 font-sans text-lg text-foreground">
                 <button
                   onClick={() => setView("send")}
+                  aria-label="Back to sending Neon"
                   className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-muted/30"
                 >
-                  <ArrowLeft className="h-4 w-4 text-muted-foreground" />
+                  <ArrowLeft className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 </button>
                 <ShoppingCart className="h-5 w-5" style={{ color: "var(--brand-cyan)" }} />
                 Get Neon
               </DialogTitle>
+              <DialogDescription className="sr-only">
+                Buy a Neon pack to top up your balance.
+              </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-3 pt-2">

@@ -926,7 +926,17 @@ export function RoomClient({
 
   // ─── Derived render data ──────────────────────────────────────────────────
 
+  // Can be null even while playback state exists — e.g. the transient
+  // between a reconnect's playback_state and its track_changed replay
+  // when the REST snapshot had no nowPlaying either. The render below
+  // must not assume hasRealPlayback implies a track (see the
+  // !displayTrack guard on the now-playing branch).
   const displayTrack = currentTrack ?? room.nowPlaying
+
+  // Connection banner visibility — also feeds the grid min-height so
+  // the banner doesn't push the page past the viewport (see below).
+  const showConnectionBanner =
+    ws.connectionStatus !== "connected" && (ws.everConnected || wsGraceOver)
 
   const djInitials = (room.djName || "DJ").slice(0, 2).toUpperCase()
 
@@ -1062,12 +1072,14 @@ export function RoomClient({
           (indefinite jittered backoff plus online/visibility
           re-triggers), so this is a status signal, not a dead end.
           Hidden during the initial handshake grace window so it
-          doesn't flash on every page load. */}
-      {ws.connectionStatus !== "connected" && (ws.everConnected || wsGraceOver) && (
+          doesn't flash on every page load. Fixed 28px tall on md+ so
+          the grid's min-height calc below can account for it exactly
+          (mobile's h-dvh shell absorbs it via flex). */}
+      {showConnectionBanner && (
         <div
           role="status"
           aria-live="polite"
-          className="flex items-center justify-center gap-2"
+          className="flex items-center justify-center gap-2 md:h-[28px]"
           style={{
             paddingBlock: "5px",
             paddingInline: "var(--space-md)",
@@ -1108,12 +1120,23 @@ export function RoomClient({
           md the columns become the tabbed panes driven by mobileTab:
           the active pane fills the remaining shell height (flex-1) and
           scrolls internally; inactive panes are display:none'd via
-          their wrappers. */}
+          their wrappers. The md min-height fills the viewport below
+          the 56px nav — minus the 28px connection banner while it's
+          shown, so the banner doesn't push a scrollbar onto an
+          otherwise viewport-height page. */}
       <div
         className={
           isDJ
-            ? "shell-narrow flex min-h-0 flex-1 flex-col md:min-h-[calc(100vh-56px)] md:grid md:grid-cols-[minmax(0,1fr)_clamp(240px,20vw,320px)_clamp(260px,20vw,320px)]"
-            : "shell-narrow flex min-h-0 flex-1 flex-col md:min-h-[calc(100vh-56px)] md:grid md:grid-cols-[minmax(0,1fr)_clamp(260px,22vw,360px)]"
+            ? `shell-narrow flex min-h-0 flex-1 flex-col ${
+                showConnectionBanner
+                  ? "md:min-h-[calc(100vh-56px-28px)]"
+                  : "md:min-h-[calc(100vh-56px)]"
+              } md:grid md:grid-cols-[minmax(0,1fr)_clamp(240px,20vw,320px)_clamp(260px,20vw,320px)]`
+            : `shell-narrow flex min-h-0 flex-1 flex-col ${
+                showConnectionBanner
+                  ? "md:min-h-[calc(100vh-56px-28px)]"
+                  : "md:min-h-[calc(100vh-56px)]"
+              } md:grid md:grid-cols-[minmax(0,1fr)_clamp(260px,22vw,360px)]`
         }
       >
         {/* Left: now playing + DJ context + queue. <main> landmark —
@@ -1167,7 +1190,12 @@ export function RoomClient({
                 </button>
               )}
             </div>
-          ) : showWaiting ? (
+          ) : showWaiting || !displayTrack ? (
+            // Also the guard for hasRealPlayback-without-a-track: a
+            // playback_state can land before its track_changed (and
+            // before any REST nowPlaying), leaving displayTrack null
+            // for a beat — show this waiting presentation instead of
+            // crashing on displayTrack.title below.
             <div className="flex flex-col items-center gap-3 py-20 text-center">
               <div
                 className="h-14 w-14 rounded-full"

@@ -78,15 +78,24 @@ export const clockOffsetSlice = new Slice<number>(0)
 // AudioEngine (which also renders the "Tap to join the audio" gate).
 export const autoplayBlockedSlice = new Slice<boolean>(false)
 
-// Reset slices when the room slug changes or the connection opens so a
-// reconnect doesn't flash stale state from a different room.
+// Reset slices when the room slug changes (the [slug] effect in
+// use-room-websocket.ts is the only caller) so a room switch doesn't flash
+// stale state from a different room. Reconnects deliberately do NOT reset:
+// the resync markers let the fresh initial_state replace state atomically.
+// autoplayBlockedSlice is deliberately NOT reset here: the flag is a
+// property of the browser's autoplay policy, not of any one room, and
+// its owner is the audio engine — which clears it on unmount and on
+// real playback, and intentionally keeps it across track changes
+// (without a user gesture the next track is just as blocked). Clearing
+// it from a room transition while the engine stays mounted hid the
+// tap-to-listen gate until the play watchdog re-flagged it seconds
+// later.
 export function resetRoomSlices() {
   chatMessagesSlice.set([])
   activityEventsSlice.set([])
   playbackStateSlice.set(null)
   currentTrackSlice.set(null)
   playbackPositionSlice.set(0)
-  autoplayBlockedSlice.set(false)
 }
 
 export function useRoomChatMessages(): APIChatMessage[] {

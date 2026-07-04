@@ -102,6 +102,17 @@ const SUBMIT_ERROR_MESSAGES = new Set([
 const RECONNECT_BASE_MS = 1000
 const RECONNECT_CAP_MS = 30000
 
+// Zombie-socket detection: after a mobile background/resume the socket
+// can report OPEN while the connection is actually dead (the OS killed
+// it without a FIN ever reaching us), leaving a silent room that never
+// recovers. On tab re-focus, a socket that hasn't delivered a server
+// frame in this long is force-closed and reconnected. The server's
+// keepalive pings are protocol-level (invisible to onmessage) and data
+// frames can legitimately pause mid-track, so this can false-positive
+// in a quiet room — that just costs one clean reconnect + initial-state
+// replay, which the resync markers absorb without blanking the UI.
+const ZOMBIE_SILENCE_MS = 45000
+
 export type RoomConnectionStatus = "connected" | "reconnecting" | "offline"
 
 export interface RoomWSState {
@@ -243,6 +254,15 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
     // and swap in the fresh snapshot atomically instead of blanking
     // the room (see ws.onopen).
     const resync = { playbackPending: false, requestsPending: false }
+    // Wall-clock time of the last server frame (seeded on open). The
+    // visibility handler compares it against ZOMBIE_SILENCE_MS to spot
+    // dead-but-OPEN sockets after a mobile background/resume.
+    let lastMessageAt = 0
+    // Count of submit_result rejections already accounted for by their
+    // paired legacy error event (rejectSubmit sends both, error first).
+    // Without this, the trailing submit_result would resolve the NEXT
+    // pending submit with the previous one's failure.
+    let swallowSubmitResults = 0
 
     // Fresh connection scope (mount or room change) — start from a
     // clean slate so a previous room's queue/listeners can't bleed in.
@@ -260,10 +280,15 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
     }
 
     // Immediate retry for the online/visibilitychange handlers below:
-    // reset the backoff and skip any pending timer. No-op while a
-    // socket is already open or mid-handshake.
+    // reset the backoff and skip any pending timer. The immediate
+    // reconnect is skipped while a socket is already open or
+    // mid-handshake, but the backoff reset still applies — these are
+    // external "network is back / user is looking" signals, so if a
+    // doomed CONNECTING attempt fails right after one, its retry
+    // should start from the base delay, not the stale backoff.
     function reconnectNow() {
       if (cancelled) return
+      reconnectCount = 0
       const current = wsRef.current
       if (
         current &&
@@ -276,7 +301,6 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
         clearTimeout(reconnectTimer.current)
         reconnectTimer.current = null
       }
-      reconnectCount = 0
       connect()
     }
 
@@ -320,6 +344,8 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
       ws.onopen = () => {
         if (cancelled || wsRef.current !== ws) return
         reconnectCount = 0
+        lastMessageAt = Date.now()
+        swallowSubmitResults = 0 // per-socket pairing — see declaration
         // The server replays its initial state on every (re)connect
         // (track/playback pair, queue, recent chat, settings, pending
         // requests, listener list). Don't clear anything here — that
@@ -357,6 +383,7 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
 
       ws.onmessage = (event) => {
         if (cancelled || wsRef.current !== ws) return
+        lastMessageAt = Date.now()
         try {
           const msg: WSMessage = JSON.parse(event.data)
           handleMessage(msg)
@@ -368,12 +395,25 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
 
     function handleMessage(msg: WSMessage) {
       // submit_result — the server's direct reply to this client's
-      // submit_track: {"type":"submit_result","ok":boolean,"error":string|null}.
-      // Accept it bare (as specified) or wrapped in the standard
-      // {event, payload} envelope the rest of the protocol uses.
+      // submit_track. WS CONTRACT (frozen), implemented by the backend
+      // (Jukebox-Backend internal/ws/client.go sendSubmitResult):
+      // {"type":"submit_result","ok":boolean,"error":string|null},
+      // sent bare — also accept it wrapped in the standard
+      // {event, payload} envelope in case the backend ever normalizes
+      // it. Handled before the switch so it resolves the pending
+      // submit ahead of the queue/request-echo and announcement
+      // fallbacks below.
       const raw = msg as any
       if (raw.type === "submit_result" || raw.event === "submit_result") {
         const body = raw.type === "submit_result" ? raw : raw.payload ?? {}
+        // A rejection whose paired legacy error event (sent first —
+        // see rejectSubmit backend-side) already resolved its pending
+        // submit is spent; letting it through would fail the NEXT
+        // pending submit with this one's error.
+        if (!body.ok && swallowSubmitResults > 0) {
+          swallowSubmitResults--
+          return
+        }
         resolveOldestPendingSubmit({
           ok: !!body.ok,
           error: body.error || undefined,
@@ -636,6 +676,10 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
             SUBMIT_ERROR_MESSAGES.has(message)
           ) {
             resolveOldestPendingSubmit({ ok: false, error: message })
+            // The backend pairs this legacy error with a contractual
+            // submit_result (error first, per-client ordered) — that
+            // reply is now accounted for, so mark it to be swallowed.
+            swallowSubmitResults++
           } else {
             onErrorRef.current?.(message)
           }
@@ -659,11 +703,32 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
     // while backgrounded/locked) instead of waiting out the backoff.
     const handleOnline = () => reconnectNow()
     const handleVisibility = () => {
-      if (document.visibilityState === "visible") reconnectNow()
+      if (document.visibilityState !== "visible") return
+      // Zombie-socket check: after a background/resume the socket can
+      // still report OPEN even though the connection died while the
+      // page was frozen. readyState can't be trusted here, so use
+      // server silence as the tell — force-close and let reconnectNow
+      // open a fresh socket (connect() detaches this one's handlers,
+      // so its late onclose can't double-schedule; `connected` stays
+      // true until the replacement resolves, keeping the banner calm).
+      const current = wsRef.current
+      if (
+        current &&
+        current.readyState === WebSocket.OPEN &&
+        Date.now() - lastMessageAt > ZOMBIE_SILENCE_MS
+      ) {
+        try {
+          current.close()
+        } catch {}
+      }
+      reconnectNow()
     }
-    // Flip the banner to "offline" right away — a dead network can
-    // take the socket seconds to notice, and the next onclose may be a
-    // full backoff interval away.
+    // While already disconnected, relabel the banner from
+    // "reconnecting" to "offline" right away — the next onclose (which
+    // would recompute it) may be a full backoff interval out. A socket
+    // still reporting connected is left alone: a dead network can take
+    // the socket seconds to notice, and onclose sets the status from a
+    // fresh navigator.onLine check when it does.
     const handleOffline = () => {
       setState((s) => (s.connected ? s : { ...s, connectionStatus: "offline" }))
     }

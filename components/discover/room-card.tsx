@@ -450,24 +450,32 @@ function RoomCardImpl({ room }: { room: Room }) {
   )
 }
 
-// Homepage polls every 30s and passes fresh Room objects to every card.
-// Most fields are identical across polls — memoize on the fields the card
-// actually reads so unchanged cards skip re-render.
-export const RoomCard = memo(RoomCardImpl, (prev, next) => {
-  const a = prev.room
-  const b = next.room
+// Every Room field RoomCardImpl reads. Lives directly under the render so
+// the two can't drift: any field the component starts consuming above must
+// be compared here, or memo will pin stale UI on screen between polls.
+function sameRoomForCard(a: Room, b: Room) {
   return (
     a.id === b.id &&
+    a.slug === b.slug &&
     a.name === b.name &&
     a.djName === b.djName &&
     a.genre === b.genre &&
     a.isLive === b.isLive &&
     a.listenerCount === b.listenerCount &&
-    a.isFeatured === b.isFeatured &&
     a.isAutoplay === b.isAutoplay &&
     a.isOfficial === b.isOfficial &&
     a.coverArt === b.coverArt &&
     a.coverGradient === b.coverGradient &&
-    a.nowPlaying?.id === b.nowPlaying?.id
+    a.scheduledStart?.getTime() === b.scheduledStart?.getTime() &&
+    a.nowPlaying?.id === b.nowPlaying?.id &&
+    a.nowPlaying?.title === b.nowPlaying?.title &&
+    a.nowPlaying?.artist === b.nowPlaying?.artist &&
+    a.vibes.length === b.vibes.length &&
+    a.vibes.every((vibe, i) => vibe === b.vibes[i])
   )
-})
+}
+
+// Homepage polls every 30s and passes fresh Room objects to every card.
+// Most fields are identical across polls — memoize on the fields the card
+// actually reads so unchanged cards skip re-render.
+export const RoomCard = memo(RoomCardImpl, (prev, next) => sameRoomForCard(prev.room, next.room))

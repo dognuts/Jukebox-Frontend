@@ -85,6 +85,18 @@ export const ListenerChatColumn = memo(forwardRef<
   const overlayElRef = useRef<HTMLDivElement>(null)
   const prefersReducedMotion = usePrefersReducedMotion()
 
+  // Relative timestamps ("42s", "3m") derive from Date.now() at render
+  // time, and this memoized column otherwise re-renders only when a
+  // message arrives — in a quiet room every label freezes at whatever
+  // it said last. A single low-frequency tick keeps them honest while
+  // re-rendering just this column, not the page (the re-render
+  // isolation the memo exists for stays intact).
+  const [, setClockTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setClockTick((t) => t + 1), 30000)
+    return () => clearInterval(id)
+  }, [])
+
   // Live chat from the external store — subscribed HERE (not in the
   // room page) so each incoming message reconciles just this column.
   const wsMessages = useRoomChatMessages()

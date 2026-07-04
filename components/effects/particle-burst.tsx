@@ -19,6 +19,10 @@ export function useParticleBurst() {
 
   const burst = useCallback(
     (emoji: string, count: number = 6, originEl?: HTMLElement | null) => {
+      // Purely decorative flourish (the container is aria-hidden) — skip it
+      // entirely for users who ask for reduced motion.
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+
       let originX = window.innerWidth / 2
       let originY = window.innerHeight * 0.75
       if (originEl) {

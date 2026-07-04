@@ -120,7 +120,8 @@
   /* Text hierarchy tokens for consistency */
   --text-primary: oklch(0.95 0.01 80); /* Main content */
   --text-secondary: oklch(0.70 0.02 280); /* Secondary info */
-  --text-tertiary: oklch(0.55 0.02 280); /* Hints, disabled, muted */
+  --text-tertiary: oklch(0.62 0.02 280); /* Hints, disabled, muted — 0.62 matches the
+     muted-foreground AA fix (>=4.5:1 on every surface token); do not re-darken */
   --text-success: oklch(0.65 0.15 155); /* Success state */
   --text-warning: oklch(0.75 0.20 60); /* Warning state */
   --text-error: oklch(0.62 0.28 30); /* Error state */

@@ -14,7 +14,7 @@ const RESEND_COOLDOWN_SECONDS = 60
 function VerifyEmailContent() {
   const searchParams = useSearchParams()
   const token = searchParams.get("token") || ""
-  const { verifyEmail, resendVerification, isLoggedIn, user } = useAuth()
+  const { verifyEmail, refreshAuth, authFetch, isLoggedIn, user, loading: authLoading } = useAuth()
   const [status, setStatus] = useState<"loading" | "success" | "already-verified" | "error">("loading")
   const [errorMsg, setErrorMsg] = useState("")
   const attemptedTokenRef = useRef<string | null>(null)
@@ -38,7 +38,15 @@ function VerifyEmailContent() {
     attemptedTokenRef.current = token
 
     verifyEmail(token)
-      .then(() => setStatus("success"))
+      .then(() => {
+        setStatus("success")
+        // Re-pull the auth user so the rest of the UI stops treating the
+        // account as unverified. verifyEmail's own /me refetch is skipped
+        // when this effect runs before auth finishes loading (accessToken
+        // state is still null then), so refresh explicitly here. For an
+        // anonymous visitor this is a no-op.
+        refreshAuth().catch(() => {})
+      })
       .catch((err: Error) => {
         // The backend marks a token used only in the same step that verifies
         // the email (auth.go VerifyEmail), so "token already used" means the
@@ -46,12 +54,13 @@ function VerifyEmailContent() {
         // That's a success, not a failure.
         if (err.message?.includes("token already used")) {
           setStatus("already-verified")
+          refreshAuth().catch(() => {})
           return
         }
         setStatus("error")
         setErrorMsg(err.message?.trim() || "Verification failed")
       })
-  }, [token, verifyEmail])
+  }, [token, verifyEmail, refreshAuth])
 
   // Tick the resend cooldown down once per second
   useEffect(() => {
@@ -65,7 +74,18 @@ function VerifyEmailContent() {
     setResendError("")
     setResendState("sending")
     try {
-      await resendVerification()
+      // Hit the endpoint directly (rather than via auth-context's
+      // resendVerification, which discards the body) — the backend answers
+      // 200 with status "already verified" when no email was sent, and
+      // showing a "link is on its way" confirmation for that would lie.
+      const res = await authFetch("/api/auth/resend-verification", { method: "POST" })
+      if (!res.ok) throw new Error(await res.text())
+      const data = (await res.json().catch(() => null)) as { status?: string } | null
+      if (data?.status === "already verified") {
+        setStatus("already-verified")
+        refreshAuth().catch(() => {})
+        return
+      }
       setResendState("sent")
       setCooldown(RESEND_COOLDOWN_SECONDS)
     } catch (err: any) {
@@ -74,7 +94,10 @@ function VerifyEmailContent() {
     }
   }
 
-  if (status === "loading") {
+  // The error screen branches on isLoggedIn (resend button vs. log-in
+  // link), so hold the spinner until auth has resolved — otherwise a
+  // logged-in user gets a flash of the wrong variant.
+  if (status === "loading" || (status === "error" && authLoading)) {
     return (
       <AuthShell title="Verifying your email...">
         <div className="flex flex-col items-center py-8">
@@ -91,7 +114,7 @@ function VerifyEmailContent() {
         title={status === "already-verified" ? "Your email is already verified" : "Email verified!"}
         subtitle={
           status === "already-verified"
-            ? "This link was already used to confirm your address."
+            ? "Your email address has already been confirmed."
             : "Your email address has been confirmed."
         }
       >

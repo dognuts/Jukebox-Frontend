@@ -129,9 +129,13 @@ export const NeonTube = memo(function NeonTube({ tube, powerUp, onSendNeon }: Ne
     canvas.style.height = `${INNER_H}px`
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-    // Check reduced motion
-    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    if (prefersReduced) return
+    // Respect reduced motion — via the subscribed hook value (in the
+    // deps below) rather than a one-shot matchMedia read, so flipping
+    // the OS preference mid-visit stops/starts the loop like the
+    // inline-style animations above. Re-running this effect also
+    // resets the canvas bitmap (the sizing writes clear it), so no
+    // frozen bubbles linger when the loop stops.
+    if (prefersReducedMotion) return
 
     let lastFrame = 0
 
@@ -256,7 +260,7 @@ export const NeonTube = memo(function NeonTube({ tube, powerUp, onSendNeon }: Ne
       document.removeEventListener("visibilitychange", onVis)
       bubblesRef.current = []
     }
-  }, [fillAmount, fillTarget, level]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fillAmount, fillTarget, level, prefersReducedMotion]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ─── Derived styles ──────────────────────────────────────────── */
 
@@ -330,7 +334,15 @@ export const NeonTube = memo(function NeonTube({ tube, powerUp, onSendNeon }: Ne
           role="button"
           tabIndex={0}
           onClick={onSendNeon}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onSendNeon?.() }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              // Space scrolls the page (and Enter can re-trigger
+              // defaults) unless suppressed — role="button" divs get
+              // no native key handling for free.
+              e.preventDefault()
+              onSendNeon?.()
+            }
+          }}
           aria-label={`Neon tube level ${level} — ${fillAmount} of ${fillTarget} neon. Click to send neon.`}
           title="Send Neon"
         >

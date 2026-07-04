@@ -17,8 +17,13 @@ import Image, { type ImageProps } from "next/image"
  * next.config.mjs.
  */
 const OPTIMIZED_HOSTS = [
-  /(^|\.)ytimg\.com$/, // YouTube thumbnails (i.ytimg.com)
-  /(^|\.)sndcdn\.com$/, // SoundCloud artwork (i1.sndcdn.com, ...)
+  // Exactly i.ytimg.com — the config allowlists only that host, and a URL
+  // routed to the optimizer but rejected by remotePatterns 500s at request
+  // time, so these must not be broader than the config.
+  /^i\.ytimg\.com$/, // YouTube thumbnails
+  // Any subdomain of sndcdn.com (i1.sndcdn.com, ...) but not the bare apex,
+  // mirroring the "**.sndcdn.com" pattern.
+  /^.+\.sndcdn\.com$/, // SoundCloud artwork
 ]
 
 function isOptimizable(src: string): boolean {

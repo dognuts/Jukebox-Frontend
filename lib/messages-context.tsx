@@ -155,7 +155,6 @@ export function MessagesProvider({ children }: { children: ReactNode }) {
   const [activeConversation, setActiveConversation] = useState<string | null>(
     null
   )
-  const [hydrated, setHydrated] = useState(false)
   const pollRef = useRef<NodeJS.Timeout | null>(null)
   // In-flight poll request — aborted before each new tick and on unmount.
   const pollAbortRef = useRef<AbortController | null>(null)
@@ -224,7 +223,7 @@ export function MessagesProvider({ children }: { children: ReactNode }) {
   }, [isRealAPI])
 
   useEffect(() => {
-    loadConversations().then(() => setHydrated(true))
+    loadConversations()
 
     if (isRealAPI) {
       pollRef.current = setInterval(() => {

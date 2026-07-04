@@ -2,10 +2,11 @@ import { Navbar } from "@/components/layout/navbar"
 import { Footer } from "@/components/layout/footer"
 
 // Lean chrome for static content routes (blog, support, privacy, terms,
-// help). Only AuthProvider + Toaster from the root layout are available
-// here — no player/messages/upgrade providers, no ambient canvases — so
-// these pages stay cheap to download and hydrate. Navbar degrades
-// gracefully when the optional contexts are absent.
+// help). Only AuthProvider + Toaster and the player stack (so playback
+// keeps running when a listener navigates here) come from the root
+// layout — no messages/favorites/upgrade/room-status providers, no
+// ambient canvases — so these pages stay cheap to download and hydrate.
+// Navbar degrades gracefully when the optional contexts are absent.
 export default function SiteLayout({
   children,
 }: {

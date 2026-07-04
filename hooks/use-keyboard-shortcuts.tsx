@@ -12,7 +12,10 @@ export interface KeyboardShortcut {
   action: () => void
 }
 
-function sameCombo(a: KeyboardShortcut, b: KeyboardShortcut) {
+// Just the fields that identify a shortcut — what unregisterShortcut takes.
+export type ShortcutCombo = Pick<KeyboardShortcut, "key" | "ctrl" | "shift" | "alt" | "meta">
+
+function sameCombo(a: ShortcutCombo, b: ShortcutCombo) {
   return (
     a.key.toLowerCase() === b.key.toLowerCase() &&
     !!(a.ctrl || a.meta) === !!(b.ctrl || b.meta) &&
@@ -39,8 +42,11 @@ export function useKeyboardShortcuts() {
     })
   }, [])
 
-  const unregisterShortcut = useCallback((key: string) => {
-    setShortcuts(prev => prev.filter(s => s.key !== key))
+  // Match with sameCombo — the same identity registration uses — so
+  // unregistering is case-insensitive and modifier-aware ("K" removes "k",
+  // and ctrl+k doesn't take plain k down with it).
+  const unregisterShortcut = useCallback((combo: ShortcutCombo) => {
+    setShortcuts(prev => prev.filter(s => !sameCombo(s, combo)))
   }, [])
 
   useEffect(() => {
@@ -52,6 +58,16 @@ export function useKeyboardShortcuts() {
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA' ||
         target.isContentEditable
+      ) {
+        return
+      }
+
+      // Don't fire global shortcuts underneath an open modal — Radix traps
+      // focus inside the dialog but keydown still bubbles to window.
+      if (
+        document.querySelector(
+          '[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]'
+        )
       ) {
         return
       }

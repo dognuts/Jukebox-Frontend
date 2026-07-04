@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo, createContext, useContext, type ReactNode } from "react"
+import { useState, useCallback, useEffect, useMemo, createContext, useContext, type ReactNode } from "react"
 import { X, Check, Zap, Crown, Loader2, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -41,7 +41,10 @@ export function PricingModalProvider({ children }: { children: ReactNode }) {
   return (
     <PricingModalContext.Provider value={value}>
       {children}
-      {isOpen && <PricingModal onClose={close} />}
+      {/* Always mounted, driven by the open prop — conditionally mounting
+          would tear the Dialog out of the tree on close and skip Radix's
+          exit animation. */}
+      <PricingModal open={isOpen} onClose={close} />
     </PricingModalContext.Provider>
   )
 }
@@ -64,7 +67,7 @@ const NEON_PACKS = [
 
 // ── Modal Component ──
 
-function PricingModal({ onClose }: { onClose: () => void }) {
+function PricingModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname()
   const { isLoggedIn, user, refreshAuth } = useAuth()
   const [subscribing, setSubscribing] = useState(false)
@@ -72,6 +75,16 @@ function PricingModal({ onClose }: { onClose: () => void }) {
   const [boughtPack, setBoughtPack] = useState<string | null>(null)
   const [localBalance, setLocalBalance] = useState<number | null>(null)
   const neonBalance = localBalance ?? (user as any)?.neonBalance ?? 0
+
+  // The dialog stays mounted for its exit animation, so post-purchase
+  // local state must not shadow the (refreshed) auth balance forever —
+  // drop it once the modal closes.
+  useEffect(() => {
+    if (!open) {
+      setLocalBalance(null)
+      setBoughtPack(null)
+    }
+  }, [open])
 
   const handleSubscribePlus = async () => {
     if (!isLoggedIn) return
@@ -106,7 +119,7 @@ function PricingModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) onClose() }}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
       <DialogContent
         showCloseButton={false}
         className="gap-0 overflow-hidden rounded-2xl border-[0.5px] border-hairline bg-popover p-0 sm:max-w-2xl"

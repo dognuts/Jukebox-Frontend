@@ -212,6 +212,22 @@ export function WelcomePopup({ isLoggedIn }: { isLoggedIn: boolean }) {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
           }
+
+          @media (prefers-reduced-motion: reduce) {
+            .welcome-glow-bar,
+            .welcome-stagger-1,
+            .welcome-stagger-2,
+            .welcome-stagger-3,
+            .welcome-stagger-4,
+            .welcome-stagger-5 {
+              animation: none;
+            }
+            /* Without its sweep animation the shine stripe would just sit
+               frozen over the label — hide it. */
+            .welcome-cta-shine {
+              display: none;
+            }
+          }
         `}</style>
       </DialogContent>
     </Dialog>

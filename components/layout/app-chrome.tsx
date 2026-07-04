@@ -2,18 +2,15 @@
 
 import { useEffect, useState } from "react"
 import dynamic from "next/dynamic"
-import { usePlayer } from "@/lib/player-context"
 import { useMessages } from "@/lib/messages-context"
 import { useUpgrade } from "@/lib/upgrade-context"
 
-// Each of these pulls a meaningful dependency tree (AudioEngine + YouTube/
-// SoundCloud embeds for the mini player, Radix sheet + conversation UI for
-// the drawer, Radix dialog for upgrade). Load them only when their state
-// first requires them instead of shipping them in the layout chunk.
-const MiniPlayer = dynamic(
-  () => import("@/components/layout/mini-player").then((m) => m.MiniPlayer),
-  { ssr: false }
-)
+// Each of these pulls a meaningful dependency tree (Radix sheet +
+// conversation UI for the drawer, Radix dialog for upgrade). Load them
+// only when their state first requires them instead of shipping them in
+// the layout chunk. The mini player used to live here too, but it now
+// mounts from PlayerChrome in the root layout so playback survives
+// navigation into the (site) route group.
 const MessagesDrawer = dynamic(
   () =>
     import("@/components/messages/messages-drawer").then(
@@ -28,7 +25,6 @@ const UpgradeDialog = dynamic(
 )
 
 export function AppChrome() {
-  const { player } = usePlayer()
   const { drawerOpen } = useMessages()
   const { isDialogOpen } = useUpgrade()
 
@@ -48,7 +44,6 @@ export function AppChrome() {
 
   return (
     <>
-      {player && <MiniPlayer />}
       {drawerMounted && <MessagesDrawer />}
       {upgradeMounted && <UpgradeDialog />}
     </>

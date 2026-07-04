@@ -3,6 +3,9 @@ import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { AuthProvider } from "@/lib/auth-context"
+import { PlaylistProvider } from "@/lib/playlist-context"
+import { PlayerProvider } from "@/lib/player-context"
+import { PlayerChrome } from "@/components/layout/player-chrome"
 import { Toaster } from "@/components/ui/sonner"
 import { ProgressBar } from "@/components/effects/progress-bar"
 import "./globals.css"
@@ -62,9 +65,14 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
-// Deliberately lean: the full provider/chrome stack (player, playlists,
-// messages, upgrade dialogs, ambient effects) lives in app/(app)/layout.tsx
-// so static content routes in app/(site)/ don't download or hydrate any of it.
+// Deliberately lean: most of the provider/chrome stack (messages, upgrade
+// dialogs, ambient effects) lives in app/(app)/layout.tsx so static content
+// routes in app/(site)/ don't download or hydrate any of it. The player
+// stack is the exception — PlayerProvider/PlayerChrome mount here so active
+// playback survives navigation between the (app) and (site) route groups,
+// and PlaylistProvider comes with it because the mini player's save-track
+// menu needs it. Both are thin contexts; the heavy MiniPlayer/AudioEngine
+// chunk is still lazy-loaded inside PlayerChrome only when something plays.
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -75,8 +83,13 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <ProgressBar />
         <AuthProvider>
-          {children}
-          <Toaster position="bottom-right" />
+          <PlaylistProvider>
+            <PlayerProvider>
+              {children}
+              <PlayerChrome />
+              <Toaster position="bottom-right" />
+            </PlayerProvider>
+          </PlaylistProvider>
         </AuthProvider>
         <Analytics />
       </body>

@@ -9,11 +9,11 @@ export function FollowButton({ displayName }: { displayName: string }) {
   const [following, setFollowing] = useState(false)
 
   function handleClick() {
-    setFollowing((prev) => {
-      const next = !prev
-      toast.success(next ? `Following ${displayName}` : `Unfollowed ${displayName}`)
-      return next
-    })
+    // Toast outside the state updater — updaters must stay pure (StrictMode
+    // runs them twice, which double-fired the toast).
+    const next = !following
+    setFollowing(next)
+    toast.success(next ? `Following ${displayName}` : `Unfollowed ${displayName}`)
   }
 
   return (

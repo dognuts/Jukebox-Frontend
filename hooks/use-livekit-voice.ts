@@ -118,7 +118,12 @@ export function useLiveKitVoice({ roomSlug, isDJ, voiceActive }: UseLiveKitVoice
           setError(err.message || "Failed to connect to voice")
         }
       } finally {
-        connectPromiseRef.current = null
+        // Only clear our own registration — a stale attempt finishing
+        // after teardown (epoch bumped) must not wipe the single-flight
+        // guard of a newer attempt already in flight for the next room.
+        if (epoch === connectEpochRef.current) {
+          connectPromiseRef.current = null
+        }
       }
     })()
     connectPromiseRef.current = attempt
@@ -141,6 +146,10 @@ export function useLiveKitVoice({ roomSlug, isDJ, voiceActive }: UseLiveKitVoice
   useEffect(() => {
     return () => {
       connectEpochRef.current++ // abandon any in-flight connect attempt
+      // Drop the abandoned attempt's single-flight promise too —
+      // otherwise a connect in the next room returns room A's stale
+      // (self-abandoning) promise and never actually connects.
+      connectPromiseRef.current = null
       if (localTrackRef.current) {
         localTrackRef.current.stop()
         localTrackRef.current = null
