@@ -344,6 +344,7 @@ export function RoomClient({
             return { ...prev, level: 1, fillAmount: 0, fillTarget: 100, totalNeon: newTotal, prestigeCount: newPrestige }
           }
           const newLevel = Math.min(prev.level + 1, 5)
+          // Raw literals on purpose — mirrors the LEVELS palette in neon-tube.tsx.
           const colors = ["oklch(0.72 0.18 195)", "oklch(0.65 0.24 330)", "oklch(0.82 0.18 80)", "oklch(0.75 0.20 300)", "oklch(0.95 0.03 80)"]
           setMockPowerUp({ newLevel, color: colors[newLevel - 1] })
           setTimeout(() => setMockPowerUp(null), 4000)
@@ -850,17 +851,17 @@ export function RoomClient({
   const errorShell = (title: string, body: string, action?: ReactNode) => (
     <div
       className="flex min-h-screen items-center justify-center"
-      style={{ background: "#0d0b10", color: "#e8e6ea" }}
+      style={{ background: "var(--ink)", color: "var(--ink-foreground)" }}
     >
       <div className="flex flex-col items-center gap-3 px-6 text-center">
         <div
           className="flex h-14 w-14 items-center justify-center rounded-full"
-          style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }}
+          style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid var(--hairline-strong)" }}
         >
-          <Radio className="h-6 w-6" style={{ color: "#e89a3c" }} />
+          <Radio className="h-6 w-6" style={{ color: "var(--brand-amber)" }} />
         </div>
         <h1 className="text-base font-semibold">{title}</h1>
-        <p className="max-w-sm text-sm" style={{ color: "rgba(232,230,234,0.55)" }}>
+        <p className="max-w-sm text-sm" style={{ color: "var(--text-low)" }}>
           {body}
         </p>
         {action ? (
@@ -869,7 +870,7 @@ export function RoomClient({
             <Link
               href="/"
               className="text-xs underline underline-offset-2"
-              style={{ color: "rgba(232,230,234,0.55)" }}
+              style={{ color: "var(--text-low)" }}
             >
               Back to Discover
             </Link>
@@ -878,7 +879,7 @@ export function RoomClient({
           <Link
             href="/"
             className="mt-2 rounded-full px-5 py-2 text-sm font-semibold"
-            style={{ background: "#e89a3c", color: "#0d0b10" }}
+            style={{ background: "var(--brand-amber)", color: "var(--ink)" }}
           >
             Back to Discover
           </Link>
@@ -902,7 +903,7 @@ export function RoomClient({
         type="button"
         onClick={retryLoad}
         className="mt-2 rounded-full px-5 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
-        style={{ background: "#e89a3c", color: "#0d0b10" }}
+        style={{ background: "var(--brand-amber)", color: "var(--ink)" }}
       >
         Retry
       </button>
@@ -991,6 +992,8 @@ export function RoomClient({
   const djHypeLabel =
     djHypeScore >= 80 ? "On fire" : djHypeScore >= 50 ? "Hyped" : djHypeScore >= 25 ? "Warming" : "Chill"
   const djHypeColor =
+    // Must stay raw hex: DjDeck derives alpha shades via `${hypeColor}15`
+    // string concatenation (8-digit hex), which breaks with var().
     djHypeScore >= 80 ? "#ff5a3a" : djHypeScore >= 50 ? "#e89a3c" : djHypeScore >= 25 ? "#4a8fe8" : "#8a8a9a"
 
   return (
@@ -1002,7 +1005,7 @@ export function RoomClient({
     // className="min-h-screen".
     <div
       className="flex h-dvh flex-col overflow-hidden md:block md:h-auto md:min-h-screen md:overflow-visible"
-      style={{ background: "#0d0b10", color: "#e8e6ea" }}
+      style={{ background: "var(--ink)", color: "var(--ink-foreground)" }}
     >
       {/* Supernova explosion — full-screen particle burst when level 5 maxes out.
           Uses backend event when available, falls back to local detection. */}
@@ -1069,14 +1072,14 @@ export function RoomClient({
             paddingBlock: "5px",
             paddingInline: "var(--space-md)",
             background: "rgba(255,255,255,0.03)",
-            borderBottom: "0.5px solid rgba(255,255,255,0.06)",
-            color: "rgba(232,230,234,0.65)",
+            borderBottom: "0.5px solid var(--hairline)",
+            color: "var(--text-mid)",
             fontSize: "var(--fs-small)",
           }}
         >
           <span
             className="h-[6px] w-[6px] shrink-0 animate-pulse rounded-full motion-reduce:animate-none"
-            style={{ background: "#e89a3c" }}
+            style={{ background: "var(--brand-amber)" }}
           />
           {ws.connectionStatus === "offline"
             ? "You're offline — we'll reconnect when your connection returns"
@@ -1137,16 +1140,16 @@ export function RoomClient({
                 className="flex h-20 w-20 items-center justify-center rounded-full"
                 style={{
                   background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(232,154,60,0.3)",
+                  border: "1px solid color-mix(in oklab, var(--brand-amber) 30%, transparent)",
                 }}
               >
-                <Play className="h-8 w-8" style={{ color: "#e89a3c" }} />
+                <Play className="h-8 w-8" style={{ color: "var(--brand-amber)" }} />
               </div>
               <div>
-                <h2 className="text-lg font-bold" style={{ color: "#e8e6ea" }}>
+                <h2 className="text-lg font-bold" style={{ color: "var(--ink-foreground)" }}>
                   Ready to go live
                 </h2>
-                <p className="mt-1 text-sm" style={{ color: "rgba(232,230,234,0.55)" }}>
+                <p className="mt-1 text-sm" style={{ color: "var(--text-low)" }}>
                   {queueTracks.length > 0
                     ? `${queueTracks.length} track${queueTracks.length !== 1 ? "s" : ""} in queue — hit play to start`
                     : "Add tracks to the queue, then start playing"}
@@ -1157,7 +1160,7 @@ export function RoomClient({
                   type="button"
                   onClick={handleGoLive}
                   className="flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90"
-                  style={{ background: "#e89a3c", color: "#0d0b10" }}
+                  style={{ background: "var(--brand-amber)", color: "var(--ink)" }}
                 >
                   <Play className="h-4 w-4" />
                   Go live
@@ -1170,10 +1173,10 @@ export function RoomClient({
                 className="h-14 w-14 rounded-full"
                 style={{
                   background: "rgba(255,255,255,0.04)",
-                  border: "0.5px solid rgba(255,255,255,0.08)",
+                  border: "0.5px solid var(--hairline-strong)",
                 }}
               />
-              <p className="text-sm" style={{ color: "rgba(232,230,234,0.55)" }}>
+              <p className="text-sm" style={{ color: "var(--text-low)" }}>
                 Waiting for the DJ to start playing...
               </p>
             </div>
@@ -1393,7 +1396,7 @@ function TroubleListeningLink({
           ...(playbackPos ? { pos: String(playbackPos) } : {}),
         }).toString()}`}
         className="font-sans text-xs underline underline-offset-2"
-        style={{ color: "rgba(232,230,234,0.55)" }}
+        style={{ color: "var(--text-low)" }}
       >
         Trouble listening?
       </Link>

@@ -137,8 +137,8 @@ export function Navbar() {
           </span>
         </Link>
 
-        {/* Right cluster: search, create, messages, user menu */}
-        <div className="flex shrink-0 items-center gap-3 sm:gap-4">
+        {/* Right cluster: blog, create, messages, user menu */}
+        <div className="flex shrink-0 items-center gap-3 sm:gap-5">
           {/* Blog link — desktop only, muted */}
           <Link
             href="/blog"
@@ -147,23 +147,6 @@ export function Navbar() {
           >
             Blog
           </Link>
-
-          {/* Search pill — matches mockup: 180×30, rounded-full */}
-          <div
-            className="hidden h-[30px] w-[180px] items-center rounded-full px-3 sm:flex"
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "0.5px solid rgba(255,255,255,0.08)",
-            }}
-          >
-            <input
-              type="text"
-              placeholder="Search rooms..."
-              className="w-full bg-transparent text-[12px] outline-none placeholder:text-[rgba(232,230,234,0.3)]"
-              style={{ color: "#e8e6ea" }}
-              aria-label="Search rooms"
-            />
-          </div>
 
           {/* Create room — solid light pill, logged in only */}
           {isLoggedIn && (

@@ -58,10 +58,10 @@ export default function SupportPage() {
 
       <div
         className="mb-10 rounded-xl border border-border/40 px-4 py-3 flex items-center justify-between"
-        style={{ background: "oklch(0.14 0.01 280 / 0.5)" }}
+        style={{ background: "color-mix(in oklab, var(--popover) 50%, transparent)" }}
       >
         <span className="font-sans text-sm text-muted-foreground">Playback or audio problem? Check the listening troubleshooter.</span>
-        <Link href="/help/listening" className="font-sans text-sm font-semibold underline underline-offset-2" style={{ color: "#e89a2e" }}>
+        <Link href="/help/listening" className="font-sans text-sm font-semibold underline underline-offset-2" style={{ color: "var(--brand-amber)" }}>
           Trouble listening? →
         </Link>
       </div>
@@ -71,7 +71,7 @@ export default function SupportPage() {
         <h2 className="font-sans text-lg font-semibold text-foreground mb-4">Frequently Asked Questions</h2>
         <div
           className="rounded-xl border border-border/40 px-4"
-          style={{ background: "oklch(0.14 0.01 280 / 0.5)" }}
+          style={{ background: "color-mix(in oklab, var(--popover) 50%, transparent)" }}
         >
           {faqs.map((faq, i) => (
             <FAQItem key={i} q={faq.q} a={faq.a} />
@@ -86,7 +86,7 @@ export default function SupportPage() {
           <a
             href="mailto:support@jukebox-app.com"
             className="flex items-center gap-3 rounded-xl border border-border/40 px-5 py-4 transition-all hover:border-border/80 hover:bg-muted/10"
-            style={{ background: "oklch(0.14 0.01 280 / 0.5)" }}
+            style={{ background: "color-mix(in oklab, var(--popover) 50%, transparent)" }}
           >
             <Mail className="h-5 w-5 text-muted-foreground" />
             <div>
@@ -99,7 +99,7 @@ export default function SupportPage() {
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-3 rounded-xl border border-border/40 px-5 py-4 transition-all hover:border-border/80 hover:bg-muted/10"
-            style={{ background: "oklch(0.14 0.01 280 / 0.5)" }}
+            style={{ background: "color-mix(in oklab, var(--popover) 50%, transparent)" }}
           >
             <MessageCircle className="h-5 w-5 text-muted-foreground" />
             <div>

@@ -189,7 +189,7 @@ export function GifPicker({ open, onClose, onSelect }: GifPickerProps) {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search GIFs..."
             aria-label="Search GIFs"
-            className="flex-1 bg-transparent text-xs outline-none placeholder:text-[rgba(232,230,234,0.55)]"
+            className="flex-1 bg-transparent text-xs outline-none placeholder:text-text-low"
             style={{ color: "#e8e6ea" }}
             autoFocus
           />

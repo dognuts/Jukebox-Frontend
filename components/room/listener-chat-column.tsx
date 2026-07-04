@@ -9,7 +9,8 @@ import { ChatMediaInline } from "@/components/room/chat-media-inline"
 import { usePrefersReducedMotion } from "@/components/room/use-prefers-reduced-motion"
 
 // Per-user colour palette. Hash username → fixed slot so the same name is
-// always the same colour.
+// always the same colour. Intentionally raw hex (categorical, not semantic
+// tokens); the last entry matches --brand-amber.
 const AVATAR_COLORS = [
   "#c06ad8",
   "#5dca87",
@@ -340,7 +341,7 @@ export const ListenerChatColumn = memo(forwardRef<
         style={{
           paddingInline: "var(--space-md)",
           paddingBlock: "var(--space-sm)",
-          borderBottom: "0.5px solid rgba(255,255,255,0.06)",
+          borderBottom: "0.5px solid var(--hairline)",
         }}
       >
         {/* h2 for the screen-reader outline — Tailwind's preflight
@@ -349,7 +350,7 @@ export const ListenerChatColumn = memo(forwardRef<
         <h2
           className="font-semibold"
           style={{
-            color: "#e8e6ea",
+            color: "var(--ink-foreground)",
             fontSize: "var(--fs-h2)",
           }}
         >
@@ -379,7 +380,7 @@ export const ListenerChatColumn = memo(forwardRef<
             <div
               className="text-center"
               style={{
-                color: "rgba(232,230,234,0.55)",
+                color: "var(--text-low)",
                 fontSize: "var(--fs-small)",
               }}
             >
@@ -417,7 +418,7 @@ export const ListenerChatColumn = memo(forwardRef<
                   {isDjMsg && (
                     <span
                       style={{
-                        color: "rgba(232,154,60,0.75)",
+                        color: "color-mix(in oklab, var(--brand-amber) 75%, transparent)",
                         fontSize: "var(--fs-meta)",
                       }}
                     >
@@ -431,7 +432,7 @@ export const ListenerChatColumn = memo(forwardRef<
                   <span
                     suppressHydrationWarning
                     style={{
-                      color: "rgba(232,230,234,0.55)",
+                      color: "var(--text-low)",
                       fontSize: "var(--fs-meta)",
                     }}
                   >
@@ -452,7 +453,7 @@ export const ListenerChatColumn = memo(forwardRef<
                     <div
                       className="leading-[1.4]"
                       style={{
-                        color: "rgba(232,230,234,0.6)",
+                        color: "var(--text-low)",
                         fontSize: "var(--fs-body)",
                       }}
                     >
@@ -524,8 +525,8 @@ export const ListenerChatColumn = memo(forwardRef<
               paddingInline: "var(--space-md)",
               paddingBlock: "4px",
               fontSize: "var(--fs-small)",
-              background: "#e89a3c",
-              color: "#0d0b10",
+              background: "var(--brand-amber)",
+              color: "var(--ink)",
             }}
           >
             {newCount} new {newCount === 1 ? "message" : "messages"} ↓
@@ -539,8 +540,8 @@ export const ListenerChatColumn = memo(forwardRef<
         style={{
           paddingInline: "var(--space-md)",
           paddingBlock: "var(--space-sm)",
-          borderTop: "0.5px solid rgba(255,255,255,0.06)",
-          borderBottom: "0.5px solid rgba(255,255,255,0.06)",
+          borderTop: "0.5px solid var(--hairline)",
+          borderBottom: "0.5px solid var(--hairline)",
         }}
       >
         <div className="flex items-center">
@@ -552,7 +553,7 @@ export const ListenerChatColumn = memo(forwardRef<
                 width: "clamp(18px, 1.8vw, 24px)",
                 height: "clamp(18px, 1.8vw, 24px)",
                 background: l.avatarColor || colorFor(l.username),
-                border: "1.5px solid #0d0b10",
+                border: "1.5px solid var(--ink)",
                 marginLeft: i === 0 ? 0 : -6,
                 zIndex: 5 - i,
               }}
@@ -566,9 +567,9 @@ export const ListenerChatColumn = memo(forwardRef<
                 width: "clamp(18px, 1.8vw, 24px)",
                 height: "clamp(18px, 1.8vw, 24px)",
                 background: "rgba(255,255,255,0.08)",
-                border: "1.5px solid #0d0b10",
+                border: "1.5px solid var(--ink)",
                 marginLeft: -6,
-                color: "rgba(232,230,234,0.6)",
+                color: "var(--text-low)",
                 fontSize: "var(--fs-meta)",
                 zIndex: 1,
               }}
@@ -600,7 +601,7 @@ export const ListenerChatColumn = memo(forwardRef<
               paddingBlock: "2px",
               fontSize: "var(--fs-body)",
               background: "rgba(255,255,255,0.04)",
-              border: "0.5px solid rgba(255,255,255,0.08)",
+              border: "0.5px solid var(--hairline-strong)",
             }}
             aria-label={`React with ${emoji}`}
           >
@@ -693,11 +694,11 @@ function ChatComposer({
               fontSize: "10px",
               fontWeight: 700,
               letterSpacing: "0.04em",
-              background: gifPickerOpen ? "rgba(232,154,60,0.15)" : "rgba(255,255,255,0.04)",
+              background: gifPickerOpen ? "color-mix(in oklab, var(--brand-amber) 15%, transparent)" : "rgba(255,255,255,0.04)",
               border: gifPickerOpen
-                ? "0.5px solid rgba(232,154,60,0.4)"
-                : "0.5px solid rgba(255,255,255,0.08)",
-              color: gifPickerOpen ? "#e89a3c" : "rgba(232,230,234,0.6)",
+                ? "0.5px solid color-mix(in oklab, var(--brand-amber) 40%, transparent)"
+                : "0.5px solid var(--hairline-strong)",
+              color: gifPickerOpen ? "var(--brand-amber)" : "var(--text-low)",
             }}
             aria-label="GIF picker"
           >
@@ -717,14 +718,14 @@ function ChatComposer({
             placeholder="Say something..."
             aria-label="Chat message"
             disabled={disabled}
-            className="neon-focus flex-1 rounded-full transition-colors placeholder:text-[rgba(232,230,234,0.55)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="neon-focus flex-1 rounded-full transition-colors placeholder:text-text-low disabled:cursor-not-allowed disabled:opacity-60"
             style={{
               height: "clamp(34px, 4vw, 42px)",
               paddingInline: "var(--space-md)",
               fontSize: "var(--fs-body)",
               background: "rgba(255,255,255,0.04)",
-              border: "0.5px solid rgba(255,255,255,0.08)",
-              color: "#e8e6ea",
+              border: "0.5px solid var(--hairline-strong)",
+              color: "var(--ink-foreground)",
             }}
           />
         </div>

@@ -78,8 +78,8 @@ function VerifyEmailContent() {
     return (
       <AuthShell title="Verifying your email...">
         <div className="flex flex-col items-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="mt-4 font-sans text-sm text-muted-foreground">Please wait...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-brand-amber" />
+          <p className="mt-4 type-small font-sans text-text-mid">Please wait...</p>
         </div>
       </AuthShell>
     )
@@ -96,12 +96,12 @@ function VerifyEmailContent() {
         }
       >
         <div className="text-center py-4">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full" style={{ background: "oklch(0.55 0.18 150 / 0.15)" }}>
-            <CheckCircle className="h-6 w-6" style={{ color: "oklch(0.65 0.18 150)" }} />
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border-[0.5px] border-hairline bg-white/[0.04]">
+            <CheckCircle className="h-6 w-6" style={{ color: "var(--text-success)" }} />
           </div>
-          <p className="font-sans text-sm text-muted-foreground mb-6">You&apos;re all set. Enjoy Jukebox!</p>
+          <p className="type-small font-sans text-text-mid mb-6">You&apos;re all set. Enjoy Jukebox!</p>
           <Link href="/">
-            <Button className="rounded-xl bg-primary font-sans font-semibold text-primary-foreground hover:bg-primary/90">
+            <Button className="rounded-xl bg-brand-amber font-sans font-semibold text-ink hover:bg-brand-amber/90">
               Go to Jukebox
             </Button>
           </Link>
@@ -113,16 +113,16 @@ function VerifyEmailContent() {
   return (
     <AuthShell title="Verification failed" subtitle={errorMsg}>
       <div className="text-center py-4">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full" style={{ background: "oklch(0.30 0.12 25 / 0.15)" }}>
-          <XCircle className="h-6 w-6" style={{ color: "oklch(0.65 0.15 25)" }} />
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border-[0.5px] border-destructive-foreground/30 bg-destructive/20">
+          <XCircle className="h-6 w-6 text-destructive-foreground" />
         </div>
-        <p className="font-sans text-sm text-muted-foreground mb-6">The link may have expired or already been used.</p>
+        <p className="type-small font-sans text-text-mid mb-6">The link may have expired or already been used.</p>
 
         {resendError && (
-          <p className="mb-3 font-sans text-xs" style={{ color: "oklch(0.75 0.12 25)" }}>{resendError}</p>
+          <p className="mb-3 font-sans text-xs text-destructive-foreground">{resendError}</p>
         )}
         {resendState === "sent" && (
-          <p className="mb-3 flex items-center justify-center gap-1.5 font-sans text-xs" style={{ color: "oklch(0.65 0.18 150)" }}>
+          <p className="mb-3 flex items-center justify-center gap-1.5 font-sans text-xs" style={{ color: "var(--text-success)" }}>
             <MailCheck className="h-3.5 w-3.5" />
             A new verification link is on its way{user?.email ? ` to ${user.email}` : ""}.
           </p>
@@ -133,7 +133,7 @@ function VerifyEmailContent() {
             <Button
               onClick={handleResend}
               disabled={resendState === "sending" || cooldown > 0}
-              className="rounded-xl bg-primary font-sans font-semibold text-primary-foreground hover:bg-primary/90"
+              className="rounded-xl bg-brand-amber font-sans font-semibold text-ink hover:bg-brand-amber/90"
             >
               {resendState === "sending" ? (
                 <>
@@ -147,10 +147,10 @@ function VerifyEmailContent() {
               )}
             </Button>
           ) : (
-            <p className="font-sans text-xs text-muted-foreground">
+            <p className="font-sans text-xs text-text-mid">
               <Link
                 href={withNextParam("/login", token ? `/verify-email?token=${encodeURIComponent(token)}` : "/verify-email")}
-                className="text-primary hover:underline"
+                className="text-brand-amber hover:underline"
               >
                 Log in
               </Link>{" "}
@@ -158,7 +158,7 @@ function VerifyEmailContent() {
             </p>
           )}
           <Link href="/">
-            <Button variant="outline" className="rounded-xl font-sans">Go to Jukebox</Button>
+            <Button variant="outline" className="rounded-xl border-hairline-strong bg-white/[0.04] font-sans text-text-hi hover:bg-white/[0.06] hover:text-ink-foreground">Go to Jukebox</Button>
           </Link>
         </div>
       </div>

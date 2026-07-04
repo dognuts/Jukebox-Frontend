@@ -291,7 +291,7 @@ export default function CreateRoomPage() {
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Midnight Frequencies"
                     className="rounded-xl bg-muted/30 font-sans text-foreground placeholder:text-muted-foreground"
-                    style={{ borderColor: nameBlocked ? "oklch(0.65 0.25 25 / 0.6)" : undefined }}
+                    style={{ borderColor: nameBlocked ? "color-mix(in oklab, var(--destructive-foreground) 60%, transparent)" : undefined }}
                     maxLength={40}
                   />
                   <div className="flex items-center justify-between">
@@ -299,7 +299,7 @@ export default function CreateRoomPage() {
                       {name.length}/40
                     </span>
                     {nameBlocked && (
-                      <span className="font-sans text-[10px] font-medium" style={{ color: "oklch(0.65 0.25 25)" }}>
+                      <span className="font-sans text-[10px] font-medium" style={{ color: "var(--destructive-foreground)" }}>
                         Prohibited language detected
                       </span>
                     )}
@@ -316,7 +316,7 @@ export default function CreateRoomPage() {
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="What's the vibe? What should listeners expect?"
                     className="min-h-[100px] rounded-xl bg-muted/30 font-sans text-foreground placeholder:text-muted-foreground resize-none"
-                    style={{ borderColor: descBlocked ? "oklch(0.65 0.25 25 / 0.6)" : undefined }}
+                    style={{ borderColor: descBlocked ? "color-mix(in oklab, var(--destructive-foreground) 60%, transparent)" : undefined }}
                     maxLength={200}
                   />
                   <div className="flex items-center justify-between">
@@ -324,7 +324,7 @@ export default function CreateRoomPage() {
                       {description.length}/200
                     </span>
                     {descBlocked && (
-                      <span className="font-sans text-[10px] font-medium" style={{ color: "oklch(0.65 0.25 25)" }}>
+                      <span className="font-sans text-[10px] font-medium" style={{ color: "var(--destructive-foreground)" }}>
                         Prohibited language detected
                       </span>
                     )}
@@ -379,7 +379,7 @@ export default function CreateRoomPage() {
                         style={{
                           background: "oklch(0.10 0.01 280 / 0.85)",
                           border: "1px solid oklch(0.30 0.02 280 / 0.5)",
-                          color: "oklch(0.70 0.02 280)",
+                          color: "var(--text-secondary)",
                         }}
                       >
                         <Upload className="h-3 w-3" />
@@ -395,7 +395,7 @@ export default function CreateRoomPage() {
                       onDrop={handleDrop}
                       className="flex flex-col items-center justify-center gap-2 rounded-xl py-8 transition-all"
                       style={{
-                        background: dragOver ? "oklch(0.20 0.04 80 / 0.15)" : "oklch(0.14 0.01 280 / 0.4)",
+                        background: dragOver ? "oklch(0.20 0.04 80 / 0.15)" : "color-mix(in oklab, var(--popover) 40%, transparent)",
                         border: dragOver
                           ? "2px dashed oklch(0.65 0.15 80 / 0.6)"
                           : "2px dashed oklch(0.28 0.02 280 / 0.5)",
@@ -408,10 +408,10 @@ export default function CreateRoomPage() {
                           border: dragOver ? "1px solid oklch(0.65 0.15 80 / 0.4)" : "1px solid oklch(0.28 0.02 280 / 0.4)",
                         }}
                       >
-                        <ImageIcon className="h-5 w-5" style={{ color: dragOver ? "oklch(0.82 0.18 80)" : "oklch(0.45 0.02 280)" }} />
+                        <ImageIcon className="h-5 w-5" style={{ color: dragOver ? "var(--neon-amber)" : "oklch(0.45 0.02 280)" }} />
                       </div>
                       <div className="flex flex-col items-center gap-0.5">
-                        <span className="font-sans text-xs font-medium" style={{ color: dragOver ? "oklch(0.82 0.18 80)" : "oklch(0.55 0.02 280)" }}>
+                        <span className="font-sans text-xs font-medium" style={{ color: dragOver ? "var(--neon-amber)" : "var(--text-tertiary)" }}>
                           {dragOver ? "Drop image here" : "Click to upload or drag and drop"}
                         </span>
                         <span className="font-sans text-[10px] text-muted-foreground">
@@ -438,13 +438,13 @@ export default function CreateRoomPage() {
                           style={{
                             background: selected
                               ? "oklch(0.30 0.08 80)"
-                              : "oklch(0.16 0.015 280 / 0.6)",
+                              : "var(--glass-bg)",
                             borderColor: selected
                               ? "oklch(0.65 0.15 80)"
-                              : "oklch(0.25 0.02 280 / 0.5)",
+                              : "color-mix(in oklab, var(--border) 50%, transparent)",
                             color: selected
                               ? "oklch(0.85 0.12 80)"
-                              : "oklch(0.55 0.02 280)",
+                              : "var(--text-tertiary)",
                           }}
                           aria-pressed={selected}
                         >
@@ -474,13 +474,13 @@ export default function CreateRoomPage() {
                           style={{
                             background: selected
                               ? "oklch(0.22 0.06 60)"
-                              : "oklch(0.16 0.015 280 / 0.6)",
+                              : "var(--glass-bg)",
                             borderColor: selected
                               ? "oklch(0.55 0.12 60)"
-                              : "oklch(0.25 0.02 280 / 0.5)",
+                              : "color-mix(in oklab, var(--border) 50%, transparent)",
                             color: selected
                               ? "oklch(0.80 0.10 60)"
-                              : "oklch(0.55 0.02 280)",
+                              : "var(--text-tertiary)",
                           }}
                           aria-pressed={selected}
                         >
@@ -666,7 +666,7 @@ export default function CreateRoomPage() {
                           : "var(--glass-border)",
                         color: !isScheduled
                           ? "oklch(0.85 0.12 80)"
-                          : "oklch(0.55 0.02 280)",
+                          : "var(--text-tertiary)",
                       }}
                       aria-pressed={!isScheduled}
                     >
@@ -685,7 +685,7 @@ export default function CreateRoomPage() {
                           : "var(--glass-border)",
                         color: isScheduled
                           ? "oklch(0.75 0.12 250)"
-                          : "oklch(0.55 0.02 280)",
+                          : "var(--text-tertiary)",
                       }}
                       aria-pressed={isScheduled}
                     >

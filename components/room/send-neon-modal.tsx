@@ -9,6 +9,9 @@ import { useAuth } from "@/lib/auth-context"
 
 const QUICK_AMOUNTS = [10, 25, 50, 100, 250, 500]
 
+// Pack colors must stay raw oklch literals: the buy list derives alpha
+// shades via pack.color.replace(")", " / 0.25)"), which breaks with
+// var(). starter/mega match --brand-cyan / --neon-amber.
 const NEON_PACKS = [
   { id: "starter", name: "Starter", neon: 100, price: "$1.99", priceCents: 199, color: "oklch(0.72 0.18 195)" },
   { id: "popular", name: "Popular", neon: 500, price: "$7.99", priceCents: 799, bonus: "+10%", color: "oklch(0.65 0.24 330)" },
@@ -139,7 +142,7 @@ export function SendNeonModal({ open, onClose, roomId, neonBalance: initialBalan
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 font-sans text-lg text-foreground">
-                <Zap className="h-5 w-5" style={{ color: "oklch(0.72 0.18 195)" }} />
+                <Zap className="h-5 w-5" style={{ color: "var(--brand-cyan)" }} />
                 Send Neon
               </DialogTitle>
             </DialogHeader>
@@ -151,7 +154,7 @@ export function SendNeonModal({ open, onClose, roomId, neonBalance: initialBalan
               >
                 <span className="font-sans text-xs text-muted-foreground">Your balance</span>
                 <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1 font-mono text-sm font-bold" style={{ color: "oklch(0.72 0.18 195)" }}>
+                  <span className="flex items-center gap-1 font-mono text-sm font-bold" style={{ color: "var(--brand-cyan)" }}>
                     <Zap className="h-3.5 w-3.5" />
                     {balance.toLocaleString()}
                   </span>
@@ -159,9 +162,9 @@ export function SendNeonModal({ open, onClose, roomId, neonBalance: initialBalan
                     onClick={() => { setError(""); setView("topup") }}
                     className="flex items-center gap-1 rounded-full px-2 py-0.5 font-sans text-[10px] font-semibold transition-all hover:scale-105"
                     style={{
-                      background: "oklch(0.72 0.18 195 / 0.15)",
-                      border: "1px solid oklch(0.72 0.18 195 / 0.35)",
-                      color: "oklch(0.72 0.18 195)",
+                      background: "color-mix(in oklab, var(--brand-cyan) 15%, transparent)",
+                      border: "1px solid color-mix(in oklab, var(--brand-cyan) 35%, transparent)",
+                      color: "var(--brand-cyan)",
                     }}
                   >
                     <Plus className="h-2.5 w-2.5" />
@@ -179,7 +182,7 @@ export function SendNeonModal({ open, onClose, roomId, neonBalance: initialBalan
                     <button
                       onClick={() => { setError(""); setView("topup") }}
                       className="font-sans text-xs font-semibold transition-colors hover:underline"
-                      style={{ color: "oklch(0.72 0.18 195)" }}
+                      style={{ color: "var(--brand-cyan)" }}
                     >
                       Get Neon →
                     </button>
@@ -199,18 +202,18 @@ export function SendNeonModal({ open, onClose, roomId, neonBalance: initialBalan
                         amount === amt ? "ring-2" : "hover:bg-muted/20"
                       }`}
                       style={{
-                        background: amount === amt ? "oklch(0.72 0.18 195 / 0.15)" : "oklch(0.16 0.01 280 / 0.5)",
-                        border: `1px solid ${amount === amt ? "oklch(0.72 0.18 195 / 0.5)" : "oklch(0.28 0.02 280 / 0.4)"}`,
+                        background: amount === amt ? "color-mix(in oklab, var(--brand-cyan) 15%, transparent)" : "oklch(0.16 0.01 280 / 0.5)",
+                        border: `1px solid ${amount === amt ? "color-mix(in oklab, var(--brand-cyan) 50%, transparent)" : "oklch(0.28 0.02 280 / 0.4)"}`,
                         color: tooExpensive
                           ? "oklch(0.45 0.03 280)"
-                          : amount === amt ? "oklch(0.72 0.18 195)" : "oklch(0.65 0.03 280)",
-                        "--tw-ring-color": "oklch(0.72 0.18 195 / 0.5)",
+                          : amount === amt ? "var(--brand-cyan)" : "oklch(0.65 0.03 280)",
+                        "--tw-ring-color": "color-mix(in oklab, var(--brand-cyan) 50%, transparent)",
                       } as React.CSSProperties}
                     >
                       {amt}
                       {tooExpensive && (
                         <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px]"
-                          style={{ background: "oklch(0.72 0.18 195 / 0.25)", color: "oklch(0.72 0.18 195)" }}
+                          style={{ background: "color-mix(in oklab, var(--brand-cyan) 25%, transparent)", color: "var(--brand-cyan)" }}
                         >
                           <Plus className="h-2 w-2" />
                         </span>
@@ -271,7 +274,7 @@ export function SendNeonModal({ open, onClose, roomId, neonBalance: initialBalan
                 >
                   <ArrowLeft className="h-4 w-4 text-muted-foreground" />
                 </button>
-                <ShoppingCart className="h-5 w-5" style={{ color: "oklch(0.72 0.18 195)" }} />
+                <ShoppingCart className="h-5 w-5" style={{ color: "var(--brand-cyan)" }} />
                 Get Neon
               </DialogTitle>
             </DialogHeader>
@@ -282,7 +285,7 @@ export function SendNeonModal({ open, onClose, roomId, neonBalance: initialBalan
                 style={{ background: "oklch(0.16 0.02 270 / 0.6)", border: "1px solid oklch(0.30 0.04 270 / 0.3)" }}
               >
                 <span className="font-sans text-xs text-muted-foreground">Current balance</span>
-                <span className="flex items-center gap-1 font-mono text-sm font-bold" style={{ color: "oklch(0.72 0.18 195)" }}>
+                <span className="flex items-center gap-1 font-mono text-sm font-bold" style={{ color: "var(--brand-cyan)" }}>
                   <Zap className="h-3.5 w-3.5" />
                   {balance.toLocaleString()}
                 </span>

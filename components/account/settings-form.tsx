@@ -57,12 +57,12 @@ export function SettingsForm({ user }: SettingsFormProps) {
     <div className="space-y-6">
       {/* Avatar Upload */}
       <div>
-        <Label className="mb-3 block font-sans text-sm font-semibold text-foreground">
+        <Label className="mb-3 block font-sans text-sm font-semibold text-text-hi">
           Profile Photo
         </Label>
         <div className="flex items-center gap-4">
           <div
-            className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-2 border-border/30 font-sans text-2xl font-bold text-background shadow-lg overflow-hidden"
+            className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-[0.5px] border-hairline-strong font-sans text-2xl font-bold text-ink shadow-lg overflow-hidden"
             style={{ background: user.avatarColor }}
           >
             {avatarPreview ? (
@@ -83,7 +83,7 @@ export function SettingsForm({ user }: SettingsFormProps) {
                 type="button"
                 variant="outline"
                 size="sm"
-                className="gap-2 rounded-xl"
+                className="gap-2 rounded-xl border-hairline-strong bg-white/[0.04] text-text-hi hover:bg-white/[0.06] hover:text-ink-foreground"
                 onClick={() => document.getElementById("avatar-upload")?.click()}
               >
                 <Upload className="h-4 w-4" />
@@ -97,7 +97,7 @@ export function SettingsForm({ user }: SettingsFormProps) {
               className="hidden"
               onChange={handleAvatarUpload}
             />
-            <p className="mt-2 font-sans text-xs text-muted-foreground">
+            <p className="mt-2 font-sans text-xs text-text-low">
               JPG, PNG, or GIF. Max 5MB.
             </p>
           </div>
@@ -106,7 +106,7 @@ export function SettingsForm({ user }: SettingsFormProps) {
 
       {/* Email */}
       <div>
-        <Label htmlFor="email" className="mb-2 block font-sans text-sm font-semibold text-foreground">
+        <Label htmlFor="email" className="mb-2 block font-sans text-sm font-semibold text-text-hi">
           Email Address
         </Label>
         <Input
@@ -114,16 +114,16 @@ export function SettingsForm({ user }: SettingsFormProps) {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="rounded-xl border-border/30 bg-muted/30 font-sans text-sm"
+          className="rounded-xl border-[0.5px] border-hairline-strong bg-white/[0.04] font-sans text-sm"
         />
       </div>
 
       {/* Stage Name */}
       <div>
-        <Label htmlFor="stage-name" className="mb-2 block font-sans text-sm font-semibold text-foreground">
-          Stage Name <span className="font-normal text-muted-foreground">(display name)</span>
+        <Label htmlFor="stage-name" className="mb-2 block font-sans text-sm font-semibold text-text-hi">
+          Stage Name <span className="font-normal text-text-low">(display name)</span>
         </Label>
-        <p className="mb-1.5 font-sans text-xs text-muted-foreground">
+        <p className="mb-1.5 font-sans text-xs text-text-mid">
           Your public identity — shown when you DJ and across the platform
         </p>
         <Input
@@ -133,18 +133,18 @@ export function SettingsForm({ user }: SettingsFormProps) {
           placeholder="e.g. DJ Shadow"
           minLength={2}
           maxLength={30}
-          className="rounded-xl border-border/30 bg-muted/30 font-sans text-sm"
+          className="rounded-xl border-[0.5px] border-hairline-strong bg-white/[0.04] font-sans text-sm"
         />
       </div>
 
       {/* Password Change */}
       <div>
-        <Label className="mb-3 block font-sans text-sm font-semibold text-foreground">
+        <Label className="mb-3 block font-sans text-sm font-semibold text-text-hi">
           Change Password
         </Label>
         <div className="space-y-3">
           <div>
-            <Label htmlFor="current-password" className="mb-1.5 block font-sans text-xs text-muted-foreground">
+            <Label htmlFor="current-password" className="mb-1.5 block font-sans text-xs text-text-mid">
               Current Password
             </Label>
             <Input
@@ -153,11 +153,11 @@ export function SettingsForm({ user }: SettingsFormProps) {
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
               placeholder="Enter current password"
-              className="rounded-xl border-border/30 bg-muted/30 font-sans text-sm"
+              className="rounded-xl border-[0.5px] border-hairline-strong bg-white/[0.04] font-sans text-sm"
             />
           </div>
           <div>
-            <Label htmlFor="new-password" className="mb-1.5 block font-sans text-xs text-muted-foreground">
+            <Label htmlFor="new-password" className="mb-1.5 block font-sans text-xs text-text-mid">
               New Password
             </Label>
             <Input
@@ -166,11 +166,11 @@ export function SettingsForm({ user }: SettingsFormProps) {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="Enter new password"
-              className="rounded-xl border-border/30 bg-muted/30 font-sans text-sm"
+              className="rounded-xl border-[0.5px] border-hairline-strong bg-white/[0.04] font-sans text-sm"
             />
           </div>
           <div>
-            <Label htmlFor="confirm-password" className="mb-1.5 block font-sans text-xs text-muted-foreground">
+            <Label htmlFor="confirm-password" className="mb-1.5 block font-sans text-xs text-text-mid">
               Confirm New Password
             </Label>
             <Input
@@ -179,7 +179,7 @@ export function SettingsForm({ user }: SettingsFormProps) {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirm new password"
-              className="rounded-xl border-border/30 bg-muted/30 font-sans text-sm"
+              className="rounded-xl border-[0.5px] border-hairline-strong bg-white/[0.04] font-sans text-sm"
             />
           </div>
         </div>
@@ -187,33 +187,27 @@ export function SettingsForm({ user }: SettingsFormProps) {
 
       {/* Account Type */}
       <div>
-        <Label className="mb-3 block font-sans text-sm font-semibold text-foreground">
+        <Label className="mb-3 block font-sans text-sm font-semibold text-text-hi">
           Account Type
         </Label>
-        <div
-          className="flex items-center justify-between rounded-xl border border-border/30 p-4"
-          style={{
-            background: "oklch(0.13 0.01 280 / 0.5)",
-            backdropFilter: "blur(8px)",
-          }}
-        >
+        <div className="flex items-center justify-between rounded-xl border-[0.5px] border-hairline bg-white/[0.02] p-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-sans text-sm font-semibold text-foreground">
-                {accountType === "premium" ? "Premium" : "Free"} Plan
+              <span className="font-sans text-sm font-semibold text-text-hi">
+                {accountType === "premium" ? "Plus" : "Free"} Plan
               </span>
               <Badge
                 variant={accountType === "premium" ? "default" : "outline"}
                 className={
                   accountType === "premium"
-                    ? "border-0 bg-gradient-to-r from-amber-500/20 to-orange-500/20 font-sans text-xs font-semibold text-amber-400"
-                    : "border-blue-500/30 font-sans text-xs font-semibold text-blue-400"
+                    ? "border-0 bg-brand-purple font-sans text-xs font-semibold text-white"
+                    : "border-[0.5px] border-hairline-strong bg-white/[0.04] font-sans text-xs font-semibold text-text-mid"
                 }
               >
-                {accountType === "premium" ? "Premium" : "Free"}
+                {accountType === "premium" ? "Plus" : "Free"}
               </Badge>
             </div>
-            <p className="mt-1 font-sans text-xs text-muted-foreground">
+            <p className="mt-1 font-sans text-xs text-text-mid">
               {accountType === "premium"
                 ? "No ads - uninterrupted listening experience"
                 : "Free accounts get ads every 10 minutes"}
@@ -223,7 +217,8 @@ export function SettingsForm({ user }: SettingsFormProps) {
             <Button
               size="sm"
               onClick={handleUpgradeAccount}
-              className="gap-2 rounded-xl bg-gradient-to-r from-amber-500/90 to-orange-500/90 font-sans text-background hover:from-amber-500 hover:to-orange-500"
+              className="gap-2 rounded-xl font-sans font-semibold text-white hover:opacity-90"
+              style={{ background: "linear-gradient(135deg, var(--brand-purple), var(--brand-purple-deep))" }}
             >
               <Crown className="h-4 w-4" />
               Upgrade
@@ -236,7 +231,7 @@ export function SettingsForm({ user }: SettingsFormProps) {
       <div className="flex justify-end pt-4">
         <Button
           onClick={handleSave}
-          className="gap-2 rounded-xl bg-primary font-sans text-primary-foreground hover:bg-primary/90"
+          className="gap-2 rounded-xl bg-brand-amber font-sans font-semibold text-ink hover:bg-brand-amber/90"
         >
           Save Changes
         </Button>

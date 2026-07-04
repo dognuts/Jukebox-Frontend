@@ -72,19 +72,19 @@ function TrackProgress({
       >
         <div
           className="absolute inset-y-0 left-0 rounded transition-[width] duration-500 ease-linear"
-          style={{ width: `${pct}%`, background: "#e89a3c" }}
+          style={{ width: `${pct}%`, background: "var(--brand-amber)" }}
         />
       </div>
       <div className="mt-1 flex justify-between">
         <span
           className="text-[10px] tabular-nums"
-          style={{ color: "rgba(232,230,234,0.55)" }}
+          style={{ color: "var(--text-low)" }}
         >
           {formatTime(currentTime)}
         </span>
         <span
           className="text-[10px] tabular-nums"
-          style={{ color: "rgba(232,230,234,0.55)" }}
+          style={{ color: "var(--text-low)" }}
         >
           {duration > 0 ? formatTime(duration) : "—:—"}
         </span>
@@ -148,20 +148,20 @@ export const ListenerNowPlaying = memo(function ListenerNowPlaying({
         <div className="mb-5 flex items-center gap-2">
           <div
             className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full text-[11px] font-bold"
-            style={{ background: "#e89a3c", color: "#0d0b10" }}
+            style={{ background: "var(--brand-amber)", color: "var(--ink)" }}
           >
             {djInitials}
           </div>
           <div className="min-w-0">
             <div
               className="truncate text-xs font-semibold"
-              style={{ color: "#e8e6ea" }}
+              style={{ color: "var(--ink-foreground)" }}
             >
               {djName}
             </div>
             <div
               className="truncate text-[10px]"
-              style={{ color: "rgba(232,230,234,0.55)" }}
+              style={{ color: "var(--text-low)" }}
             >
               {djSubtitle}
             </div>
@@ -200,7 +200,7 @@ export const ListenerNowPlaying = memo(function ListenerNowPlaying({
                 height: "clamp(100px, 12vw, 135px)",
                 aspectRatio: "16 / 9",
                 background: "#000",
-                border: "1px solid rgba(232,154,60,0.18)",
+                border: "1px solid color-mix(in oklab, var(--brand-amber) 18%, transparent)",
                 boxShadow:
                   "0 12px 32px -12px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,0,0,0.5) inset",
               }}
@@ -232,11 +232,11 @@ export const ListenerNowPlaying = memo(function ListenerNowPlaying({
               {!albumArtUrl && (
                 <div
                   className="flex h-10 w-10 items-center justify-center rounded-full"
-                  style={{ border: "3px solid rgba(232,154,60,0.2)" }}
+                  style={{ border: "3px solid color-mix(in oklab, var(--brand-amber) 20%, transparent)" }}
                 >
                   <div
                     className="h-2 w-2 rounded-full"
-                    style={{ background: "rgba(232,154,60,0.4)" }}
+                    style={{ background: "color-mix(in oklab, var(--brand-amber) 40%, transparent)" }}
                   />
                 </div>
               )}
@@ -250,7 +250,7 @@ export const ListenerNowPlaying = memo(function ListenerNowPlaying({
               style={{
                 marginBottom: "var(--space-2xs)",
                 fontSize: "var(--fs-meta)",
-                color: "rgba(232,230,234,0.55)",
+                color: "var(--text-low)",
               }}
             >
               Now playing
@@ -260,7 +260,7 @@ export const ListenerNowPlaying = memo(function ListenerNowPlaying({
               style={{
                 marginBottom: "var(--space-2xs)",
                 fontSize: "var(--fs-display)",
-                color: "#e8e6ea",
+                color: "var(--ink-foreground)",
               }}
             >
               {soundCloudUrl ? (
@@ -268,7 +268,7 @@ export const ListenerNowPlaying = memo(function ListenerNowPlaying({
                   href={soundCloudUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="transition-colors hover:text-[color:rgba(232,154,60,1)]"
+                  className="transition-colors hover:text-brand-amber"
                   style={{ color: "inherit" }}
                 >
                   {trackTitle}
@@ -282,7 +282,7 @@ export const ListenerNowPlaying = memo(function ListenerNowPlaying({
               style={{
                 marginBottom: "var(--space-sm)",
                 fontSize: "var(--fs-body)",
-                color: "rgba(232,230,234,0.6)",
+                color: "var(--text-low)",
               }}
             >
               {scProfileUrl ? (
@@ -317,7 +317,7 @@ export const ListenerNowPlaying = memo(function ListenerNowPlaying({
                   key={i}
                   className="inline-block w-[3px] rounded-sm"
                   style={{
-                    background: "#e89a3c",
+                    background: "var(--brand-amber)",
                     animation: isPlaying && !prefersReducedMotion
                       ? `${bar.anim} ease-in-out infinite ${bar.delay}`
                       : "none",
@@ -341,8 +341,8 @@ export const ListenerNowPlaying = memo(function ListenerNowPlaying({
             className="flex items-center gap-[5px] rounded-2xl px-4 py-[7px] text-xs transition-colors hover:bg-white/[0.06]"
             style={{
               background: "rgba(255,255,255,0.04)",
-              border: "0.5px solid rgba(255,255,255,0.08)",
-              color: "rgba(232,230,234,0.6)",
+              border: "0.5px solid var(--hairline-strong)",
+              color: "var(--text-low)",
             }}
           >
             <Heart className="h-3.5 w-3.5" />
@@ -355,8 +355,8 @@ export const ListenerNowPlaying = memo(function ListenerNowPlaying({
             className="flex items-center gap-[5px] rounded-2xl px-4 py-[7px] text-xs transition-colors hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-40"
             style={{
               background: "rgba(255,255,255,0.04)",
-              border: "0.5px solid rgba(255,255,255,0.08)",
-              color: "rgba(232,230,234,0.6)",
+              border: "0.5px solid var(--hairline-strong)",
+              color: "var(--text-low)",
             }}
           >
             <Plus className="h-3.5 w-3.5" />
@@ -376,7 +376,7 @@ export const ListenerNowPlaying = memo(function ListenerNowPlaying({
             style={{
               background: "rgba(15,8,3,0.6)",
               border: "0.5px solid rgba(232,115,74,0.35)",
-              color: "#f4b25c",
+              color: "var(--brand-amber-bright)",
             }}
             aria-label="Listen on SoundCloud"
           >

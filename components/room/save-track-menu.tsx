@@ -73,7 +73,7 @@ export function SaveTrackMenu({
         }}
         className="group/heart flex items-center justify-center rounded-full p-1.5 transition-colors"
         style={{
-          color: liked ? "oklch(0.65 0.25 15)" : "oklch(0.55 0.02 280)",
+          color: liked ? "oklch(0.65 0.25 15)" : "var(--text-tertiary)",
         }}
         aria-label={liked ? "Unlike track" : "Like track"}
       >
@@ -94,11 +94,11 @@ export function SaveTrackMenu({
               e.stopPropagation()
             }}
             className="flex items-center justify-center rounded-full p-1.5 transition-colors"
-            style={{ color: "oklch(0.55 0.02 280)" }}
+            style={{ color: "var(--text-tertiary)" }}
             aria-label="Add to playlist"
           >
             {variant === "button" ? (
-              <span className="flex items-center gap-1.5 font-sans text-xs font-medium" style={{ color: "oklch(0.55 0.02 280)" }}>
+              <span className="flex items-center gap-1.5 font-sans text-xs font-medium" style={{ color: "var(--text-tertiary)" }}>
                 <ListMusic style={{ width: size, height: size }} />
                 Save
               </span>
@@ -115,18 +115,18 @@ export function SaveTrackMenu({
           align="end"
           className="w-56"
           style={{
-            background: "oklch(0.14 0.015 280)",
-            borderColor: "oklch(0.25 0.02 280 / 0.6)",
+            background: "var(--popover)",
+            borderColor: "color-mix(in oklab, var(--border) 60%, transparent)",
           }}
           onClick={(e) => e.stopPropagation()}
         >
           <DropdownMenuLabel
             className="font-sans text-xs font-semibold"
-            style={{ color: "oklch(0.55 0.02 280)" }}
+            style={{ color: "var(--text-tertiary)" }}
           >
             Add to playlist
           </DropdownMenuLabel>
-          <DropdownMenuSeparator style={{ background: "oklch(0.22 0.015 280)" }} />
+          <DropdownMenuSeparator style={{ background: "var(--muted)" }} />
 
           {playlists.map((pl) => (
             <DropdownMenuCheckboxItem
@@ -148,7 +148,7 @@ export function SaveTrackMenu({
             </DropdownMenuCheckboxItem>
           ))}
 
-          <DropdownMenuSeparator style={{ background: "oklch(0.22 0.015 280)" }} />
+          <DropdownMenuSeparator style={{ background: "var(--muted)" }} />
 
           {creating ? (
             <div className="flex items-center gap-2 px-2 py-1.5">

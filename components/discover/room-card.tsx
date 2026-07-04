@@ -135,8 +135,8 @@ function RoomCardImpl({ room }: { room: Room }) {
                   width: 6 + (i % 3) * 2,
                   height: 6 + ((i + 1) % 3) * 2,
                   background: room.isLive
-                    ? `oklch(0.70 0.22 350 / ${0.3 + i * 0.12})`
-                    : `oklch(0.55 0.02 280 / ${0.2 + i * 0.08})`,
+                    ? `color-mix(in oklab, var(--neon-magenta) ${30 + i * 12}%, transparent)`
+                    : `color-mix(in oklab, var(--text-tertiary) ${20 + i * 8}%, transparent)`,
                   animation: room.isLive
                     ? `bubble-float ${4 + i * 1.2}s ease-in-out infinite`
                     : "none",
@@ -154,8 +154,8 @@ function RoomCardImpl({ room }: { room: Room }) {
                   width: 5 + ((i + 2) % 3) * 2,
                   height: 5 + (i % 3) * 2,
                   background: room.isLive
-                    ? `oklch(0.82 0.18 80 / ${0.3 + i * 0.1})`
-                    : `oklch(0.55 0.02 280 / ${0.2 + i * 0.08})`,
+                    ? `color-mix(in oklab, var(--neon-amber) ${30 + i * 10}%, transparent)`
+                    : `color-mix(in oklab, var(--text-tertiary) ${20 + i * 8}%, transparent)`,
                   animation: room.isLive
                     ? `bubble-float ${5 + i * 0.9}s ease-in-out infinite`
                     : "none",
@@ -191,7 +191,7 @@ function RoomCardImpl({ room }: { room: Room }) {
                 style={{
                   background: room.isLive ? "var(--neon-amber)" : "oklch(0.35 0.02 280)",
                   boxShadow: room.isLive
-                    ? "0 0 6px var(--neon-amber), 0 0 15px oklch(0.82 0.18 80 / 0.3), 0 2px 20px oklch(0.82 0.18 80 / 0.15)"
+                    ? "0 0 6px var(--neon-amber), 0 0 15px color-mix(in oklab, var(--neon-amber) 30%, transparent), 0 2px 20px color-mix(in oklab, var(--neon-amber) 15%, transparent)"
                     : "none",
                 }}
               />
@@ -258,7 +258,7 @@ function RoomCardImpl({ room }: { room: Room }) {
                     <Heart
                       className="h-3 w-3 transition-all"
                       style={{
-                        color: favorited ? "oklch(0.65 0.28 0)" : "oklch(0.60 0.02 280)",
+                        color: favorited ? "oklch(0.65 0.28 0)" : "var(--muted-foreground)",
                         fill: favorited ? "oklch(0.65 0.28 0)" : "transparent",
                       }}
                     />
@@ -276,7 +276,7 @@ function RoomCardImpl({ room }: { room: Room }) {
                     <Badge
                       variant="outline"
                       className="shrink-0 text-[9px] px-1.5 py-0"
-                      style={{ borderColor: "oklch(0.82 0.18 80 / 0.5)", color: "oklch(0.82 0.18 80)" }}
+                      style={{ borderColor: "color-mix(in oklab, var(--neon-amber) 50%, transparent)", color: "var(--neon-amber)" }}
                     >
                       Official
                     </Badge>
@@ -318,9 +318,9 @@ function RoomCardImpl({ room }: { room: Room }) {
                       style={
                         requestStatus === "open"
                           ? {
-                              background: "oklch(0.82 0.18 80 / 0.1)",
-                              color: "oklch(0.82 0.18 80)",
-                              border: "1px solid oklch(0.82 0.18 80 / 0.3)",
+                              background: "color-mix(in oklab, var(--neon-amber) 10%, transparent)",
+                              color: "var(--neon-amber)",
+                              border: "1px solid color-mix(in oklab, var(--neon-amber) 30%, transparent)",
                             }
                           : requestStatus === "paused"
                           ? {
@@ -330,8 +330,8 @@ function RoomCardImpl({ room }: { room: Room }) {
                             }
                           : {
                               background: "oklch(0.50 0.01 280 / 0.15)",
-                              color: "oklch(0.55 0.02 280)",
-                              border: "1px solid oklch(0.35 0.02 280 / 0.3)",
+                              color: "var(--text-tertiary)",
+                              border: "1px solid var(--glass-border)",
                             }
                       }
                     >
@@ -359,7 +359,7 @@ function RoomCardImpl({ room }: { room: Room }) {
                 className="absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
                 style={{
                   background:
-                    "radial-gradient(circle at 50% 50%, oklch(0.82 0.18 80 / 0.2), transparent 60%)",
+                    "radial-gradient(circle at 50% 50%, color-mix(in oklab, var(--neon-amber) 20%, transparent), transparent 60%)",
                 }}
               />
             </div>
@@ -381,7 +381,7 @@ function RoomCardImpl({ room }: { room: Room }) {
                     : "1px solid oklch(0.30 0.03 60 / 0.3)",
                   color: reminderSet
                     ? "oklch(0.75 0.12 250)"
-                    : "oklch(0.60 0.02 280)",
+                    : "var(--muted-foreground)",
                   boxShadow: reminderSet
                     ? "0 0 8px oklch(0.55 0.15 250 / 0.3), inset 0 0 8px oklch(0.55 0.15 250 / 0.1)"
                     : "none",
@@ -426,10 +426,10 @@ function RoomCardImpl({ room }: { room: Room }) {
             className="h-1.5"
             style={{
               background: room.isLive
-                ? "linear-gradient(90deg, transparent, oklch(0.82 0.18 80 / 0.5), oklch(0.70 0.22 350 / 0.5), oklch(0.72 0.18 250 / 0.5), transparent)"
+                ? "linear-gradient(90deg, transparent, color-mix(in oklab, var(--neon-amber) 50%, transparent), color-mix(in oklab, var(--neon-magenta) 50%, transparent), color-mix(in oklab, var(--neon-blue) 50%, transparent), transparent)"
                 : "linear-gradient(90deg, transparent, oklch(0.30 0.02 280 / 0.3), transparent)",
               boxShadow: room.isLive
-                ? "0 0 8px oklch(0.82 0.18 80 / 0.2), 0 -2px 12px oklch(0.70 0.22 350 / 0.1)"
+                ? "0 0 8px color-mix(in oklab, var(--neon-amber) 20%, transparent), 0 -2px 12px color-mix(in oklab, var(--neon-magenta) 10%, transparent)"
                 : "none",
             }}
           />
@@ -441,7 +441,7 @@ function RoomCardImpl({ room }: { room: Room }) {
         className="absolute -bottom-2 left-4 right-4 h-4 rounded-full opacity-50 group-hover:opacity-100 transition-opacity duration-500"
         style={{
           background: room.isLive
-            ? "radial-gradient(ellipse, oklch(0.82 0.18 80 / 0.15), transparent 70%)"
+            ? "radial-gradient(ellipse, color-mix(in oklab, var(--neon-amber) 15%, transparent), transparent 70%)"
             : "radial-gradient(ellipse, oklch(0.20 0.01 280 / 0.3), transparent 70%)",
           filter: "blur(4px)",
         }}

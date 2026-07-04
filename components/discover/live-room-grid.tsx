@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { SmartImage } from "@/components/smart-image"
+import { EmptyState } from "@/components/ui/empty-state"
 import { type Room } from "./types"
 
 // Per-genre accent colors for the small genre pill on each card.
@@ -66,19 +67,10 @@ export function LiveRoomGrid({
       </div>
 
       {rooms.length === 0 ? (
-        <div
-          className="rounded-[14px] text-center"
-          style={{
-            paddingInline: "var(--space-md)",
-            paddingBlock: "var(--space-xl)",
-            background: "rgba(255,255,255,0.02)",
-            border: "0.5px solid rgba(255,255,255,0.06)",
-            color: "rgba(232,230,234,0.45)",
-            fontSize: "var(--fs-body)",
-          }}
-        >
-          {emptyLabel ?? "No rooms live right now"}
-        </div>
+        <EmptyState
+          compact
+          title={emptyLabel ?? "No rooms live right now"}
+        />
       ) : (
         // Auto-fit grid — adds and removes columns continuously based on
         // the container width. No breakpoints needed. The min(220px, 100%)

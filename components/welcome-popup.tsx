@@ -60,8 +60,8 @@ export function WelcomePopup({ isLoggedIn }: { isLoggedIn: boolean }) {
           background: "oklch(0.10 0.02 280)",
           border: "1px solid oklch(0.30 0.06 80 / 0.4)",
           boxShadow: `
-            0 0 60px oklch(0.82 0.18 80 / 0.12),
-            0 0 120px oklch(0.70 0.22 350 / 0.08),
+            0 0 60px color-mix(in oklab, var(--neon-amber) 12%, transparent),
+            0 0 120px color-mix(in oklab, var(--neon-magenta) 8%, transparent),
             0 24px 48px oklch(0.05 0.01 280 / 0.6)
           `,
         }}
@@ -75,7 +75,7 @@ export function WelcomePopup({ isLoggedIn }: { isLoggedIn: boolean }) {
         <DialogClose
           aria-label="Close"
           className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-white/10"
-          style={{ color: "oklch(0.60 0.02 280)" }}
+          style={{ color: "var(--muted-foreground)" }}
         >
           <X className="h-4 w-4" />
         </DialogClose>
@@ -92,7 +92,7 @@ export function WelcomePopup({ isLoggedIn }: { isLoggedIn: boolean }) {
             </div>
             <p
               className="mb-5 font-sans text-[10px] font-semibold uppercase tracking-[0.35em]"
-              style={{ color: "oklch(0.55 0.02 280)" }}
+              style={{ color: "var(--text-tertiary)" }}
             >
               Listen Together
             </p>
@@ -126,7 +126,7 @@ export function WelcomePopup({ isLoggedIn }: { isLoggedIn: boolean }) {
               onClick={dismiss}
               className="welcome-cta group relative mb-4 w-full overflow-hidden rounded-2xl py-3.5 font-sans text-sm font-bold uppercase tracking-wider transition-transform active:scale-[0.98]"
               style={{
-                background: "oklch(0.82 0.18 80)",
+                background: "var(--neon-amber)",
                 color: "oklch(0.10 0.02 280)",
               }}
             >
@@ -145,7 +145,7 @@ export function WelcomePopup({ isLoggedIn }: { isLoggedIn: boolean }) {
               href={withNextParam("/login", pathname)}
               onClick={dismiss}
               className="font-semibold transition-colors hover:underline"
-              style={{ color: "oklch(0.82 0.18 80)" }}
+              style={{ color: "var(--neon-amber)" }}
             >
               Log in
             </Link>
@@ -154,7 +154,7 @@ export function WelcomePopup({ isLoggedIn }: { isLoggedIn: boolean }) {
               href={withNextParam("/signup", pathname)}
               onClick={dismiss}
               className="font-semibold transition-colors hover:underline"
-              style={{ color: "oklch(0.72 0.18 250)" }}
+              style={{ color: "var(--neon-blue)" }}
             >
               Sign up
             </Link>
@@ -165,7 +165,7 @@ export function WelcomePopup({ isLoggedIn }: { isLoggedIn: boolean }) {
         <div
           className="pointer-events-none absolute -bottom-20 left-1/2 h-40 w-80 -translate-x-1/2"
           style={{
-            background: "radial-gradient(ellipse, oklch(0.82 0.18 80 / 0.06), transparent 70%)",
+            background: "radial-gradient(ellipse, color-mix(in oklab, var(--neon-amber) 6%, transparent), transparent 70%)",
           }}
         />
 
@@ -173,9 +173,9 @@ export function WelcomePopup({ isLoggedIn }: { isLoggedIn: boolean }) {
           .welcome-glow-bar {
             background: linear-gradient(90deg,
               transparent 0%,
-              oklch(0.82 0.18 80 / 0.6) 20%,
-              oklch(0.70 0.22 350 / 0.5) 50%,
-              oklch(0.72 0.18 250 / 0.6) 80%,
+              color-mix(in oklab, var(--neon-amber) 60%, transparent) 20%,
+              color-mix(in oklab, var(--neon-magenta) 50%, transparent) 50%,
+              color-mix(in oklab, var(--neon-blue) 60%, transparent) 80%,
               transparent 100%
             );
             animation: glowBarShimmer 3s ease-in-out infinite;
@@ -186,11 +186,11 @@ export function WelcomePopup({ isLoggedIn }: { isLoggedIn: boolean }) {
           }
 
           .welcome-cta {
-            box-shadow: 0 0 20px oklch(0.82 0.18 80 / 0.3), 0 0 40px oklch(0.82 0.18 80 / 0.1);
+            box-shadow: 0 0 20px color-mix(in oklab, var(--neon-amber) 30%, transparent), 0 0 40px color-mix(in oklab, var(--neon-amber) 10%, transparent);
             transition: box-shadow 0.3s ease, transform 0.15s ease;
           }
           .welcome-cta:hover {
-            box-shadow: 0 0 28px oklch(0.82 0.18 80 / 0.5), 0 0 56px oklch(0.82 0.18 80 / 0.2);
+            box-shadow: 0 0 28px color-mix(in oklab, var(--neon-amber) 50%, transparent), 0 0 56px color-mix(in oklab, var(--neon-amber) 20%, transparent);
           }
           .welcome-cta-shine {
             background: linear-gradient(105deg, transparent 40%, oklch(0.95 0.05 80 / 0.25) 50%, transparent 60%);

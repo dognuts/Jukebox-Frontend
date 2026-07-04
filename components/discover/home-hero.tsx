@@ -35,7 +35,7 @@ export function HomeHero({ liveCount, selectedGenre, onSelectGenre }: HomeHeroPr
           width: "min(780px, 90%)",
           height: "clamp(200px, 24vw, 320px)",
           background:
-            "radial-gradient(ellipse, rgba(232,154,60,0.09) 0%, transparent 70%)",
+            "radial-gradient(ellipse, color-mix(in oklab, var(--brand-amber) 9%, transparent) 0%, transparent 70%)",
         }}
       />
 
@@ -44,7 +44,7 @@ export function HomeHero({ liveCount, selectedGenre, onSelectGenre }: HomeHeroPr
           className="uppercase tracking-[0.2em]"
           style={{
             marginBottom: "var(--space-sm)",
-            color: "rgba(232,154,60,0.7)",
+            color: "color-mix(in oklab, var(--brand-amber) 70%, transparent)",
             fontSize: "var(--fs-meta)",
           }}
         >
@@ -52,8 +52,8 @@ export function HomeHero({ liveCount, selectedGenre, onSelectGenre }: HomeHeroPr
             aria-hidden="true"
             className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle"
             style={{
-              background: "#e89a3c",
-              boxShadow: "0 0 6px rgba(232,154,60,0.5)",
+              background: "var(--brand-amber)",
+              boxShadow: "0 0 6px color-mix(in oklab, var(--brand-amber) 50%, transparent)",
             }}
           />
           {liveLabel}
@@ -62,7 +62,7 @@ export function HomeHero({ liveCount, selectedGenre, onSelectGenre }: HomeHeroPr
           className="font-bold leading-[1.08] tracking-tight"
           style={{
             marginBottom: "var(--space-xs)",
-            color: "#e8e6ea",
+            color: "var(--ink-foreground)",
             fontSize: "var(--fs-hero)",
           }}
         >
@@ -71,7 +71,7 @@ export function HomeHero({ liveCount, selectedGenre, onSelectGenre }: HomeHeroPr
         <p
           style={{
             marginBottom: "var(--space-xl)",
-            color: "rgba(232,230,234,0.5)",
+            color: "var(--text-low)",
             fontSize: "var(--fs-body)",
           }}
         >
@@ -98,12 +98,12 @@ export function HomeHero({ liveCount, selectedGenre, onSelectGenre }: HomeHeroPr
                   paddingBlock: "var(--space-sm)",
                   fontSize: "var(--fs-small)",
                   background: isSelected
-                    ? "rgba(232,154,60,0.12)"
+                    ? "color-mix(in oklab, var(--brand-amber) 12%, transparent)"
                     : "rgba(255,255,255,0.04)",
                   border: isSelected
-                    ? "0.5px solid rgba(232,154,60,0.25)"
-                    : "0.5px solid rgba(255,255,255,0.08)",
-                  color: isSelected ? "#e89a3c" : "rgba(232,230,234,0.6)",
+                    ? "0.5px solid color-mix(in oklab, var(--brand-amber) 25%, transparent)"
+                    : "0.5px solid var(--hairline-strong)",
+                  color: isSelected ? "var(--brand-amber)" : "var(--text-low)",
                 }}
               >
                 {genre}

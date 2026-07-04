@@ -6,6 +6,10 @@ import type { NeonTubeState } from "@/hooks/use-room-websocket"
 import { usePrefersReducedMotion } from "@/components/room/use-prefers-reduced-motion"
 
 /* ─── Level palette ──────────────────────────────────────────────── */
+/* Intentionally raw literals: each level pairs a CSS color with its
+   canvas-RGB twin (canvas 2D can't resolve var()), so the quadruples
+   must stay in sync by hand. Level 1 css matches --brand-cyan and
+   level 3 matches --neon-amber / rgb(--brand-amber). */
 
 const LEVELS: Record<
   number,
@@ -293,7 +297,7 @@ export const NeonTube = memo(function NeonTube({ tube, powerUp, onSendNeon }: Ne
           paddingInline: "var(--space-lg)",
           paddingBlock: "var(--space-md)",
           background: "rgba(255,255,255,0.015)",
-          border: "0.5px solid rgba(255,255,255,0.06)",
+          border: "0.5px solid var(--hairline)",
           borderRadius: "16px",
         }}
       >
@@ -555,7 +559,7 @@ export const NeonTube = memo(function NeonTube({ tube, powerUp, onSendNeon }: Ne
               </span>
               <span
                 className="text-xs font-semibold"
-                style={{ color: "rgba(232,230,234,0.6)" }}
+                style={{ color: "var(--text-low)" }}
               >
                 {lv.label}
               </span>
@@ -589,7 +593,7 @@ export const NeonTube = memo(function NeonTube({ tube, powerUp, onSendNeon }: Ne
                     lineHeight: 1,
                     filter: prestigeTier >= 3
                       ? "drop-shadow(0 0 3px oklch(0.90 0.04 0 / 0.8))"
-                      : "drop-shadow(0 0 2px rgba(232,154,60,0.5))",
+                      : "drop-shadow(0 0 2px color-mix(in oklab, var(--brand-amber) 50%, transparent))",
                     animation: `neon-tube-star-pop 0.4s ease-out ${i * 0.06}s both`,
                   }}
                 >
@@ -599,7 +603,7 @@ export const NeonTube = memo(function NeonTube({ tube, powerUp, onSendNeon }: Ne
               {prestigeCount > 10 && (
                 <span
                   className="tabular-nums font-bold"
-                  style={{ fontSize: "var(--fs-meta)", color: "rgba(232,154,60,0.8)" }}
+                  style={{ fontSize: "var(--fs-meta)", color: "color-mix(in oklab, var(--brand-amber) 80%, transparent)" }}
                 >
                   +{prestigeCount - 10}
                 </span>
@@ -612,7 +616,7 @@ export const NeonTube = memo(function NeonTube({ tube, powerUp, onSendNeon }: Ne
             className="uppercase tracking-[0.14em]"
             style={{
               fontSize: "var(--fs-meta)",
-              color: "rgba(232,230,234,0.55)",
+              color: "var(--text-low)",
             }}
           >
             Room energy
@@ -625,7 +629,7 @@ export const NeonTube = memo(function NeonTube({ tube, powerUp, onSendNeon }: Ne
               style={{
                 height: "6px",
                 background: "oklch(0.14 0.02 280)",
-                border: "0.5px solid oklch(0.25 0.02 280 / 0.5)",
+                border: "0.5px solid color-mix(in oklab, var(--border) 50%, transparent)",
               }}
             >
               <div
@@ -667,13 +671,13 @@ export const NeonTube = memo(function NeonTube({ tube, powerUp, onSendNeon }: Ne
               className="mt-1 flex items-baseline justify-between"
               style={{ fontSize: "var(--fs-meta)" }}
             >
-              <span className="tabular-nums font-semibold" style={{ color: "rgba(232,230,234,0.7)" }}>
+              <span className="tabular-nums font-semibold" style={{ color: "var(--text-mid)" }}>
                 {fillAmount}
-                <span style={{ color: "rgba(232,230,234,0.55)" }}> / {fillTarget}</span>
+                <span style={{ color: "var(--text-low)" }}> / {fillTarget}</span>
               </span>
               <span
                 className="tabular-nums"
-                style={{ color: "rgba(232,230,234,0.55)" }}
+                style={{ color: "var(--text-low)" }}
               >
                 {totalNeon > 0 && `${totalNeon.toLocaleString()} total`}
               </span>

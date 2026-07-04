@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Loader2, Plus, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { adminSearchTrack, type TrackCandidate } from "@/lib/api"
+import { adminSearchTrack, type AdminSearchTrackResult, type TrackCandidate } from "@/lib/api"
 
 // Bulk mode requires the host page to extend its track type with these two
 // optional fields. We only *write* them; the page is responsible for stripping
@@ -44,6 +44,12 @@ interface Props<TrackT extends BulkResolvedTrack> {
 type Mode = "url" | "bulk"
 
 const CONCURRENCY = 5
+
+// Solid light pill — primary CTA treatment from the redesign navbar.
+const pillPrimary: React.CSSProperties = {
+  background: "var(--ink-foreground)",
+  color: "var(--ink)",
+}
 
 export function BulkAddPanel<TrackT extends BulkResolvedTrack>({
   onAddTracks,
@@ -102,7 +108,20 @@ export function BulkAddPanel<TrackT extends BulkResolvedTrack>({
         const i = nextIdx++
         if (i >= queries.length) return
         const q = queries[i]
-        const res = await adminSearchTrack(q)
+        // adminSearchTrack maps HTTP errors to {ok:false} but still rejects
+        // on network-level fetch failure (offline, backend restart). Catch
+        // here so one dead request becomes a failed row instead of rejecting
+        // Promise.all and wedging bulkRunning=true forever.
+        let res: AdminSearchTrackResult
+        try {
+          res = await adminSearchTrack(q)
+        } catch (err) {
+          res = {
+            ok: false,
+            reason: "error",
+            message: err instanceof Error ? err.message : String(err),
+          }
+        }
         if (res.ok) {
           results[i] = buildSearchTrack(res.primary, q, res.alternatives)
         } else {
@@ -123,19 +142,26 @@ export function BulkAddPanel<TrackT extends BulkResolvedTrack>({
       }
     }
 
-    const workers = Array.from({ length: Math.min(CONCURRENCY, queries.length) }, runner)
-    await Promise.all(workers)
+    try {
+      const workers = Array.from({ length: Math.min(CONCURRENCY, queries.length) }, runner)
+      await Promise.all(workers)
 
-    onAddTracks(results.filter((t): t is TrackT => t !== null))
-    setBulkText("")
-    setBulkRunning(false)
-    setBulkProgress(null)
+      onAddTracks(results.filter((t): t is TrackT => t !== null))
+      setBulkText("")
+    } finally {
+      // Belt-and-suspenders: never leave the textarea/button wedged disabled.
+      setBulkRunning(false)
+      setBulkProgress(null)
+    }
   }
 
   return (
     <div className="mb-3">
       {/* Mode toggle */}
-      <div className="mb-2 inline-flex gap-0.5 rounded-lg p-0.5" style={{ background: "oklch(0.15 0.02 280 / 0.6)" }}>
+      <div
+        className="mb-2 inline-flex gap-0.5 rounded-lg p-0.5"
+        style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid var(--hairline)" }}
+      >
         <button
           type="button"
           onClick={() => setMode("url")}
@@ -171,7 +197,8 @@ export function BulkAddPanel<TrackT extends BulkResolvedTrack>({
             size="sm"
             onClick={handleUrlAdd}
             disabled={resolving || outerDisabled || !url.trim()}
-            className="rounded-lg gap-1.5"
+            className="rounded-full gap-1.5 hover:opacity-90"
+            style={pillPrimary}
           >
             {resolving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
             Add
@@ -192,7 +219,8 @@ export function BulkAddPanel<TrackT extends BulkResolvedTrack>({
               size="sm"
               onClick={handleBulkRun}
               disabled={bulkRunning || outerDisabled || !bulkText.trim()}
-              className="rounded-lg gap-1.5"
+              className="rounded-full gap-1.5 hover:opacity-90"
+              style={pillPrimary}
             >
               {bulkRunning ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -208,7 +236,7 @@ export function BulkAddPanel<TrackT extends BulkResolvedTrack>({
             )}
           </div>
           {bulkError && (
-            <p className="font-sans text-[11px] text-red-400/80">{bulkError}</p>
+            <p className="font-sans text-[11px]" style={{ color: "var(--text-error)" }}>{bulkError}</p>
           )}
         </div>
       )}

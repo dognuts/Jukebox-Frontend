@@ -43,28 +43,28 @@ function LoginForm() {
   return (
     <AuthShell title="Welcome back" subtitle="Log in to your Jukebox account.">
       {error && (
-        <div className="mb-4 rounded-lg px-3 py-2 text-sm" style={{ background: "oklch(0.30 0.12 25 / 0.3)", border: "1px solid oklch(0.50 0.18 25 / 0.4)", color: "oklch(0.75 0.12 25)" }}>
+        <div className="mb-4 rounded-lg border-[0.5px] border-destructive-foreground/30 bg-destructive/20 px-3 py-2 type-small text-destructive-foreground">
           {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <Label htmlFor="email" className="font-sans text-sm font-medium text-foreground">Email</Label>
+          <Label htmlFor="email" className="font-sans text-sm font-medium text-text-hi">Email</Label>
           <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required
-            className="mt-1 rounded-xl border-border/40 bg-muted/30 font-sans" />
+            className="mt-1 rounded-xl border-[0.5px] border-hairline-strong bg-white/[0.04] font-sans" />
         </div>
 
         <div>
           <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="font-sans text-sm font-medium text-foreground">Password</Label>
-            <Link href="/forgot-password" className="font-sans text-xs text-primary hover:underline">Forgot password?</Link>
+            <Label htmlFor="password" className="font-sans text-sm font-medium text-text-hi">Password</Label>
+            <Link href="/forgot-password" className="font-sans text-xs text-brand-amber hover:underline">Forgot password?</Link>
           </div>
           <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
-            className="mt-1 rounded-xl border-border/40 bg-muted/30 font-sans" />
+            className="mt-1 rounded-xl border-[0.5px] border-hairline-strong bg-white/[0.04] font-sans" />
         </div>
 
-        <Button type="submit" disabled={loading} className="w-full rounded-xl bg-primary font-sans font-semibold text-primary-foreground hover:bg-primary/90">
+        <Button type="submit" disabled={loading} className="w-full rounded-xl bg-brand-amber font-sans font-semibold text-ink hover:bg-brand-amber/90">
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -74,9 +74,9 @@ function LoginForm() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center font-sans text-sm text-muted-foreground">
+      <p className="mt-6 text-center font-sans text-sm text-text-mid">
         Don&apos;t have an account?{" "}
-        <Link href={withNextParam("/signup", nextPath)} className="text-primary hover:underline">Sign up</Link>
+        <Link href={withNextParam("/signup", nextPath)} className="text-brand-amber hover:underline">Sign up</Link>
       </p>
     </AuthShell>
   )

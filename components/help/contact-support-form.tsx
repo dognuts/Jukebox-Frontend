@@ -138,7 +138,7 @@ export function ContactSupportForm({
               type="button"
               onClick={onClose}
               className="w-full rounded-lg px-4 py-2 font-sans text-sm font-semibold"
-              style={{ background: "#e89a2e", color: "#0a0a0a" }}
+              style={{ background: "var(--brand-amber)", color: "var(--ink)" }}
             >
               Close
             </button>
@@ -153,7 +153,7 @@ export function ContactSupportForm({
                 value={category}
                 onChange={(e) => setCategory(e.target.value as ContactSupportFormProps["defaultCategory"])}
                 className="w-full rounded-lg border border-border/40 px-3 py-2 font-sans text-sm text-foreground"
-                style={{ background: "oklch(0.14 0.01 280 / 0.5)" }}
+                style={{ background: "color-mix(in oklab, var(--popover) 50%, transparent)" }}
               >
                 <option value="gated">Video wants me to sign in (bot check)</option>
                 <option value="no-audio">I can't hear anything</option>
@@ -175,7 +175,7 @@ export function ContactSupportForm({
                 onChange={(e) => setMessage(e.target.value)}
                 rows={4}
                 className="w-full rounded-lg border border-border/40 px-3 py-2 font-sans text-sm text-foreground"
-                style={{ background: "oklch(0.14 0.01 280 / 0.5)" }}
+                style={{ background: "color-mix(in oklab, var(--popover) 50%, transparent)" }}
                 placeholder="Describe what you're seeing or hearing…"
               />
             </div>
@@ -192,7 +192,7 @@ export function ContactSupportForm({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full rounded-lg border border-border/40 px-3 py-2 font-sans text-sm text-foreground"
-                  style={{ background: "oklch(0.14 0.01 280 / 0.5)" }}
+                  style={{ background: "color-mix(in oklab, var(--popover) 50%, transparent)" }}
                   placeholder="you@example.com"
                 />
               </div>
@@ -238,7 +238,7 @@ export function ContactSupportForm({
               type="submit"
               disabled={status === "submitting"}
               className="w-full rounded-lg px-4 py-2 font-sans text-sm font-semibold disabled:opacity-60"
-              style={{ background: "#e89a2e", color: "#0a0a0a" }}
+              style={{ background: "var(--brand-amber)", color: "var(--ink)" }}
             >
               {status === "submitting" ? "Sending…" : "Send"}
             </button>

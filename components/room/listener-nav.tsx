@@ -23,8 +23,8 @@ export function ListenerNav({
     <div
       className="relative flex h-14 shrink-0 items-center justify-between px-5"
       style={{
-        background: "rgba(13,11,16,0.95)",
-        borderBottom: "0.5px solid rgba(255,255,255,0.06)",
+        background: "color-mix(in oklab, var(--ink) 95%, transparent)",
+        borderBottom: "0.5px solid var(--hairline)",
       }}
     >
       {/* Animated JUKEBOX logo, centered. Same size as the homepage
@@ -49,7 +49,7 @@ export function ListenerNav({
           href="/"
           className="flex shrink-0 items-center gap-1 transition-colors hover:text-white/60"
           style={{
-            color: "rgba(232,230,234,0.55)",
+            color: "var(--text-low)",
             fontSize: "var(--fs-small)",
           }}
         >
@@ -66,7 +66,7 @@ export function ListenerNav({
         <h1
           className="truncate font-semibold"
           style={{
-            color: "#e8e6ea",
+            color: "var(--ink-foreground)",
             fontSize: "var(--fs-body)",
           }}
         >
@@ -78,8 +78,8 @@ export function ListenerNav({
             style={{
               paddingInline: "var(--space-sm)",
               paddingBlock: "2px",
-              background: "rgba(232,154,60,0.12)",
-              color: "#e89a3c",
+              background: "color-mix(in oklab, var(--brand-amber) 12%, transparent)",
+              color: "var(--brand-amber)",
               fontSize: "var(--fs-meta)",
             }}
           >
@@ -96,7 +96,7 @@ export function ListenerNav({
         <div
           className="flex items-center gap-1"
           style={{
-            color: "rgba(232,230,234,0.55)",
+            color: "var(--text-low)",
             fontSize: "var(--fs-small)",
           }}
         >
@@ -120,14 +120,14 @@ export function ListenerNav({
         >
           <MessageCircle
             className="h-[18px] w-[18px]"
-            style={{ color: "rgba(232,230,234,0.55)" }}
+            style={{ color: "var(--text-low)" }}
           />
           {totalUnread > 0 && (
             <span
               className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-mono font-bold"
               style={{
-                background: "#e89a3c",
-                color: "#0d0b10",
+                background: "var(--brand-amber)",
+                color: "var(--ink)",
                 fontSize: "var(--fs-meta)",
               }}
             >

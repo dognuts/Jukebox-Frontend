@@ -4,13 +4,14 @@ import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import {
   Shield, ArrowLeft, ChevronRight, Radio, Plus, Trash2, Play, Pause,
-  GripVertical, Loader2, Check, RotateCcw, Zap, Music, ArrowUp, ArrowDown,
+  Loader2, Check, Zap, ArrowUp, ArrowDown,
   Upload, X, Pencil, Link as LinkIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Navbar } from "@/components/layout/navbar"
+import { EmptyState } from "@/components/ui/empty-state"
 import { SmartImage } from "@/components/smart-image"
 import { useAuth } from "@/lib/auth-context"
 import { authRequest, type TrackCandidate } from "@/lib/api"
@@ -35,6 +36,20 @@ interface AutoplayTrack {
 type PersistedTrack = Omit<AutoplayTrack, "_searchAlternatives" | "_searchQuery">
 function stripClientFields(tracks: AutoplayTrack[]): PersistedTrack[] {
   return tracks.map(({ _searchAlternatives, _searchQuery, ...rest }) => rest)
+}
+
+// Failed bulk placeholders (buildFailedTrack) have sourceUrl "" and duration
+// 0 — persisting one puts dead air on the room (the playback scheduler
+// falls back to a 600s duration for zero-duration tracks), and reload would
+// strip _searchQuery so the row loses its Retry affordance. Block saves
+// until every row resolves to a real URL.
+function countUnresolved(tracks: AutoplayTrack[]): number {
+  return tracks.filter((t) => !t.sourceUrl.trim()).length
+}
+function unresolvedMessage(count: number): string {
+  return count === 1
+    ? "1 track has no playable URL (failed search). Retry, replace, or remove it before saving."
+    : `${count} tracks have no playable URL (failed searches). Retry, replace, or remove them before saving.`
 }
 
 // Gradient preset for visual distinction when no album art is available.
@@ -97,6 +112,25 @@ interface AutoplayRoom {
   isAutoplay: boolean
   coverArt?: string
   coverGradient?: string
+}
+
+// Shared surface treatment — quiet hairline cards on the ink ground,
+// matching the homepage/room redesign language.
+const cardStyle: React.CSSProperties = {
+  background: "rgba(255,255,255,0.02)",
+  border: "0.5px solid var(--hairline)",
+}
+
+// Amber tint — live/on-air markers, matching the redesign's live treatment.
+const liveTint: React.CSSProperties = {
+  background: "rgba(232,154,60,0.1)",
+  border: "0.5px solid rgba(232,154,60,0.25)",
+}
+
+// Solid light pill — primary CTA treatment from the redesign navbar.
+const pillPrimary: React.CSSProperties = {
+  background: "var(--ink-foreground)",
+  color: "var(--ink)",
 }
 
 const GRADIENT_PRESETS = [
@@ -188,6 +222,13 @@ export default function AdminAutoplayPage() {
     setShowEditCover(false)
     setEditCoverArt(room.coverArt || null)
     setEditGradient(room.coverGradient || "")
+    // Reset per-row UI state — an open replace input or alternatives
+    // expander would otherwise re-attach to the new room's track at the
+    // same index (with the old room's URL pre-filled).
+    setReplacingLiveIdx(null)
+    setReplaceLiveUrl("")
+    setExpandedLiveIdx(null)
+    setExpandedStagedIdx(null)
     loadPlaylists(room.id)
   }
 
@@ -362,6 +403,11 @@ export default function AdminAutoplayPage() {
       alert("Live playlist cannot be empty. Use Stop to take the room offline.")
       return
     }
+    const failed = countUnresolved(liveTracks)
+    if (failed > 0) {
+      alert(unresolvedMessage(failed))
+      return
+    }
     setSavingLiveTracks(true)
     try {
       await authRequest(`/api/admin/autoplay/rooms/${selectedRoom.id}/live/tracks`, {
@@ -379,6 +425,11 @@ export default function AdminAutoplayPage() {
   // Save staged playlist
   const handleSave = async () => {
     if (!selectedRoom) return
+    const failed = countUnresolved(stagedTracks)
+    if (failed > 0) {
+      alert(unresolvedMessage(failed))
+      return
+    }
     setSaving(true)
     try {
       await authRequest(`/api/admin/autoplay/rooms/${selectedRoom.id}/staged`, {
@@ -458,18 +509,22 @@ export default function AdminAutoplayPage() {
             </Link>
             <ChevronRight className="h-3 w-3 text-muted-foreground/50" />
             <div className="flex items-center gap-2">
-              <Radio className="h-5 w-5" style={{ color: "oklch(0.82 0.18 80)" }} />
-              <h1 className="font-sans text-xl font-bold text-foreground">Autoplay Rooms</h1>
+              <Radio className="h-5 w-5" style={{ color: "var(--brand-amber)" }} />
+              <h1 className="type-display" style={{ color: "var(--ink-foreground)" }}>Autoplay Rooms</h1>
             </div>
           </div>
-          <Button size="sm" onClick={() => setShowCreate(!showCreate)} className="gap-1.5 rounded-xl">
-            <Plus className="h-4 w-4" /> New Room
-          </Button>
+          <button
+            onClick={() => setShowCreate(!showCreate)}
+            className="flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition-opacity hover:opacity-90"
+            style={pillPrimary}
+          >
+            <Plus className="h-3.5 w-3.5" /> New Room
+          </button>
         </div>
 
         {/* Create form */}
         {showCreate && (
-          <div className="mb-6 rounded-xl p-4" style={{ background: "oklch(0.14 0.015 280 / 0.6)", border: "1px solid oklch(0.25 0.02 280 / 0.4)" }}>
+          <div className="mb-6 rounded-[14px] p-4" style={cardStyle}>
             <div className="grid gap-3 sm:grid-cols-3">
               <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Room name" className="rounded-lg bg-muted/20" />
               <Input value={newGenre} onChange={(e) => setNewGenre(e.target.value)} placeholder="Genre (e.g. Lo-fi)" className="rounded-lg bg-muted/20" />
@@ -485,8 +540,7 @@ export default function AdminAutoplayPage() {
                     className="h-8 w-16 rounded-lg transition-all"
                     style={{
                       background: g.value,
-                      border: newGradient === g.value ? "2px solid oklch(0.82 0.18 80)" : "2px solid transparent",
-                      boxShadow: newGradient === g.value ? "0 0 8px oklch(0.82 0.18 80 / 0.4)" : "none",
+                      border: newGradient === g.value ? "2px solid var(--brand-amber)" : "2px solid transparent",
                     }}
                     title={g.name}
                   />
@@ -495,7 +549,7 @@ export default function AdminAutoplayPage() {
             </div>
             <div className="flex justify-end gap-2 mt-3">
               <Button size="sm" variant="ghost" onClick={() => setShowCreate(false)} className="rounded-lg text-xs">Cancel</Button>
-              <Button size="sm" onClick={handleCreate} disabled={creating || !newName.trim()} className="rounded-lg text-xs gap-1.5">
+              <Button size="sm" onClick={handleCreate} disabled={creating || !newName.trim()} className="rounded-full text-xs gap-1.5 hover:opacity-90" style={pillPrimary}>
                 {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
                 Create
               </Button>
@@ -507,7 +561,7 @@ export default function AdminAutoplayPage() {
           {/* Room list */}
           <div className={`w-64 shrink-0 ${selectedRoom ? "hidden lg:block" : ""}`}>
             {rooms.length === 0 ? (
-              <p className="text-center py-8 font-sans text-sm text-muted-foreground">No autoplay rooms yet</p>
+              <EmptyState compact title="No autoplay rooms yet" />
             ) : (
               <div className="space-y-1">
                 {rooms.map((room) => (
@@ -518,12 +572,12 @@ export default function AdminAutoplayPage() {
                       selectedRoom?.id === room.id ? "bg-muted/20 border border-border/40" : ""
                     }`}
                   >
-                    <Radio className="h-4 w-4 shrink-0" style={{ color: room.isLive ? "oklch(0.65 0.20 150)" : "oklch(0.45 0.05 280)" }} />
+                    <Radio className="h-4 w-4 shrink-0" style={{ color: room.isLive ? "var(--brand-amber)" : "var(--text-low)" }} />
                     <div className="min-w-0 flex-1">
                       <span className="truncate font-sans text-sm font-medium text-foreground block">{room.name}</span>
                       <span className="font-sans text-[10px] text-muted-foreground">{room.genre || "No genre"}</span>
                     </div>
-                    {room.isLive && <span className="h-2 w-2 rounded-full shrink-0" style={{ background: "oklch(0.65 0.20 150)" }} />}
+                    {room.isLive && <span className="h-2 w-2 rounded-full shrink-0" style={{ background: "var(--brand-amber)", boxShadow: "0 0 8px rgba(232,154,60,0.8)" }} />}
                   </button>
                 ))}
               </div>
@@ -544,7 +598,7 @@ export default function AdminAutoplayPage() {
                     className="h-14 w-14 shrink-0 rounded-lg overflow-hidden relative"
                     style={{
                       background: selectedRoom.coverGradient || "oklch(0.25 0.05 280)",
-                      border: "1px solid oklch(0.25 0.02 280 / 0.4)",
+                      border: "0.5px solid var(--hairline)",
                     }}
                   >
                     {selectedRoom.coverArt && (
@@ -578,7 +632,7 @@ export default function AdminAutoplayPage() {
                     <Pencil className="h-3.5 w-3.5" /> Cover
                   </Button>
                   {selectedRoom.isLive ? (
-                    <Button size="sm" variant="ghost" onClick={handleStop} className="gap-1.5 rounded-lg text-xs" style={{ color: "oklch(0.60 0.20 25)" }}>
+                    <Button size="sm" variant="ghost" onClick={handleStop} className="gap-1.5 rounded-lg text-xs" style={{ color: "var(--text-error)" }}>
                       <Pause className="h-3.5 w-3.5" /> Stop
                     </Button>
                   ) : liveTracks.length > 0 ? (
@@ -586,21 +640,27 @@ export default function AdminAutoplayPage() {
                       size="sm"
                       onClick={handleRelaunch}
                       disabled={relaunching}
-                      className="gap-1.5 rounded-lg text-xs"
-                      style={{ background: "oklch(0.55 0.20 150 / 0.8)", color: "white" }}
+                      className="gap-1.5 rounded-full text-xs hover:opacity-90"
+                      style={{ background: "var(--brand-amber)", color: "var(--ink)" }}
                     >
                       {relaunching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
                       Relaunch
                     </Button>
                   ) : (
-                    <Badge variant="outline" className="text-xs text-muted-foreground">Offline</Badge>
+                    <Badge
+                      variant="outline"
+                      className="text-xs"
+                      style={{ borderColor: "var(--hairline-strong)", color: "var(--text-low)" }}
+                    >
+                      Offline
+                    </Badge>
                   )}
                 </div>
               </div>
 
               {/* Cover photo editor */}
               {showEditCover && (
-                <div className="mb-4 rounded-xl p-4" style={{ background: "oklch(0.14 0.015 280 / 0.6)", border: "1px solid oklch(0.25 0.02 280 / 0.4)" }}>
+                <div className="mb-4 rounded-[14px] p-4" style={cardStyle}>
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-sans text-sm font-semibold text-foreground">Edit Cover</h3>
                     <button onClick={() => setShowEditCover(false)} className="p-1 rounded hover:bg-muted/20">
@@ -614,7 +674,7 @@ export default function AdminAutoplayPage() {
                       className="h-32 w-32 rounded-xl overflow-hidden relative mx-auto sm:mx-0"
                       style={{
                         background: editGradient || "oklch(0.25 0.05 280)",
-                        border: "1px solid oklch(0.25 0.02 280 / 0.4)",
+                        border: "0.5px solid var(--hairline)",
                       }}
                     >
                       {editCoverArt && (
@@ -675,8 +735,7 @@ export default function AdminAutoplayPage() {
                               className="h-8 w-16 rounded-lg transition-all"
                               style={{
                                 background: g.value,
-                                border: editGradient === g.value ? "2px solid oklch(0.82 0.18 80)" : "2px solid transparent",
-                                boxShadow: editGradient === g.value ? "0 0 8px oklch(0.82 0.18 80 / 0.4)" : "none",
+                                border: editGradient === g.value ? "2px solid var(--brand-amber)" : "2px solid transparent",
                               }}
                               title={g.name}
                             />
@@ -688,7 +747,7 @@ export default function AdminAutoplayPage() {
 
                   <div className="flex justify-end gap-2 mt-4">
                     <Button size="sm" variant="ghost" onClick={() => setShowEditCover(false)} className="rounded-lg text-xs">Cancel</Button>
-                    <Button size="sm" onClick={handleSaveCover} disabled={savingCover} className="rounded-lg text-xs gap-1.5">
+                    <Button size="sm" onClick={handleSaveCover} disabled={savingCover} className="rounded-full text-xs gap-1.5 hover:opacity-90" style={pillPrimary}>
                       {savingCover ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                       Save Cover
                     </Button>
@@ -698,11 +757,11 @@ export default function AdminAutoplayPage() {
 
               {/* Live playlist status */}
               {livePlaylist && (
-                <div className="mb-4 rounded-xl p-3" style={{ background: "oklch(0.16 0.04 150 / 0.2)", border: "1px solid oklch(0.55 0.15 150 / 0.3)" }}>
+                <div className="mb-4 rounded-[14px] p-3" style={liveTint}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Play className="h-3.5 w-3.5" style={{ color: "oklch(0.65 0.18 150)" }} />
-                      <span className="font-sans text-xs font-semibold" style={{ color: "oklch(0.65 0.18 150)" }}>
+                      <Play className="h-3.5 w-3.5" style={{ color: "var(--brand-amber)" }} />
+                      <span className="font-sans text-xs font-semibold" style={{ color: "var(--brand-amber)" }}>
                         LIVE: {livePlaylist.name || "Untitled"}
                       </span>
                     </div>
@@ -720,7 +779,7 @@ export default function AdminAutoplayPage() {
                   current_index against its source URL so the next auto-
                   advance picks the right next track. */}
               {livePlaylist && (
-                <div className="mb-4 rounded-xl p-4" style={{ background: "oklch(0.13 0.015 280 / 0.6)", border: "1px solid oklch(0.25 0.02 280 / 0.4)" }}>
+                <div className="mb-4 rounded-[14px] p-4" style={cardStyle}>
                   <div className="flex items-center justify-between mb-1">
                     <h3 className="font-sans text-sm font-semibold text-foreground">Edit Live Tracks</h3>
                     <span className="font-mono text-[10px] text-muted-foreground">{liveTracks.length} tracks</span>
@@ -741,9 +800,7 @@ export default function AdminAutoplayPage() {
                   {/* Live track list */}
                   <div className="space-y-1 mb-3 max-h-[28rem] overflow-y-auto pr-1">
                     {liveTracks.length === 0 ? (
-                      <p className="py-6 text-center font-sans text-xs text-muted-foreground">
-                        No tracks — paste a URL above to add one
-                      </p>
+                      <EmptyState compact title="No tracks — paste a URL above to add one" />
                     ) : (
                       liveTracks.map((track, i) => {
                         const isCurrent = i === (livePlaylist.currentIndex % Math.max(liveTracks.length, 1))
@@ -756,15 +813,15 @@ export default function AdminAutoplayPage() {
                             className="rounded-lg px-2 py-1.5 group hover:bg-muted/10"
                             style={{
                               background: isCurrent
-                                ? "oklch(0.16 0.04 150 / 0.25)"
+                                ? "rgba(232,154,60,0.08)"
                                 : isFailed
-                                ? "oklch(0.15 0.05 25 / 0.20)"
+                                ? "oklch(0.62 0.28 30 / 0.08)"
                                 : undefined,
                               border: isCurrent
-                                ? "1px solid oklch(0.55 0.15 150 / 0.4)"
+                                ? "0.5px solid rgba(232,154,60,0.3)"
                                 : isFailed
-                                ? "1px solid oklch(0.55 0.18 25 / 0.4)"
-                                : "1px solid transparent",
+                                ? "0.5px solid oklch(0.62 0.28 30 / 0.3)"
+                                : "0.5px solid transparent",
                             }}
                           >
                             <div className="flex items-center gap-2">
@@ -794,7 +851,7 @@ export default function AdminAutoplayPage() {
                                 title="Duration in seconds"
                               />
                               {isCurrent && (
-                                <span className="font-sans text-[9px] font-semibold uppercase tracking-wide rounded px-1.5 py-0.5 shrink-0" style={{ color: "oklch(0.65 0.18 150)", background: "oklch(0.16 0.04 150 / 0.4)" }}>
+                                <span className="font-sans text-[9px] font-semibold uppercase tracking-wide rounded px-1.5 py-0.5 shrink-0" style={{ color: "var(--brand-amber)", background: "rgba(232,154,60,0.15)" }}>
                                   On Air
                                 </span>
                               )}
@@ -814,8 +871,8 @@ export default function AdminAutoplayPage() {
                                 <button onClick={() => moveLiveTrack(i, 1)} disabled={i === liveTracks.length - 1} className="p-1 rounded hover:bg-muted/20 disabled:opacity-20" title="Move down">
                                   <ArrowDown className="h-3 w-3 text-muted-foreground" />
                                 </button>
-                                <button onClick={() => removeLiveTrack(i)} className="p-1 rounded hover:bg-red-500/20" title="Remove">
-                                  <Trash2 className="h-3 w-3" style={{ color: "oklch(0.60 0.20 25)" }} />
+                                <button onClick={() => removeLiveTrack(i)} className="p-1 rounded hover:bg-destructive/20" title="Remove">
+                                  <Trash2 className="h-3 w-3" style={{ color: "var(--text-error)" }} />
                                 </button>
                               </div>
                             </div>
@@ -834,7 +891,7 @@ export default function AdminAutoplayPage() {
                                   className="flex-1 h-7 rounded-md bg-muted/20 text-[11px]"
                                   autoFocus
                                 />
-                                <Button size="sm" onClick={confirmReplaceLiveUrl} disabled={resolvingReplace || !replaceLiveUrl.trim()} className="h-7 rounded-md text-[10px] gap-1">
+                                <Button size="sm" onClick={confirmReplaceLiveUrl} disabled={resolvingReplace || !replaceLiveUrl.trim()} className="h-7 rounded-full text-[10px] gap-1 hover:opacity-90" style={pillPrimary}>
                                   {resolvingReplace ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
                                   Replace
                                 </Button>
@@ -869,7 +926,7 @@ export default function AdminAutoplayPage() {
                   </div>
 
                   <div className="flex justify-end">
-                    <Button size="sm" onClick={handleSaveLiveTracks} disabled={savingLiveTracks || liveTracks.length === 0} className="gap-1.5 rounded-lg text-xs">
+                    <Button size="sm" onClick={handleSaveLiveTracks} disabled={savingLiveTracks || liveTracks.length === 0} className="gap-1.5 rounded-full text-xs hover:opacity-90" style={pillPrimary}>
                       {savingLiveTracks ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                       Save Live Tracks
                     </Button>
@@ -878,7 +935,7 @@ export default function AdminAutoplayPage() {
               )}
 
               {/* Staged playlist editor */}
-              <div className="rounded-xl p-4" style={{ background: "oklch(0.13 0.015 280 / 0.6)", border: "1px solid oklch(0.25 0.02 280 / 0.4)" }}>
+              <div className="rounded-[14px] p-4" style={cardStyle}>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-sans text-sm font-semibold text-foreground">
                     {stagedPlaylist ? "Edit Staged Playlist" : "Build Next Playlist"}
@@ -906,9 +963,7 @@ export default function AdminAutoplayPage() {
                 {/* Track list */}
                 <div className="space-y-1 mb-4 max-h-96 overflow-y-auto">
                   {stagedTracks.length === 0 ? (
-                    <p className="py-6 text-center font-sans text-xs text-muted-foreground">
-                      No tracks yet — paste URLs above to build your playlist
-                    </p>
+                    <EmptyState compact title="No tracks yet — paste URLs above to build your playlist" />
                   ) : (
                     stagedTracks.map((track, i) => {
                       const isFailed = !track.sourceUrl && !!track._searchQuery
@@ -918,8 +973,8 @@ export default function AdminAutoplayPage() {
                         key={i}
                         className="rounded-lg px-2 py-1.5 group hover:bg-muted/10"
                         style={{
-                          background: isFailed ? "oklch(0.15 0.05 25 / 0.20)" : undefined,
-                          border: isFailed ? "1px solid oklch(0.55 0.18 25 / 0.4)" : "1px solid transparent",
+                          background: isFailed ? "oklch(0.62 0.28 30 / 0.08)" : undefined,
+                          border: isFailed ? "0.5px solid oklch(0.62 0.28 30 / 0.3)" : "0.5px solid transparent",
                         }}
                       >
                         <div className="flex items-center gap-2">
@@ -961,8 +1016,8 @@ export default function AdminAutoplayPage() {
                             <button onClick={() => moveTrack(i, 1)} disabled={i === stagedTracks.length - 1} className="p-1 rounded hover:bg-muted/20 disabled:opacity-20">
                               <ArrowDown className="h-3 w-3 text-muted-foreground" />
                             </button>
-                            <button onClick={() => removeTrack(i)} className="p-1 rounded hover:bg-red-500/20">
-                              <Trash2 className="h-3 w-3" style={{ color: "oklch(0.60 0.20 25)" }} />
+                            <button onClick={() => removeTrack(i)} className="p-1 rounded hover:bg-destructive/20">
+                              <Trash2 className="h-3 w-3" style={{ color: "var(--text-error)" }} />
                             </button>
                           </div>
                         </div>
@@ -991,7 +1046,7 @@ export default function AdminAutoplayPage() {
 
                 {/* Actions */}
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={handleSave} disabled={saving || stagedTracks.length === 0} className="gap-1.5 rounded-lg text-xs flex-1">
+                  <Button size="sm" onClick={handleSave} disabled={saving || stagedTracks.length === 0} className="gap-1.5 rounded-full text-xs flex-1 hover:opacity-90" style={pillPrimary}>
                     {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                     Save Staged Playlist
                   </Button>
@@ -999,10 +1054,10 @@ export default function AdminAutoplayPage() {
                     size="sm"
                     onClick={handleActivate}
                     disabled={activating || !stagedPlaylist}
-                    className="gap-1.5 rounded-lg text-xs"
+                    className="gap-1.5 rounded-full text-xs hover:opacity-90"
                     style={{
-                      background: stagedPlaylist ? "oklch(0.55 0.20 150 / 0.8)" : undefined,
-                      color: stagedPlaylist ? "white" : undefined,
+                      background: stagedPlaylist ? "var(--brand-amber)" : undefined,
+                      color: stagedPlaylist ? "var(--ink)" : undefined,
                     }}
                   >
                     {activating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}

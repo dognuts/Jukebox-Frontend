@@ -46,7 +46,7 @@ export function RoomSkeleton() {
       role="status"
       aria-label="Loading room"
       className="min-h-screen"
-      style={{ background: "#0d0b10", color: "#e8e6ea" }}
+      style={{ background: "var(--ink)", color: "var(--ink-foreground)" }}
     >
       <span className="sr-only">Loading room…</span>
 
@@ -55,8 +55,8 @@ export function RoomSkeleton() {
         aria-hidden="true"
         className="flex h-14 items-center justify-between px-5"
         style={{
-          background: "rgba(13,11,16,0.95)",
-          borderBottom: "0.5px solid rgba(255,255,255,0.06)",
+          background: "color-mix(in oklab, var(--ink) 95%, transparent)",
+          borderBottom: "0.5px solid var(--hairline)",
         }}
       >
         <div className={`flex items-center ${pulse}`} style={{ gap: "var(--space-sm)" }}>
@@ -137,7 +137,7 @@ export function RoomSkeleton() {
                     <Bone
                       key={i}
                       className="w-[3px]"
-                      style={{ height: h, background: "rgba(232,154,60,0.25)" }}
+                      style={{ height: h, background: "color-mix(in oklab, var(--brand-amber) 25%, transparent)" }}
                     />
                   ))}
                 </div>

@@ -92,7 +92,7 @@ function ListeningTroubleshooter() {
         <Link
           href={`/room/${roomSlug}`}
           className="mb-6 inline-flex items-center gap-1 font-sans text-sm transition-colors hover:text-foreground"
-          style={{ color: "rgba(232,230,234,0.6)" }}
+          style={{ color: "var(--text-low)" }}
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to {roomName || "room"}
@@ -103,7 +103,7 @@ function ListeningTroubleshooter() {
         Pick the issue you're seeing — most things have a quick fix.
       </p>
 
-      <div className="rounded-xl border border-border/40 px-4 mb-6" style={{ background: "oklch(0.14 0.01 280 / 0.5)" }}>
+      <div className="rounded-xl border border-border/40 px-4 mb-6" style={{ background: "color-mix(in oklab, var(--popover) 50%, transparent)" }}>
         {ROWS.map((row) => (
           <TroubleshooterRow
             key={row.id}
@@ -124,7 +124,7 @@ function ListeningTroubleshooter() {
               type="button"
               onClick={handleContactClick}
               className="inline-flex items-center gap-2 rounded-lg px-4 py-2 font-sans text-sm font-semibold transition-colors"
-              style={{ background: "#e89a2e", color: "#0a0a0a" }}
+              style={{ background: "var(--brand-amber)", color: "var(--ink)" }}
             >
               <MessageCircle className="h-4 w-4" />
               Contact support

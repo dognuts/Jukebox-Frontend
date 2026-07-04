@@ -1,9 +1,13 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { Crown, Zap, Check } from "lucide-react"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+import { Crown, Check } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { useUpgrade } from "@/lib/upgrade-context"
 
 const PERKS = [
@@ -21,27 +25,17 @@ export function UpgradeDialog() {
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={(o) => !o && closeUpgradeDialog()}>
-      <DialogContent
-        className="border-border/30 sm:max-w-md p-0 overflow-hidden"
-        style={{ background: "oklch(0.12 0.02 270 / 0.97)", backdropFilter: "blur(10px)" }}
-      >
+      <DialogContent className="overflow-hidden rounded-2xl border-[0.5px] border-hairline bg-popover p-0 sm:max-w-md">
         {/* Header */}
-        <div
-          className="px-6 pt-8 pb-6 text-center"
-          style={{ background: "linear-gradient(180deg, oklch(0.18 0.05 270 / 0.6), transparent)" }}
-        >
+        <div className="px-6 pt-8 pb-6 text-center">
           <div
-            className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl"
-            style={{
-              background: "oklch(0.55 0.22 270 / 0.2)",
-              border: "1px solid oklch(0.55 0.22 270 / 0.4)",
-              boxShadow: "0 0 20px oklch(0.55 0.22 270 / 0.2)",
-            }}
+            className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl text-white"
+            style={{ background: "linear-gradient(135deg, var(--brand-purple), var(--brand-purple-deep))" }}
           >
-            <Crown className="h-7 w-7" style={{ color: "oklch(0.72 0.18 270)" }} />
+            <Crown className="h-7 w-7" />
           </div>
-          <h2 className="font-sans text-xl font-bold text-foreground">Jukebox Plus</h2>
-          <p className="mt-1 font-sans text-sm text-muted-foreground">$7.99/month</p>
+          <DialogTitle className="type-display font-sans text-ink-foreground">Jukebox Plus</DialogTitle>
+          <DialogDescription className="mt-1 type-small font-sans text-text-mid">$7.99/month</DialogDescription>
         </div>
 
         {/* Perks */}
@@ -49,8 +43,8 @@ export function UpgradeDialog() {
           <ul className="space-y-2.5">
             {PERKS.map((perk) => (
               <li key={perk} className="flex items-center gap-2.5">
-                <Check className="h-4 w-4 shrink-0" style={{ color: "oklch(0.72 0.18 270)" }} />
-                <span className="font-sans text-sm text-foreground/80">{perk}</span>
+                <Check className="h-4 w-4 shrink-0 text-brand-amber" />
+                <span className="font-sans text-sm text-text-mid">{perk}</span>
               </li>
             ))}
           </ul>
@@ -60,18 +54,14 @@ export function UpgradeDialog() {
         <div className="px-6 pb-6 space-y-3">
           <button
             onClick={() => { closeUpgradeDialog(); router.push("/pricing") }}
-            className="w-full rounded-xl py-3 font-sans font-semibold text-background upgrade-button-premium"
-            style={{
-              background: "linear-gradient(135deg, oklch(0.82 0.18 80) 0%, oklch(0.85 0.20 60) 50%, oklch(0.72 0.18 250) 100%)",
-              backgroundSize: "200% auto",
-              boxShadow: "0 0 20px oklch(0.82 0.18 80 / 0.3)",
-            }}
+            className="w-full rounded-xl py-3 font-sans font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ background: "linear-gradient(135deg, var(--brand-purple), var(--brand-purple-deep))" }}
           >
             View Pricing
           </button>
           <button
             onClick={closeUpgradeDialog}
-            className="block w-full text-center font-sans text-xs text-muted-foreground hover:text-foreground"
+            className="block w-full text-center font-sans text-xs text-text-low transition-colors hover:text-text-hi"
           >
             Maybe later
           </button>

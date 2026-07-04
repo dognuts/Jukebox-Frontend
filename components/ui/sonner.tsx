@@ -9,15 +9,15 @@ const Toaster = ({ ...props }: ToasterProps) => {
       className="toaster group"
       toastOptions={{
         style: {
-          background: 'oklch(0.16 0.01 280)',
+          background: 'var(--card)',
           border: '1px solid oklch(0.30 0.03 60 / 0.4)',
-          color: 'oklch(0.95 0 0)',
+          color: 'var(--foreground)',
         },
         classNames: {
-          success: '[&>svg]:text-[oklch(0.65_0.15_155)]',
-          error: '[&>svg]:text-[oklch(0.62_0.28_30)]',
-          warning: '[&>svg]:text-[oklch(0.75_0.20_60)]',
-          info: '[&>svg]:text-[oklch(0.72_0.18_250)]',
+          success: '[&>svg]:text-[color:var(--text-success)]',
+          error: '[&>svg]:text-[color:var(--text-error)]',
+          warning: '[&>svg]:text-[color:var(--text-warning)]',
+          info: '[&>svg]:text-neon-blue',
         },
       }}
       {...props}

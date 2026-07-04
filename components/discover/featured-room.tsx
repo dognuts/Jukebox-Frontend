@@ -39,15 +39,15 @@ export function FeaturedRoom({ room }: { room: Room }) {
                   width: 6 + (i % 3) * 3,
                   height: 6 + (i % 3) * 3,
                   background: i % 2 === 0
-                    ? `oklch(0.70 0.22 350 / ${0.25 + i * 0.06})`
-                    : `oklch(0.82 0.18 80 / ${0.2 + i * 0.05})`,
+                    ? `color-mix(in oklab, var(--neon-magenta) ${25 + i * 6}%, transparent)`
+                    : `color-mix(in oklab, var(--neon-amber) ${20 + i * 5}%, transparent)`,
                   animation: `bubble-float ${4 + i * 0.8}s ease-in-out infinite`,
                   animationDelay: `${i * 0.5}s`,
                 }}
               />
             ))}
             {/* Tube glow */}
-            <div className="absolute inset-0 rounded-full" style={{ background: "linear-gradient(180deg, oklch(0.70 0.22 350 / 0.05), oklch(0.82 0.18 80 / 0.08), oklch(0.70 0.22 350 / 0.05))" }} />
+            <div className="absolute inset-0 rounded-full" style={{ background: "linear-gradient(180deg, color-mix(in oklab, var(--neon-magenta) 5%, transparent), color-mix(in oklab, var(--neon-amber) 8%, transparent), color-mix(in oklab, var(--neon-magenta) 5%, transparent))" }} />
           </div>
 
           {/* Right bubble column */}
@@ -60,14 +60,14 @@ export function FeaturedRoom({ room }: { room: Room }) {
                   width: 5 + (i % 3) * 3,
                   height: 5 + (i % 3) * 3,
                   background: i % 2 === 0
-                    ? `oklch(0.72 0.18 250 / ${0.25 + i * 0.06})`
-                    : `oklch(0.82 0.18 80 / ${0.2 + i * 0.05})`,
+                    ? `color-mix(in oklab, var(--neon-blue) ${25 + i * 6}%, transparent)`
+                    : `color-mix(in oklab, var(--neon-amber) ${20 + i * 5}%, transparent)`,
                   animation: `bubble-float ${5 + i * 0.7}s ease-in-out infinite`,
                   animationDelay: `${i * 0.4 + 0.2}s`,
                 }}
               />
             ))}
-            <div className="absolute inset-0 rounded-full" style={{ background: "linear-gradient(180deg, oklch(0.72 0.18 250 / 0.05), oklch(0.82 0.18 80 / 0.08), oklch(0.72 0.18 250 / 0.05))" }} />
+            <div className="absolute inset-0 rounded-full" style={{ background: "linear-gradient(180deg, color-mix(in oklab, var(--neon-blue) 5%, transparent), color-mix(in oklab, var(--neon-amber) 8%, transparent), color-mix(in oklab, var(--neon-blue) 5%, transparent))" }} />
           </div>
 
           {/* Main content area */}
@@ -89,7 +89,7 @@ export function FeaturedRoom({ room }: { room: Room }) {
                   className="relative h-32 w-32 overflow-hidden rounded-xl sm:h-40 sm:w-40 md:h-48 md:w-48"
                   style={{
                     background: room.nowPlaying.albumGradient,
-                    boxShadow: "0 0 20px oklch(0.82 0.18 80 / 0.2), inset 0 0 30px oklch(0.10 0.01 280 / 0.3)",
+                    boxShadow: "0 0 20px color-mix(in oklab, var(--neon-amber) 20%, transparent), inset 0 0 30px oklch(0.10 0.01 280 / 0.3)",
                   }}
                 >
                   {room.coverArt && (
@@ -113,7 +113,7 @@ export function FeaturedRoom({ room }: { room: Room }) {
                           height: `${h * 24}px`,
                           background: i % 2 === 0
                             ? "oklch(0.95 0.01 80 / 0.85)"
-                            : "oklch(0.82 0.18 80 / 0.85)",
+                            : "color-mix(in oklab, var(--neon-amber) 85%, transparent)",
                           transformOrigin: "bottom",
                           animation: `visualizer-bar ${0.3 + i * 0.08}s ease-in-out infinite alternate`,
                           animationDelay: `${i * 0.05}s`,
@@ -122,7 +122,7 @@ export function FeaturedRoom({ room }: { room: Room }) {
                     ))}
                   </div>
                   {/* Neon border glow line */}
-                  <div className="absolute inset-0 rounded-xl" style={{ boxShadow: "inset 0 0 0 1px oklch(0.82 0.18 80 / 0.2)" }} />
+                  <div className="absolute inset-0 rounded-xl" style={{ boxShadow: "inset 0 0 0 1px color-mix(in oklab, var(--neon-amber) 20%, transparent)" }} />
                 </div>
               </div>
             </div>
@@ -188,8 +188,8 @@ export function FeaturedRoom({ room }: { room: Room }) {
                   size="lg"
                   className="gap-2 rounded-full font-sans text-primary-foreground"
                   style={{
-                    background: "linear-gradient(135deg, oklch(0.82 0.18 80), oklch(0.75 0.20 70))",
-                    boxShadow: "0 0 15px oklch(0.82 0.18 80 / 0.3), 0 4px 12px oklch(0.10 0.01 280 / 0.4)",
+                    background: "linear-gradient(135deg, var(--neon-amber), oklch(0.75 0.20 70))",
+                    boxShadow: "0 0 15px color-mix(in oklab, var(--neon-amber) 30%, transparent), 0 4px 12px oklch(0.10 0.01 280 / 0.4)",
                   }}
                 >
                   <Link href={`/room/${room.slug}`}>
@@ -220,8 +220,8 @@ export function FeaturedRoom({ room }: { room: Room }) {
           <div
             className="h-2"
             style={{
-              background: "linear-gradient(90deg, transparent 5%, oklch(0.72 0.18 250 / 0.5) 20%, oklch(0.82 0.18 80 / 0.6) 40%, oklch(0.70 0.22 350 / 0.6) 60%, oklch(0.82 0.18 80 / 0.5) 80%, transparent 95%)",
-              boxShadow: "0 0 12px oklch(0.82 0.18 80 / 0.2), 0 0 25px oklch(0.70 0.22 350 / 0.1)",
+              background: "linear-gradient(90deg, transparent 5%, color-mix(in oklab, var(--neon-blue) 50%, transparent) 20%, color-mix(in oklab, var(--neon-amber) 60%, transparent) 40%, color-mix(in oklab, var(--neon-magenta) 60%, transparent) 60%, color-mix(in oklab, var(--neon-amber) 50%, transparent) 80%, transparent 95%)",
+              boxShadow: "0 0 12px color-mix(in oklab, var(--neon-amber) 20%, transparent), 0 0 25px color-mix(in oklab, var(--neon-magenta) 10%, transparent)",
             }}
           />
         </div>
@@ -231,7 +231,7 @@ export function FeaturedRoom({ room }: { room: Room }) {
       <div
         className="absolute -bottom-3 left-10 right-10 h-6 rounded-full"
         style={{
-          background: "radial-gradient(ellipse, oklch(0.82 0.18 80 / 0.12), transparent 70%)",
+          background: "radial-gradient(ellipse, color-mix(in oklab, var(--neon-amber) 12%, transparent), transparent 70%)",
           filter: "blur(6px)",
         }}
       />

@@ -5,6 +5,8 @@ import { ArrowUpRight } from "lucide-react"
 import { SmartImage } from "@/components/smart-image"
 import { type Room, type ChatMessage, formatListenerCount } from "./types"
 
+// Categorical avatar palette — intentionally raw hex (hashed per
+// username, not semantic tokens); the last entry matches --brand-amber.
 const AVATAR_COLORS = [
   "#c06ad8",
   "#5dca87",
@@ -56,9 +58,9 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
       style={{
         background:
           "linear-gradient(135deg, rgba(40,22,10,0.5) 0%, rgba(20,15,25,0.82) 100%)",
-        border: "0.5px solid rgba(232,154,60,0.22)",
+        border: "0.5px solid color-mix(in oklab, var(--brand-amber) 22%, transparent)",
         boxShadow:
-          "0 30px 60px -20px rgba(0,0,0,0.5), 0 0 80px -30px rgba(232,154,60,0.18)",
+          "0 30px 60px -20px rgba(0,0,0,0.5), 0 0 80px -30px color-mix(in oklab, var(--brand-amber) 18%, transparent)",
       }}
     >
       <div
@@ -76,7 +78,7 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
             aspectRatio: "1 / 1",
             background: coverBackground,
             boxShadow:
-              "0 0 40px rgba(232,154,60,0.12), 0 20px 40px -10px rgba(0,0,0,0.5)",
+              "0 0 40px color-mix(in oklab, var(--brand-amber) 12%, transparent), 0 20px 40px -10px rgba(0,0,0,0.5)",
           }}
         >
           {room.coverArt && (
@@ -97,7 +99,7 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
             className="absolute inset-0 rounded-[inherit]"
             style={{
               boxShadow:
-                "inset 0 0 0 1px rgba(232,154,60,0.18), inset 0 0 50px rgba(0,0,0,0.3)",
+                "inset 0 0 0 1px color-mix(in oklab, var(--brand-amber) 18%, transparent), inset 0 0 50px rgba(0,0,0,0.3)",
             }}
           />
           {/* Pulsing LIVE dot at the bottom-left of the cover */}
@@ -116,8 +118,8 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
               aria-hidden="true"
               className="inline-block h-1.5 w-1.5 rounded-full"
               style={{
-                background: "#e89a3c",
-                boxShadow: "0 0 8px rgba(232,154,60,0.8)",
+                background: "var(--brand-amber)",
+                boxShadow: "0 0 8px color-mix(in oklab, var(--brand-amber) 80%, transparent)",
                 animation: "pulse 2s ease-in-out infinite",
               }}
             />
@@ -126,7 +128,7 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
               style={{
                 fontSize: "var(--fs-meta)",
                 letterSpacing: "0.18em",
-                color: "#f4b25c",
+                color: "var(--brand-amber-bright)",
                 fontWeight: 600,
               }}
             >
@@ -146,9 +148,9 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
                 paddingBlock: "4px",
                 fontSize: "var(--fs-meta)",
                 background:
-                  "linear-gradient(135deg, #f4b25c 0%, #e89a3c 100%)",
-                color: "#0d0b10",
-                boxShadow: "0 0 18px rgba(232,154,60,0.35)",
+                  "linear-gradient(135deg, var(--brand-amber-bright) 0%, var(--brand-amber) 100%)",
+                color: "var(--ink)",
+                boxShadow: "0 0 18px color-mix(in oklab, var(--brand-amber) 35%, transparent)",
               }}
             >
               Featured
@@ -172,7 +174,7 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
               fontSize: "var(--fs-hero)",
               color: "#f0ebe0",
               fontStyle: "italic",
-              textShadow: "0 0 40px rgba(232,154,60,0.14)",
+              textShadow: "0 0 40px color-mix(in oklab, var(--brand-amber) 14%, transparent)",
             }}
           >
             {room.name}
@@ -183,11 +185,11 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
             className="mt-2"
             style={{
               fontSize: "var(--fs-small)",
-              color: "rgba(232,230,234,0.5)",
+              color: "var(--text-low)",
             }}
           >
             Hosted by{" "}
-            <span style={{ color: "#e89a3c", fontWeight: 600 }}>
+            <span style={{ color: "var(--brand-amber)", fontWeight: 600 }}>
               {room.djName}
             </span>
           </div>
@@ -201,7 +203,7 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
               paddingInline: "var(--space-md)",
               paddingBlock: "var(--space-sm)",
               background: "rgba(0,0,0,0.35)",
-              border: "0.5px solid rgba(255,255,255,0.06)",
+              border: "0.5px solid var(--hairline)",
             }}
           >
             <div
@@ -211,8 +213,8 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
               <span
                 className="inline-block h-1.5 w-1.5 rounded-full"
                 style={{
-                  background: "#e89a3c",
-                  boxShadow: "0 0 8px rgba(232,154,60,0.8)",
+                  background: "var(--brand-amber)",
+                  boxShadow: "0 0 8px color-mix(in oklab, var(--brand-amber) 80%, transparent)",
                 }}
               />
               <span
@@ -220,7 +222,7 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
                 style={{
                   fontSize: "var(--fs-meta)",
                   letterSpacing: "0.2em",
-                  color: "rgba(232,154,60,0.8)",
+                  color: "color-mix(in oklab, var(--brand-amber) 80%, transparent)",
                 }}
               >
                 Now
@@ -231,7 +233,7 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
                 className="truncate font-semibold"
                 style={{
                   fontSize: "var(--fs-body)",
-                  color: "#e8e6ea",
+                  color: "var(--ink-foreground)",
                 }}
               >
                 {room.nowPlaying.title}
@@ -240,7 +242,7 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
                 className="truncate"
                 style={{
                   fontSize: "var(--fs-small)",
-                  color: "rgba(232,230,234,0.5)",
+                  color: "var(--text-low)",
                 }}
               >
                 {room.nowPlaying.artist}
@@ -256,7 +258,7 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
             <div
               style={{
                 fontSize: "var(--fs-small)",
-                color: "rgba(232,230,234,0.6)",
+                color: "var(--text-low)",
               }}
             >
               <span
@@ -278,10 +280,10 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
                 paddingBlock: "var(--space-sm)",
                 fontSize: "var(--fs-small)",
                 background:
-                  "linear-gradient(135deg, #f4b25c 0%, #e89a3c 100%)",
-                color: "#0d0b10",
+                  "linear-gradient(135deg, var(--brand-amber-bright) 0%, var(--brand-amber) 100%)",
+                color: "var(--ink)",
                 boxShadow:
-                  "0 0 30px rgba(232,154,60,0.35), 0 8px 20px -4px rgba(0,0,0,0.4)",
+                  "0 0 30px color-mix(in oklab, var(--brand-amber) 35%, transparent), 0 8px 20px -4px rgba(0,0,0,0.4)",
               }}
             >
               Tune in
@@ -322,7 +324,7 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
                     height: "20px",
                     fontSize: "9px",
                     background: color,
-                    color: "#0d0b10",
+                    color: "var(--ink)",
                   }}
                 >
                   {initials(msg.username)}
@@ -331,7 +333,7 @@ export function FeaturedRoomCard({ room, chatPreview }: FeaturedRoomCardProps) {
                   className="truncate"
                   style={{
                     fontSize: "var(--fs-small)",
-                    color: "rgba(232,230,234,0.55)",
+                    color: "var(--text-low)",
                   }}
                 >
                   <span className="font-semibold" style={{ color }}>

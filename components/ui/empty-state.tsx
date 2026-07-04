@@ -1,14 +1,24 @@
 "use client"
 
-import { Radio, Search, Music, Headphones } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import Link from "next/link"
+import { Radio, Search, Headphones } from "lucide-react"
 
+// Canonical empty state for every surface: quiet hairline card in the
+// redesign language (ink ground, rgba-white fill, restrained type).
+// Two densities:
+// - default: icon + title + description + optional action, for page-level
+//   empties (homepage "no rooms", search results, admin lists)
+// - compact: single-line quiet box, for section-level empties inside an
+//   already-labelled container (grids, queues, admin sections)
 interface EmptyStateProps {
   variant?: "no-results" | "no-rooms" | "offline"
   title?: string
   description?: string
   actionLabel?: string
+  // Button action (onAction) or link action (actionHref) — pass one.
   onAction?: () => void
+  actionHref?: string
+  compact?: boolean
 }
 
 export function EmptyState({
@@ -17,6 +27,8 @@ export function EmptyState({
   description,
   actionLabel,
   onAction,
+  actionHref,
+  compact = false,
 }: EmptyStateProps) {
   const defaults = {
     "no-results": {
@@ -39,53 +51,94 @@ export function EmptyState({
   const config = defaults[variant]
   const Icon = config.icon
 
-  return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-      {/* Icon with neon glow */}
+  // Action pill — amber tint on the quiet card, matching the redesign's
+  // accent treatment (e.g. the homepage offline banner).
+  const actionStyle: React.CSSProperties = {
+    background: "rgba(232,154,60,0.1)",
+    border: "0.5px solid rgba(232,154,60,0.25)",
+    color: "var(--brand-amber)",
+  }
+  const action =
+    actionLabel && actionHref ? (
+      <Link
+        href={actionHref}
+        className="rounded-full px-4 py-1.5 font-medium transition-opacity hover:opacity-80"
+        style={{ ...actionStyle, fontSize: "var(--fs-small)" }}
+      >
+        {actionLabel}
+      </Link>
+    ) : actionLabel && onAction ? (
+      <button
+        type="button"
+        onClick={onAction}
+        className="rounded-full px-4 py-1.5 font-medium transition-opacity hover:opacity-80"
+        style={{ ...actionStyle, fontSize: "var(--fs-small)" }}
+      >
+        {actionLabel}
+      </button>
+    ) : null
+
+  if (compact) {
+    return (
       <div
-        className="mb-6 flex h-20 w-20 items-center justify-center rounded-full"
+        className="flex flex-col items-center justify-center rounded-[14px] text-center"
         style={{
-          background: "oklch(0.16 0.02 280)",
-          border: "1px solid oklch(0.30 0.03 60 / 0.3)",
-          boxShadow: "0 0 30px oklch(0.82 0.18 80 / 0.1), inset 0 0 20px oklch(0.82 0.18 80 / 0.05)",
+          gap: "var(--space-sm)",
+          paddingInline: "var(--space-md)",
+          paddingBlock: "var(--space-lg)",
+          background: "rgba(255,255,255,0.02)",
+          border: "0.5px solid var(--hairline)",
+        }}
+      >
+        <p style={{ color: "var(--text-low)", fontSize: "var(--fs-body)" }}>
+          {title || config.title}
+        </p>
+        {action}
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="flex flex-col items-center justify-center rounded-[14px] text-center"
+      style={{
+        paddingInline: "var(--space-md)",
+        paddingBlock: "var(--space-xl)",
+        background: "rgba(255,255,255,0.02)",
+        border: "0.5px solid var(--hairline)",
+      }}
+    >
+      <div
+        className="flex h-12 w-12 items-center justify-center rounded-full"
+        style={{
+          marginBottom: "var(--space-md)",
+          background: "rgba(255,255,255,0.04)",
+          border: "0.5px solid var(--hairline-strong)",
         }}
       >
         <Icon
-          className="h-10 w-10"
-          style={{
-            color: "oklch(0.65 0.12 80)",
-            filter: "drop-shadow(0 0 8px oklch(0.82 0.18 80 / 0.4))",
-          }}
+          className="h-5 w-5"
+          style={{ color: "rgba(232,230,234,0.4)" }}
+          aria-hidden="true"
         />
       </div>
 
-      {/* Text */}
-      <h3 className="font-sans text-xl font-semibold text-foreground mb-2">
+      <h3 className="type-h2" style={{ color: "var(--ink-foreground)" }}>
         {title || config.title}
       </h3>
-      <p className="font-sans text-sm text-muted-foreground max-w-sm leading-relaxed">
+      <p
+        className="max-w-sm"
+        style={{
+          marginTop: "var(--space-2xs)",
+          color: "var(--text-low)",
+          fontSize: "var(--fs-small)",
+          lineHeight: 1.5,
+        }}
+      >
         {description || config.description}
       </p>
 
-      {/* Optional action button */}
-      {actionLabel && onAction && (
-        <Button
-          onClick={onAction}
-          variant="outline"
-          className="mt-6 rounded-full"
-        >
-          {actionLabel}
-        </Button>
-      )}
-
-      {/* Decorative music notes */}
-      <div className="mt-8 flex items-center gap-3 opacity-30">
-        <Music className="h-4 w-4 text-muted-foreground" />
-        <div className="h-px w-16 bg-border" />
-        <Music className="h-4 w-4 text-muted-foreground" />
-        <div className="h-px w-16 bg-border" />
-        <Music className="h-4 w-4 text-muted-foreground" />
-      </div>
+      {action && <div style={{ marginTop: "var(--space-md)" }}>{action}</div>}
     </div>
   )
 }

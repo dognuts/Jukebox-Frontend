@@ -60,13 +60,16 @@ export function VinylSpinner({
       className="relative select-none"
       style={{ width: platSize, height: platSize }}
     >
-      {/* Platter base / turntable mat */}
+      {/* Platter base / turntable mat. The near-black/chrome oklch and
+          rgba literals throughout this component are intentional physical
+          rendering shades (vinyl, grooves, tonearm metal) with no token
+          counterpart. */}
       <div
         className="absolute inset-0 rounded-full"
         style={{
           background: "radial-gradient(circle, oklch(0.16 0.01 280) 48%, oklch(0.13 0.008 280) 50%, oklch(0.10 0.006 280) 100%)",
           boxShadow: isPlaying
-            ? "0 0 40px oklch(0.82 0.18 80 / 0.15), inset 0 0 20px oklch(0 0 0 / 0.4)"
+            ? "0 0 40px color-mix(in oklab, var(--neon-amber) 15%, transparent), inset 0 0 20px oklch(0 0 0 / 0.4)"
             : "inset 0 0 20px oklch(0 0 0 / 0.4)",
           transition: "box-shadow 0.5s ease",
         }}

@@ -165,20 +165,6 @@ export function HomeClient({
   // accumulating stale duplicates.
   useEffect(() => {
     registerShortcut({
-      key: "/",
-      description: "Focus search",
-      action: () => {
-        const searchInput = document.querySelector(
-          'input[type="text"][placeholder*="search" i]'
-        ) as HTMLInputElement
-        if (searchInput) {
-          searchInput.focus()
-          toast.info("Type to search rooms")
-        }
-      },
-    })
-
-    registerShortcut({
       key: "?",
       shift: true,
       description: "Show keyboard shortcuts",
@@ -349,6 +335,8 @@ export function HomeClient({
                 variant="no-rooms"
                 title="No rooms live"
                 description="All DJs are taking a break. Check back soon or start your own session!"
+                actionLabel="Start a session"
+                actionHref="/create"
               />
             </div>
           )}

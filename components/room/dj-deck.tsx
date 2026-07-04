@@ -163,7 +163,7 @@ export const DjDeck = memo(function DjDeck({
       className="flex min-h-0 flex-1 flex-col md:min-h-[auto] md:flex-initial md:border-l"
       style={{
         background: "rgba(255,255,255,0.012)",
-        borderColor: "rgba(255,255,255,0.06)",
+        borderColor: "var(--hairline)",
       }}
     >
       {/* Deck header */}
@@ -173,7 +173,7 @@ export const DjDeck = memo(function DjDeck({
           paddingInline: "var(--space-md)",
           paddingBlock: "var(--space-sm)",
           gap: "var(--space-sm)",
-          borderColor: "rgba(255,255,255,0.06)",
+          borderColor: "var(--hairline)",
         }}
       >
         <div
@@ -181,8 +181,8 @@ export const DjDeck = memo(function DjDeck({
           style={{
             width: "clamp(26px, 2.5vw, 32px)",
             height: "clamp(26px, 2.5vw, 32px)",
-            background: "#e89a3c",
-            color: "#0d0b10",
+            background: "var(--brand-amber)",
+            color: "var(--ink)",
             fontSize: "var(--fs-meta)",
           }}
         >
@@ -191,14 +191,14 @@ export const DjDeck = memo(function DjDeck({
         <div className="min-w-0 flex-1">
           <div
             className="truncate font-semibold"
-            style={{ color: "#e8e6ea", fontSize: "var(--fs-small)" }}
+            style={{ color: "var(--ink-foreground)", fontSize: "var(--fs-small)" }}
           >
             {djName}
           </div>
           <div
             className="uppercase tracking-[0.18em]"
             style={{
-              color: "rgba(232,154,60,0.65)",
+              color: "color-mix(in oklab, var(--brand-amber) 65%, transparent)",
               fontSize: "var(--fs-meta)",
             }}
           >
@@ -212,8 +212,8 @@ export const DjDeck = memo(function DjDeck({
             paddingBlock: "3px",
             fontSize: "var(--fs-meta)",
             background: "rgba(255,255,255,0.04)",
-            border: "0.5px solid rgba(255,255,255,0.08)",
-            color: "rgba(232,230,234,0.7)",
+            border: "0.5px solid var(--hairline-strong)",
+            color: "var(--text-mid)",
           }}
         >
           <Users className="h-3 w-3" />
@@ -239,9 +239,9 @@ export const DjDeck = memo(function DjDeck({
               style={{
                 width: "44px",
                 height: "44px",
-                background: "#e89a3c",
-                color: "#0d0b10",
-                boxShadow: "0 6px 18px -4px rgba(232,154,60,0.5)",
+                background: "var(--brand-amber)",
+                color: "var(--ink)",
+                boxShadow: "0 6px 18px -4px color-mix(in oklab, var(--brand-amber) 50%, transparent)",
               }}
               aria-label={audioPlaying ? "Pause" : "Play"}
             >
@@ -256,7 +256,7 @@ export const DjDeck = memo(function DjDeck({
                 height: "36px",
                 background: "rgba(255,255,255,0.04)",
                 border: "0.5px solid rgba(255,255,255,0.1)",
-                color: "rgba(232,230,234,0.7)",
+                color: "var(--text-mid)",
               }}
               aria-label="Skip"
             >
@@ -266,7 +266,7 @@ export const DjDeck = memo(function DjDeck({
               className="ml-auto tabular-nums"
               style={{
                 fontSize: "var(--fs-small)",
-                color: "rgba(232,230,234,0.6)",
+                color: "var(--text-low)",
               }}
             >
               {audioPlaying ? "Playing" : "Paused"}
@@ -274,7 +274,9 @@ export const DjDeck = memo(function DjDeck({
           </div>
         </Section>
 
-        {/* Mic */}
+        {/* Mic — the coral (#e8734a/#ff8c66/#ffa27a/#ff5a3a) and green
+            (#5dca87) accents below are the deck's intentional live/danger
+            and approve colors; they have no token equivalent. */}
         <Section label="Microphone">
           <button
             type="button"
@@ -284,11 +286,11 @@ export const DjDeck = memo(function DjDeck({
               paddingInline: "var(--space-md)",
               paddingBlock: "var(--space-sm)",
               fontSize: "var(--fs-small)",
-              background: micActive ? "rgba(232,115,74,0.2)" : "rgba(232,154,60,0.12)",
+              background: micActive ? "rgba(232,115,74,0.2)" : "color-mix(in oklab, var(--brand-amber) 12%, transparent)",
               border: micActive
                 ? "0.5px solid rgba(232,115,74,0.55)"
-                : "0.5px solid rgba(232,154,60,0.4)",
-              color: micActive ? "#ffa27a" : "#f4b25c",
+                : "0.5px solid color-mix(in oklab, var(--brand-amber) 40%, transparent)",
+              color: micActive ? "#ffa27a" : "var(--brand-amber-bright)",
             }}
           >
             {micActive ? (
@@ -341,12 +343,12 @@ export const DjDeck = memo(function DjDeck({
                     paddingBlock: "var(--space-sm)",
                     fontSize: "var(--fs-meta)",
                     background: active
-                      ? "rgba(232,154,60,0.14)"
+                      ? "color-mix(in oklab, var(--brand-amber) 14%, transparent)"
                       : "rgba(255,255,255,0.04)",
                     border: active
-                      ? "0.5px solid rgba(232,154,60,0.4)"
-                      : "0.5px solid rgba(255,255,255,0.08)",
-                    color: active ? "#f4b25c" : "rgba(232,230,234,0.55)",
+                      ? "0.5px solid color-mix(in oklab, var(--brand-amber) 40%, transparent)"
+                      : "0.5px solid var(--hairline-strong)",
+                    color: active ? "var(--brand-amber-bright)" : "var(--text-low)",
                     fontWeight: active ? 600 : 500,
                   }}
                 >
@@ -370,14 +372,14 @@ export const DjDeck = memo(function DjDeck({
               }}
               placeholder="Paste URL..."
               aria-label="Track URL"
-              className="neon-focus rounded-lg placeholder:text-[rgba(232,230,234,0.55)]"
+              className="neon-focus rounded-lg placeholder:text-text-low"
               style={{
                 paddingInline: "var(--space-sm)",
                 paddingBlock: "var(--space-sm)",
                 fontSize: "var(--fs-small)",
                 background: "rgba(0,0,0,0.3)",
                 border: "0.5px solid rgba(255,255,255,0.1)",
-                color: "#e8e6ea",
+                color: "var(--ink-foreground)",
               }}
             />
             <button
@@ -388,8 +390,8 @@ export const DjDeck = memo(function DjDeck({
               style={{
                 paddingBlock: "var(--space-sm)",
                 fontSize: "var(--fs-small)",
-                background: "#e89a3c",
-                color: "#0d0b10",
+                background: "var(--brand-amber)",
+                color: "var(--ink)",
               }}
             >
               {addLoading ? "Adding..." : "Add to queue"}
@@ -438,7 +440,7 @@ export const DjDeck = memo(function DjDeck({
               className="mt-2 flex justify-between"
               style={{
                 fontSize: "var(--fs-meta)",
-                color: "rgba(232,230,234,0.6)",
+                color: "var(--text-low)",
               }}
             >
               <span className="flex items-center gap-1">
@@ -464,7 +466,7 @@ export const DjDeck = memo(function DjDeck({
               style={{
                 background: "rgba(255,255,255,0.02)",
                 border: "0.5px dashed rgba(255,255,255,0.1)",
-                color: "rgba(232,230,234,0.55)",
+                color: "var(--text-low)",
                 fontSize: "var(--fs-small)",
               }}
             >
@@ -481,7 +483,7 @@ export const DjDeck = memo(function DjDeck({
                     paddingInline: "var(--space-sm)",
                     paddingBlock: "var(--space-sm)",
                     background: "rgba(255,255,255,0.03)",
-                    border: "0.5px solid rgba(255,255,255,0.08)",
+                    border: "0.5px solid var(--hairline-strong)",
                   }}
                 >
                   <div
@@ -496,14 +498,14 @@ export const DjDeck = memo(function DjDeck({
                   <div className="min-w-0 flex-1">
                     <div
                       className="truncate font-medium"
-                      style={{ color: "#e8e6ea", fontSize: "var(--fs-small)" }}
+                      style={{ color: "var(--ink-foreground)", fontSize: "var(--fs-small)" }}
                     >
                       {req.track?.title || "Unknown"}
                     </div>
                     <div
                       className="truncate"
                       style={{
-                        color: "rgba(232,230,234,0.6)",
+                        color: "var(--text-low)",
                         fontSize: "var(--fs-meta)",
                       }}
                     >
@@ -551,7 +553,7 @@ export const DjDeck = memo(function DjDeck({
           className="border-t"
           style={{
             padding: "var(--space-md)",
-            borderColor: "rgba(255,255,255,0.06)",
+            borderColor: "var(--hairline)",
           }}
         >
           {showEndConfirm ? (
@@ -643,7 +645,7 @@ function Section({
         className="uppercase tracking-[0.16em]"
         style={{
           fontSize: "var(--fs-meta)",
-          color: "rgba(232,230,234,0.55)",
+          color: "var(--text-low)",
         }}
       >
         {label}

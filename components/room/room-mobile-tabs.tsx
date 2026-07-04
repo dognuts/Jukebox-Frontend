@@ -51,8 +51,8 @@ export const RoomMobileTabs = memo(function RoomMobileTabs({
     <div
       className="shrink-0 md:hidden"
       style={{
-        background: "rgba(13,11,16,0.95)",
-        borderBottom: "0.5px solid rgba(255,255,255,0.06)",
+        background: "color-mix(in oklab, var(--ink) 95%, transparent)",
+        borderBottom: "0.5px solid var(--hairline)",
       }}
     >
       {/* Compact now-playing strip — keeps the current track in view
@@ -72,12 +72,12 @@ export const RoomMobileTabs = memo(function RoomMobileTabs({
           <span
             aria-hidden="true"
             className="h-[6px] w-[6px] shrink-0 animate-pulse rounded-full motion-reduce:animate-none"
-            style={{ background: "#e89a3c" }}
+            style={{ background: "var(--brand-amber)" }}
           />
           <span
             className="min-w-0 truncate"
             style={{
-              color: "rgba(232,230,234,0.7)",
+              color: "var(--text-mid)",
               fontSize: "var(--fs-small)",
             }}
           >
@@ -116,12 +116,12 @@ export const RoomMobileTabs = memo(function RoomMobileTabs({
                 paddingBlock: "var(--space-sm)",
                 fontSize: "var(--fs-small)",
                 background: active
-                  ? "rgba(232,154,60,0.14)"
+                  ? "color-mix(in oklab, var(--brand-amber) 14%, transparent)"
                   : "rgba(255,255,255,0.04)",
                 border: active
-                  ? "0.5px solid rgba(232,154,60,0.4)"
-                  : "0.5px solid rgba(255,255,255,0.08)",
-                color: active ? "#f4b25c" : "rgba(232,230,234,0.55)",
+                  ? "0.5px solid color-mix(in oklab, var(--brand-amber) 40%, transparent)"
+                  : "0.5px solid var(--hairline-strong)",
+                color: active ? "var(--brand-amber-bright)" : "var(--text-low)",
                 fontWeight: active ? 600 : 500,
               }}
             >
@@ -130,8 +130,8 @@ export const RoomMobileTabs = memo(function RoomMobileTabs({
                 <span
                   className="flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-bold tabular-nums"
                   style={{
-                    background: "#e89a3c",
-                    color: "#0d0b10",
+                    background: "var(--brand-amber)",
+                    color: "var(--ink)",
                     fontSize: "var(--fs-meta)",
                   }}
                 >

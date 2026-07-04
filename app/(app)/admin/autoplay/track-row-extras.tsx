@@ -42,21 +42,27 @@ export function BulkActionButton<TrackT extends TrackWithBulkExtras>({
   const handleRetry = async () => {
     if (!track._searchQuery) return
     setRetrying(true)
-    const res = await adminSearchTrack(track._searchQuery)
-    setRetrying(false)
-    if (res.ok) {
-      onReplace({
-        ...track,
-        title: res.primary.title,
-        artist: res.primary.artist,
-        duration: res.primary.duration,
-        source: res.primary.source,
-        sourceUrl: res.primary.sourceUrl,
-        _searchAlternatives: res.alternatives,
-      })
+    try {
+      const res = await adminSearchTrack(track._searchQuery)
+      if (res.ok) {
+        onReplace({
+          ...track,
+          title: res.primary.title,
+          artist: res.primary.artist,
+          duration: res.primary.duration,
+          source: res.primary.source,
+          sourceUrl: res.primary.sourceUrl,
+          _searchAlternatives: res.alternatives,
+        })
+      }
+      // On failure, leave the row in its failed state — admin can retry again
+      // or remove it manually with the existing Trash button.
+    } catch {
+      // adminSearchTrack rejects on network-level fetch failure — treat it
+      // like any other failed search and leave the row retryable.
+    } finally {
+      setRetrying(false)
     }
-    // On failure, leave the row in its failed state — admin can retry again
-    // or remove it manually with the existing Trash button.
   }
 
   if (isFailed) {
@@ -64,13 +70,13 @@ export function BulkActionButton<TrackT extends TrackWithBulkExtras>({
       <button
         onClick={handleRetry}
         disabled={retrying}
-        className="p-1 rounded hover:bg-amber-500/20 disabled:opacity-50"
+        className="p-1 rounded hover:bg-white/[0.06] disabled:opacity-50"
         title={`Retry search: ${track._searchQuery}`}
       >
         {retrying ? (
-          <Loader2 className="h-3 w-3 animate-spin" style={{ color: "oklch(0.70 0.18 60)" }} />
+          <Loader2 className="h-3 w-3 animate-spin" style={{ color: "var(--brand-amber)" }} />
         ) : (
-          <RotateCw className="h-3 w-3" style={{ color: "oklch(0.70 0.18 60)" }} />
+          <RotateCw className="h-3 w-3" style={{ color: "var(--brand-amber)" }} />
         )}
       </button>
     )
@@ -126,21 +132,27 @@ export function BulkAltsPanel<TrackT extends TrackWithBulkExtras>({
   const handleSearchAgain = async () => {
     if (!track._searchQuery) return
     setResearching(true)
-    const res = await adminSearchTrack(track._searchQuery)
-    setResearching(false)
-    if (res.ok) {
-      // Fresh batch = treat the new "primary" as the current pick and keep
-      // the rest as alternatives for further iteration.
-      setAlts(res.alternatives)
-      onReplace({
-        ...track,
-        title: res.primary.title,
-        artist: res.primary.artist,
-        duration: res.primary.duration,
-        source: res.primary.source,
-        sourceUrl: res.primary.sourceUrl,
-        _searchAlternatives: res.alternatives,
-      })
+    try {
+      const res = await adminSearchTrack(track._searchQuery)
+      if (res.ok) {
+        // Fresh batch = treat the new "primary" as the current pick and keep
+        // the rest as alternatives for further iteration.
+        setAlts(res.alternatives)
+        onReplace({
+          ...track,
+          title: res.primary.title,
+          artist: res.primary.artist,
+          duration: res.primary.duration,
+          source: res.primary.source,
+          sourceUrl: res.primary.sourceUrl,
+          _searchAlternatives: res.alternatives,
+        })
+      }
+    } catch {
+      // adminSearchTrack rejects on network-level fetch failure — keep the
+      // current pick and alternatives so the admin can just try again.
+    } finally {
+      setResearching(false)
     }
   }
 
@@ -148,8 +160,8 @@ export function BulkAltsPanel<TrackT extends TrackWithBulkExtras>({
     <div
       className="mt-1.5 ml-7 rounded-md p-2"
       style={{
-        background: "oklch(0.14 0.02 280 / 0.7)",
-        border: "1px solid oklch(0.25 0.04 280 / 0.5)",
+        background: "rgba(255,255,255,0.03)",
+        border: "0.5px solid var(--hairline)",
       }}
     >
       <div className="mb-1.5 flex items-center justify-between">

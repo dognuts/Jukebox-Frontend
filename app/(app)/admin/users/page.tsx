@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Navbar } from "@/components/layout/navbar"
+import { EmptyState } from "@/components/ui/empty-state"
 import { useAuth } from "@/lib/auth-context"
 import { authRequest } from "@/lib/api"
 
@@ -136,11 +137,15 @@ export default function AdminUsersPage() {
             </Link>
             <ChevronRight className="h-3 w-3 text-muted-foreground/50" />
             <div className="flex items-center gap-2">
-              <Users className="h-5 w-5" style={{ color: "oklch(0.72 0.18 250)" }} />
-              <h1 className="font-sans text-xl font-bold text-foreground">User Management</h1>
+              <Users className="h-5 w-5" style={{ color: "var(--brand-amber)" }} />
+              <h1 className="type-display" style={{ color: "var(--ink-foreground)" }}>User Management</h1>
             </div>
           </div>
-          <Badge variant="outline" className="font-mono text-xs">
+          <Badge
+            variant="outline"
+            className="font-mono text-xs"
+            style={{ borderColor: "var(--hairline-strong)", color: "var(--text-low)" }}
+          >
             {users.length} users
           </Badge>
         </div>
@@ -167,10 +172,10 @@ export default function AdminUsersPage() {
           {/* User List */}
           <div className={`flex-1 ${selectedUser ? "hidden lg:block lg:max-w-sm" : ""}`}>
             {users.length === 0 && searched ? (
-              <div className="text-center py-12">
-                <Users className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-                <p className="font-sans text-sm text-muted-foreground">No users found</p>
-              </div>
+              <EmptyState
+                title="No users found"
+                description="Try a different email, display name, or stage name."
+              />
             ) : (
               <div className="space-y-1">
                 {users.map((u) => (
@@ -183,7 +188,7 @@ export default function AdminUsersPage() {
                   >
                     <div
                       className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-                      style={{ background: u.avatarColor, color: "oklch(0.10 0.01 280)" }}
+                      style={{ background: u.avatarColor, color: "var(--ink)" }}
                     >
                       {u.displayName?.[0]?.toUpperCase() || "?"}
                     </div>
@@ -192,9 +197,9 @@ export default function AdminUsersPage() {
                         <span className="truncate font-sans text-sm font-medium text-foreground">
                           {u.displayName || u.email}
                         </span>
-                        {u.isAdmin && <Shield className="h-3 w-3 shrink-0" style={{ color: "oklch(0.65 0.20 30)" }} />}
-                        {u.isPlus && <Crown className="h-3 w-3 shrink-0" style={{ color: "oklch(0.72 0.18 270)" }} />}
-                        {u.isBanned && <Ban className="h-3 w-3 shrink-0" style={{ color: "oklch(0.60 0.20 25)" }} />}
+                        {u.isAdmin && <Shield className="h-3 w-3 shrink-0" style={{ color: "var(--brand-amber)" }} />}
+                        {u.isPlus && <Crown className="h-3 w-3 shrink-0" style={{ color: "var(--brand-purple)" }} />}
+                        {u.isBanned && <Ban className="h-3 w-3 shrink-0" style={{ color: "var(--text-error)" }} />}
                       </div>
                       <span className="truncate font-sans text-[10px] text-muted-foreground">{u.email}</span>
                     </div>
@@ -207,8 +212,8 @@ export default function AdminUsersPage() {
           {/* User Detail Panel */}
           {selectedUser && (
             <div
-              className="flex-1 rounded-2xl p-5"
-              style={{ background: "oklch(0.13 0.015 280 / 0.6)", border: "1px solid oklch(0.25 0.02 280 / 0.4)" }}
+              className="flex-1 rounded-[14px] p-5"
+              style={{ background: "rgba(255,255,255,0.02)", border: "0.5px solid var(--hairline)" }}
             >
               {/* Close on mobile */}
               <button onClick={() => setSelectedUser(null)} className="mb-3 lg:hidden flex items-center gap-1 font-sans text-xs text-muted-foreground">
@@ -219,7 +224,7 @@ export default function AdminUsersPage() {
               <div className="flex items-center gap-3 mb-5">
                 <div
                   className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-lg font-bold"
-                  style={{ background: selectedUser.avatarColor, color: "oklch(0.10 0.01 280)" }}
+                  style={{ background: selectedUser.avatarColor, color: "var(--ink)" }}
                 >
                   {selectedUser.displayName?.[0]?.toUpperCase() || "?"}
                 </div>
@@ -236,8 +241,8 @@ export default function AdminUsersPage() {
               <div className="grid grid-cols-2 gap-3 mb-5">
                 <InfoRow label="Email" value={selectedUser.email} icon={<Mail className="h-3 w-3" />} />
                 <InfoRow label="Verified" value={selectedUser.emailVerified ? "Yes" : "No"}
-                  icon={selectedUser.emailVerified ? <CheckCircle className="h-3 w-3" style={{ color: "oklch(0.65 0.18 150)" }} /> : <XCircle className="h-3 w-3" style={{ color: "oklch(0.65 0.15 25)" }} />} />
-                <InfoRow label="Neon Balance" value={selectedUser.neonBalance.toLocaleString()} icon={<Zap className="h-3 w-3" style={{ color: "oklch(0.72 0.18 195)" }} />} />
+                  icon={selectedUser.emailVerified ? <CheckCircle className="h-3 w-3" style={{ color: "var(--text-success)" }} /> : <XCircle className="h-3 w-3" style={{ color: "var(--text-error)" }} />} />
+                <InfoRow label="Neon Balance" value={selectedUser.neonBalance.toLocaleString()} icon={<Zap className="h-3 w-3" style={{ color: "var(--brand-cyan)" }} />} />
                 <InfoRow label="Joined" value={new Date(selectedUser.createdAt).toLocaleDateString()} />
                 <InfoRow label="Location" value={[selectedUser.city, selectedUser.region, selectedUser.country].filter(Boolean).join(", ") || "Unknown"} />
                 <InfoRow label="Bio" value={selectedUser.bio || "None"} />
@@ -245,22 +250,22 @@ export default function AdminUsersPage() {
 
               {/* Status badges */}
               <div className="flex flex-wrap gap-2 mb-5">
-                {selectedUser.isAdmin && <Badge style={{ background: "oklch(0.65 0.20 30 / 0.15)", color: "oklch(0.65 0.20 30)", border: "1px solid oklch(0.65 0.20 30 / 0.3)" }}>Admin</Badge>}
-                {selectedUser.isPlus && <Badge style={{ background: "oklch(0.55 0.22 270 / 0.15)", color: "oklch(0.72 0.18 270)", border: "1px solid oklch(0.55 0.22 270 / 0.3)" }}>Plus</Badge>}
-                {selectedUser.isBanned && <Badge style={{ background: "oklch(0.60 0.20 25 / 0.15)", color: "oklch(0.60 0.20 25)", border: "1px solid oklch(0.60 0.20 25 / 0.3)" }}>Banned</Badge>}
-                {!selectedUser.emailVerified && <Badge variant="outline" className="text-muted-foreground">Unverified</Badge>}
+                {selectedUser.isAdmin && <Badge style={{ background: "rgba(232,154,60,0.1)", color: "var(--brand-amber)", border: "0.5px solid rgba(232,154,60,0.25)" }}>Admin</Badge>}
+                {selectedUser.isPlus && <Badge style={{ background: "oklch(0.55 0.22 270 / 0.15)", color: "var(--brand-purple)", border: "0.5px solid oklch(0.55 0.22 270 / 0.3)" }}>Plus</Badge>}
+                {selectedUser.isBanned && <Badge style={{ background: "oklch(0.62 0.28 30 / 0.12)", color: "var(--text-error)", border: "0.5px solid oklch(0.62 0.28 30 / 0.3)" }}>Banned</Badge>}
+                {!selectedUser.emailVerified && <Badge variant="outline" className="text-muted-foreground" style={{ borderColor: "var(--hairline-strong)" }}>Unverified</Badge>}
               </div>
 
               {/* Action buttons */}
               <div className="space-y-2">
                 <div className="flex flex-wrap gap-2">
-                  {/* Toggle Ban */}
+                  {/* Toggle Ban — destructive stays red */}
                   <ActionButton
                     loading={actionLoading}
                     onClick={() => updateUser(selectedUser.id, "isBanned", !selectedUser.isBanned)}
                     icon={<Ban className="h-3.5 w-3.5" />}
                     label={selectedUser.isBanned ? "Unban User" : "Ban User"}
-                    color={selectedUser.isBanned ? "oklch(0.65 0.18 150)" : "oklch(0.60 0.20 25)"}
+                    color={selectedUser.isBanned ? "var(--text-mid)" : "var(--text-error)"}
                   />
                   {/* Toggle Verified */}
                   <ActionButton
@@ -268,15 +273,15 @@ export default function AdminUsersPage() {
                     onClick={() => updateUser(selectedUser.id, "emailVerified", !selectedUser.emailVerified)}
                     icon={<CheckCircle className="h-3.5 w-3.5" />}
                     label={selectedUser.emailVerified ? "Unverify Email" : "Verify Email"}
-                    color="oklch(0.65 0.18 150)"
+                    color="var(--text-mid)"
                   />
-                  {/* Toggle Plus */}
+                  {/* Toggle Plus — purple is reserved for premium */}
                   <ActionButton
                     loading={actionLoading}
                     onClick={() => updateUser(selectedUser.id, "isPlus", !selectedUser.isPlus)}
                     icon={<Crown className="h-3.5 w-3.5" />}
                     label={selectedUser.isPlus ? "Remove Plus" : "Grant Plus"}
-                    color="oklch(0.72 0.18 270)"
+                    color="var(--brand-purple)"
                   />
                   {/* Toggle Admin */}
                   <ActionButton
@@ -284,7 +289,7 @@ export default function AdminUsersPage() {
                     onClick={() => updateUser(selectedUser.id, "isAdmin", !selectedUser.isAdmin)}
                     icon={<Shield className="h-3.5 w-3.5" />}
                     label={selectedUser.isAdmin ? "Remove Admin" : "Grant Admin"}
-                    color="oklch(0.82 0.18 80)"
+                    color="var(--brand-amber)"
                   />
                 </div>
 
@@ -314,7 +319,7 @@ export default function AdminUsersPage() {
                       className="h-8 gap-1.5 rounded-lg font-sans text-xs text-muted-foreground hover:text-foreground"
                       onClick={() => { setEditField("neonBalance"); setEditValue(String(selectedUser.neonBalance)) }}
                     >
-                      <Zap className="h-3.5 w-3.5" style={{ color: "oklch(0.72 0.18 195)" }} />
+                      <Zap className="h-3.5 w-3.5" style={{ color: "var(--brand-cyan)" }} />
                       Set Neon Balance ({selectedUser.neonBalance.toLocaleString()})
                     </Button>
                   )}
@@ -327,8 +332,8 @@ export default function AdminUsersPage() {
                     variant="ghost"
                     onClick={() => deleteUser(selectedUser.id)}
                     disabled={actionLoading}
-                    className="gap-1.5 rounded-lg font-sans text-xs hover:bg-red-500/10"
-                    style={{ color: "oklch(0.60 0.20 25)" }}
+                    className="gap-1.5 rounded-lg font-sans text-xs hover:bg-destructive/20"
+                    style={{ color: "var(--text-error)" }}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     Delete User Permanently
@@ -364,7 +369,11 @@ function ActionButton({ loading, onClick, icon, label, color }: {
       disabled={loading}
       onClick={onClick}
       className="h-8 gap-1.5 rounded-lg font-sans text-xs"
-      style={{ color, border: `1px solid ${color}30` }}
+      style={{
+        color,
+        background: "rgba(255,255,255,0.02)",
+        border: "0.5px solid var(--hairline-strong)",
+      }}
     >
       {icon} {label}
     </Button>
