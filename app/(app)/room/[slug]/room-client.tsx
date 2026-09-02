@@ -234,7 +234,12 @@ export function RoomClient({
   // DJs land on the deck once the room is live.
   const [mobileTabChoice, setMobileTabChoice] = useState<MobileRoomTab | null>(null)
   const tubeBarRef = useRef<HTMLDivElement>(null)
-  const { user: authUser } = useAuth()
+  const { user: authUser, loading: authLoading } = useAuth()
+
+  // Chat requires a verified account (the ws hub enforces this server-side
+  // too). DJs are exempt — the DJ key already proves room ownership.
+  const chatGate: "anonymous" | "unverified" | null =
+    isDJ || authLoading ? null : !authUser ? "anonymous" : !authUser.emailVerified ? "unverified" : null
   const [micActive, setMicActive] = useState(false)
   const [micPausesMusic, setMicPausesMusic] = useState(true)
 
@@ -1319,9 +1324,10 @@ export function RoomClient({
             useWsData={useWsData}
             listeners={ws.listeners}
             listenerCount={listenerCount}
-            onSendMessage={ws.connected ? ws.sendChat : undefined}
+            onSendMessage={ws.connected && !chatGate ? ws.sendChat : undefined}
             onSendReaction={ws.connected ? ws.sendReaction : undefined}
             connected={ws.connected}
+            chatGate={chatGate}
             djName={room.djName}
             overlayRef={chatOverlayRef}
           />

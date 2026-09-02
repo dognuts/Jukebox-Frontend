@@ -108,7 +108,8 @@ function extractApiErrorMessage(err: unknown): string {
 export default function CreateRoomPage() {
   const router = useRouter()
   const pathname = usePathname()
-  const { isLoggedIn, loading: authLoading } = useAuth()
+  const { isLoggedIn, loading: authLoading, user, resendVerification } = useAuth()
+  const [resendState, setResendState] = useState<"idle" | "sending" | "sent" | "error">("idle")
 
   // Redirect to login if not authenticated, remembering where we came from
   useEffect(() => {
@@ -260,6 +261,69 @@ export default function CreateRoomPage() {
                 <div className="lg:w-72">
                   <div className="h-64 w-full rounded-2xl border border-border/30 bg-muted/20" />
                 </div>
+              </div>
+            </div>
+          </main>
+          <Footer />
+        </div>
+      </div>
+    )
+  }
+
+  // Logged in but unverified: viewing/listening only — creating a jukebox
+  // requires a verified email (the backend enforces this too).
+  if (user && !user.emailVerified) {
+    return (
+      <div className="relative min-h-screen">
+        <div className="relative z-10">
+          <Navbar />
+          <main className="mx-auto max-w-xl px-4 py-16 lg:px-6">
+            <div className="rounded-2xl border border-border/40 bg-muted/20 p-8 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-border/40 bg-white/[0.04]">
+                <Radio className="h-6 w-6 text-brand-amber" />
+              </div>
+              <h1 className="font-sans text-xl font-bold text-foreground">Verify your email to create a jukebox</h1>
+              <p className="mt-2 font-sans text-sm text-muted-foreground">
+                We sent a verification link to <span className="text-foreground">{user.email}</span>.
+                Click it, then come back here — you can keep listening in the meantime.
+              </p>
+              {resendState === "sent" ? (
+                <p className="mt-6 font-sans text-sm" style={{ color: "var(--text-success)" }}>
+                  A new verification link is on its way.
+                </p>
+              ) : (
+                <Button
+                  className="mt-6 rounded-xl bg-brand-amber font-sans font-semibold text-ink hover:bg-brand-amber/90"
+                  disabled={resendState === "sending"}
+                  onClick={async () => {
+                    setResendState("sending")
+                    try {
+                      await resendVerification()
+                      setResendState("sent")
+                    } catch {
+                      setResendState("error")
+                    }
+                  }}
+                >
+                  {resendState === "sending" ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Resend verification email"
+                  )}
+                </Button>
+              )}
+              {resendState === "error" && (
+                <p className="mt-3 font-sans text-xs" style={{ color: "var(--destructive-foreground)" }}>
+                  Could not send the email. Please try again in a minute.
+                </p>
+              )}
+              <div className="mt-6">
+                <Link href="/" className="font-sans text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  Back to Discover
+                </Link>
               </div>
             </div>
           </main>

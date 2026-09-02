@@ -1,6 +1,10 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback, useMemo, forwardRef, memo } from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { withNextParam } from "@/components/auth/next-param"
+import { useAuth } from "@/lib/auth-context"
 import { type ChatMessage } from "@/components/discover/types"
 import { type ListenerInfo } from "@/hooks/use-room-websocket"
 import { useRoomChatMessages } from "@/hooks/room-store"
@@ -57,6 +61,9 @@ interface ListenerChatColumnProps {
   connected: boolean
   djName: string
   overlayRef?: React.RefObject<HTMLDivElement | null>
+  // Why the viewer can't chat: "anonymous" = not logged in, "unverified" =
+  // logged in but email not verified. null/undefined = allowed to chat.
+  chatGate?: "anonymous" | "unverified" | null
 }
 
 // Memoized — this column subscribes to the chat slice itself, so chat
@@ -76,6 +83,7 @@ export const ListenerChatColumn = memo(forwardRef<
     connected,
     djName,
     overlayRef,
+    chatGate,
   },
   _ref
 ) {
@@ -622,17 +630,89 @@ export const ListenerChatColumn = memo(forwardRef<
         ))}
       </div>
 
-      <ChatComposer
-        disabled={!connected || !onSendMessage}
-        gifPickerOpen={gifPickerOpen}
-        onToggleGifPicker={() => setGifPickerOpen((v) => !v)}
-        onCloseGifPicker={() => setGifPickerOpen(false)}
-        onSend={handleSendText}
-        onSendGif={handleGifSelect}
-      />
+      {chatGate ? (
+        <ChatGateNotice gate={chatGate} />
+      ) : (
+        <ChatComposer
+          disabled={!connected || !onSendMessage}
+          gifPickerOpen={gifPickerOpen}
+          onToggleGifPicker={() => setGifPickerOpen((v) => !v)}
+          onCloseGifPicker={() => setGifPickerOpen(false)}
+          onSend={handleSendText}
+          onSendGif={handleGifSelect}
+        />
+      )}
     </aside>
   )
 }))
+
+// Shown in place of the composer when the viewer can't chat yet.
+// Listening and reactions stay available — chat needs a verified account.
+function ChatGateNotice({ gate }: { gate: "anonymous" | "unverified" }) {
+  const pathname = usePathname()
+  const { resendVerification } = useAuth()
+  const [resendState, setResendState] = useState<"idle" | "sending" | "sent" | "error">("idle")
+  return (
+    <div
+      className="shrink-0 md:shrink"
+      style={{
+        paddingInline: "var(--space-md)",
+        paddingBottom: "var(--space-sm)",
+        paddingTop: "var(--space-sm)",
+      }}
+    >
+      <div
+        className="flex items-center justify-center rounded-full text-center"
+        style={{
+          minHeight: "clamp(34px, 4vw, 42px)",
+          paddingInline: "var(--space-md)",
+          paddingBlock: "6px",
+          fontSize: "var(--fs-small, 12px)",
+          background: "rgba(255,255,255,0.04)",
+          border: "0.5px solid var(--hairline-strong)",
+          color: "var(--text-mid)",
+        }}
+      >
+        {gate === "anonymous" ? (
+          <span>
+            <Link
+              href={withNextParam("/login", pathname)}
+              className="font-semibold hover:underline"
+              style={{ color: "var(--brand-amber)" }}
+            >
+              Log in
+            </Link>
+            {" "}with a verified account to join the chat
+          </span>
+        ) : resendState === "sent" ? (
+          <span>Verification link sent — check your inbox</span>
+        ) : (
+          <span>
+            Verify your email to join the chat —{" "}
+            <button
+              type="button"
+              onClick={async () => {
+                if (resendState === "sending") return
+                setResendState("sending")
+                try {
+                  await resendVerification()
+                  setResendState("sent")
+                } catch {
+                  setResendState("error")
+                }
+              }}
+              className="font-semibold hover:underline disabled:opacity-60"
+              disabled={resendState === "sending"}
+              style={{ color: "var(--brand-amber)" }}
+            >
+              {resendState === "sending" ? "sending..." : resendState === "error" ? "retry sending link" : "resend link"}
+            </button>
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
 
 // Isolated composer — owns the input text state locally so keystrokes
 // don't re-render ListenerChatColumn (which otherwise re-maps the full
