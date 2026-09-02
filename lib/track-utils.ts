@@ -59,11 +59,12 @@ export function parseTrackUrl(input: string): ParsedTrackSource | null {
     }
   }
 
-  // Check SoundCloud
+  // Check SoundCloud — normalize to https: the backend (correctly)
+  // rejects plain-http source URLs, and SoundCloud serves https anyway.
   if (SC_PATTERN.test(url)) {
     return {
       source: "soundcloud",
-      sourceUrl: url,
+      sourceUrl: url.replace(/^http:\/\//i, "https://"),
     }
   }
 

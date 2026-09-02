@@ -98,11 +98,13 @@ export function HomeClient({
     initialRooms ? JSON.stringify(initialRooms) : null
   )
 
-  // Ensure anonymous session ID is stored before any WS connections
+  // Ensure a LIVE anonymous session before any WS connections.
+  // Unconditional (not only when localStorage is empty): sessions expire
+  // after 24h in Redis and the backend no longer auto-creates them, so a
+  // stored-but-stale id would otherwise 401 every session-scoped call.
+  // GET /api/session refreshes a valid session or mints a fresh one.
   useEffect(() => {
-    if (!getSessionId()) {
-      getSession().catch(() => {})
-    }
+    getSession().catch(() => {})
   }, [])
 
   // Poll rooms from the backend (initial refresh + every 30s)

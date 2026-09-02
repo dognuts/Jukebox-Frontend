@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from "react"
 import type { APITrack, APIChatMessage, APIQueueEntry, PlaybackState } from "@/lib/api"
+import { getWsTicket } from "@/lib/api"
 import {
   chatMessagesSlice,
   activityEventsSlice,
@@ -249,6 +250,7 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
 
     let cancelled = false
     let reconnectCount = 0
+    let connectEpoch = 0
     // Set on every socket open, cleared as the server's initial-state
     // replay lands. Lets a reconnect keep showing the last-known data
     // and swap in the fresh snapshot atomically instead of blanking
@@ -321,23 +323,26 @@ export function useRoomWebSocket({ slug, djKey, disabled, onError, onReaction }:
         } catch {}
       }
 
-      const params = new URLSearchParams()
-      if (djKey) params.set("djKey", djKey)
-      
-      // Pass persistent session ID from localStorage (works across browser backgrounding)
-      try {
-        const sessionId = localStorage.getItem("jukebox_session_id")
-        if (sessionId) params.set("session", sessionId)
-      } catch {}
+      // Authenticate with a single-use, 30-second ticket minted over
+      // HTTPS — the JWT, session id, and DJ key travel as headers on the
+      // ticket request, never in the ws URL (which lands verbatim in
+      // request logs on every connect). The epoch guard drops this
+      // attempt if a newer connect() started during the async fetch, so
+      // overlapping attempts can't each open a socket.
+      const epoch = ++connectEpoch
+      void (async () => {
+        let ticket: string | null = null
+        try {
+          ticket = await getWsTicket(slug, djKey)
+        } catch {}
+        if (cancelled || epoch !== connectEpoch) return
+        openSocket(ticket)
+      })()
+    }
 
-      // Pass JWT token for user identity on WS connection
-      try {
-        const token = localStorage.getItem("jukebox_access_token")
-        if (token) params.set("token", token)
-      } catch {}
-
-      const qs = params.toString()
-      const url = `${getWsBase()}/ws/room/${slug}${qs ? `?${qs}` : ""}`
+    function openSocket(ticket: string | null) {
+      if (cancelled) return
+      const url = `${getWsBase()}/ws/room/${slug}${ticket ? `?ticket=${encodeURIComponent(ticket)}` : ""}`
       const ws = new WebSocket(url)
       wsRef.current = ws
 

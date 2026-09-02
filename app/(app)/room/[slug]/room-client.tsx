@@ -255,6 +255,7 @@ export function RoomClient({
   const liveKit = useLiveKitVoice({
     roomSlug: slug || "",
     isDJ,
+    djKey,
     voiceActive: !!room && ws.djMicActive,
   })
 

@@ -262,6 +262,51 @@ export async function getSession(): Promise<Session> {
   return session
 }
 
+/**
+ * Mint a single-use WebSocket ticket for a room. The ticket (30s TTL,
+ * one redemption) is the only credential the ws URL carries — the JWT,
+ * session id, and DJ key travel in headers here, over a normal HTTPS
+ * request, instead of sitting in a logged URL.
+ *
+ * If the stored session is missing/expired the backend answers 401;
+ * bootstrap a fresh session once and retry.
+ */
+export async function getWsTicket(roomSlug: string, djKey?: string | null): Promise<string | null> {
+  const attempt = async (): Promise<string | null> => {
+    const token = getToken()
+    const sessionId = getSessionId()
+    const res = await fetch(`${API_BASE}/api/ws/ticket`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(sessionId ? { "X-Session-ID": sessionId } : {}),
+        ...(djKey ? { "X-DJ-Key": djKey } : {}),
+      },
+      body: JSON.stringify({ roomSlug }),
+    })
+    if (!res.ok) throw new Error(`ticket ${res.status}`)
+    const data = (await res.json()) as { ticket?: string }
+    return data?.ticket ?? null
+  }
+
+  try {
+    return await attempt()
+  } catch {
+    try {
+      await getSession()
+    } catch {
+      return null
+    }
+    try {
+      return await attempt()
+    } catch {
+      return null
+    }
+  }
+}
+
 export async function updateDisplayName(displayName: string): Promise<Session> {
   return request<Session>("/api/session", {
     method: "PATCH",

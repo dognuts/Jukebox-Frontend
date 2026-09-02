@@ -10,6 +10,9 @@ import { authRequest } from "@/lib/api"
 interface UseLiveKitVoiceOptions {
   roomSlug: string
   isDJ: boolean
+  // The room's DJ key — required server-side to mint a publish-capable
+  // LiveKit token. Only meaningful when isDJ is true.
+  djKey?: string | null
   // Listener-side gate: true while voice is actually live in the room
   // (driven by the dj_mic_state WS broadcast). Listeners connect to the
   // SFU only once this flips true — never on room entry. The DJ side
@@ -29,7 +32,7 @@ interface UseLiveKitVoiceReturn {
   error: string | null
 }
 
-export function useLiveKitVoice({ roomSlug, isDJ, voiceActive }: UseLiveKitVoiceOptions): UseLiveKitVoiceReturn {
+export function useLiveKitVoice({ roomSlug, isDJ, djKey, voiceActive }: UseLiveKitVoiceOptions): UseLiveKitVoiceReturn {
   const [connected, setConnected] = useState(false)
   const [isBroadcasting, setIsBroadcasting] = useState(false)
   const [djSpeaking, setDjSpeaking] = useState(false)
@@ -53,9 +56,11 @@ export function useLiveKitVoice({ roomSlug, isDJ, voiceActive }: UseLiveKitVoice
     const epoch = connectEpochRef.current
     const attempt = (async () => {
       try {
-        // Get token from our backend
+        // Get token from our backend. Publishing (isDJ) requires proving
+        // the room's DJ key server-side, so send it along.
         const res = await authRequest<{ token: string; url: string }>("/api/livekit/token", {
           method: "POST",
+          headers: isDJ && djKey ? { "X-DJ-Key": djKey } : undefined,
           body: JSON.stringify({ roomSlug, isDJ }),
         })
 
@@ -128,7 +133,7 @@ export function useLiveKitVoice({ roomSlug, isDJ, voiceActive }: UseLiveKitVoice
     })()
     connectPromiseRef.current = attempt
     return attempt
-  }, [roomSlug, isDJ])
+  }, [roomSlug, isDJ, djKey])
 
   // Listener: connect once voice actually goes live in the room — never
   // on room entry. Once connected, stay connected for the rest of the
