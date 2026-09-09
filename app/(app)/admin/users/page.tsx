@@ -31,7 +31,25 @@ interface AdminUser {
   city: string
   region: string
   country: string
+  signupIp: string
+  signupUserAgent: string
+  verifiedAt: string | null
+  verifyHeldAt: string | null
+  secondsToVerify: number | null
 }
+
+// Mirrors the backend VERIFY_HOLD_SECONDS default. Display hint only.
+const FAST_VERIFY_SECONDS = 60
+
+function formatVerifyTime(secs: number | null): string {
+  if (secs === null) return "Never"
+  if (secs < 60) return `${secs}s`
+  if (secs < 3600) return `${Math.floor(secs / 60)}m ${secs % 60}s`
+  return `${Math.floor(secs / 3600)}h ${Math.floor((secs % 3600) / 60)}m`
+}
+
+const fastBadgeStyle = { background: "oklch(0.62 0.28 30 / 0.12)", color: "var(--text-error)", border: "0.5px solid oklch(0.62 0.28 30 / 0.3)" }
+const heldBadgeStyle = { background: "rgba(232,154,60,0.1)", color: "var(--brand-amber)", border: "0.5px solid rgba(232,154,60,0.25)" }
 
 export default function AdminUsersPage() {
   const { user, isLoggedIn } = useAuth()
@@ -201,7 +219,16 @@ export default function AdminUsersPage() {
                         {u.isPlus && <Crown className="h-3 w-3 shrink-0" style={{ color: "var(--brand-purple)" }} />}
                         {u.isBanned && <Ban className="h-3 w-3 shrink-0" style={{ color: "var(--text-error)" }} />}
                       </div>
-                      <span className="truncate font-sans text-[10px] text-muted-foreground">{u.email}</span>
+                      <div className="flex items-center gap-1.5 font-sans text-[10px] text-muted-foreground">
+                        <span className="truncate">{u.email}</span>
+                        {u.secondsToVerify !== null && (
+                          <span className="shrink-0">verified in {formatVerifyTime(u.secondsToVerify)}</span>
+                        )}
+                        {u.secondsToVerify !== null && u.secondsToVerify < FAST_VERIFY_SECONDS && (
+                          <Badge className="h-4 px-1 text-[9px]" style={fastBadgeStyle}>Fast</Badge>
+                        )}
+                        {u.verifyHeldAt && <Badge className="h-4 px-1 text-[9px]" style={heldBadgeStyle}>Held</Badge>}
+                      </div>
                     </div>
                   </button>
                 ))}
@@ -244,6 +271,9 @@ export default function AdminUsersPage() {
                   icon={selectedUser.emailVerified ? <CheckCircle className="h-3 w-3" style={{ color: "var(--text-success)" }} /> : <XCircle className="h-3 w-3" style={{ color: "var(--text-error)" }} />} />
                 <InfoRow label="Neon Balance" value={selectedUser.neonBalance.toLocaleString()} icon={<Zap className="h-3 w-3" style={{ color: "var(--brand-cyan)" }} />} />
                 <InfoRow label="Joined" value={new Date(selectedUser.createdAt).toLocaleDateString()} />
+                <InfoRow label="Verified in" value={formatVerifyTime(selectedUser.secondsToVerify)} />
+                <InfoRow label="Signup IP" value={selectedUser.signupIp || "Unknown"} />
+                <InfoRow label="User agent" value={selectedUser.signupUserAgent || "Unknown"} />
                 <InfoRow label="Location" value={[selectedUser.city, selectedUser.region, selectedUser.country].filter(Boolean).join(", ") || "Unknown"} />
                 <InfoRow label="Bio" value={selectedUser.bio || "None"} />
               </div>
@@ -254,6 +284,8 @@ export default function AdminUsersPage() {
                 {selectedUser.isPlus && <Badge style={{ background: "oklch(0.55 0.22 270 / 0.15)", color: "var(--brand-purple)", border: "0.5px solid oklch(0.55 0.22 270 / 0.3)" }}>Plus</Badge>}
                 {selectedUser.isBanned && <Badge style={{ background: "oklch(0.62 0.28 30 / 0.12)", color: "var(--text-error)", border: "0.5px solid oklch(0.62 0.28 30 / 0.3)" }}>Banned</Badge>}
                 {!selectedUser.emailVerified && <Badge variant="outline" className="text-muted-foreground" style={{ borderColor: "var(--hairline-strong)" }}>Unverified</Badge>}
+                {selectedUser.secondsToVerify !== null && selectedUser.secondsToVerify < FAST_VERIFY_SECONDS && <Badge style={fastBadgeStyle}>Fast verify</Badge>}
+                {selectedUser.verifyHeldAt && <Badge style={heldBadgeStyle}>Held for review</Badge>}
               </div>
 
               {/* Action buttons */}
